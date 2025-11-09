@@ -20,7 +20,7 @@ export async function sendQuorumAlert(
     const modRoleId = process.env.MOD_ROLE_ID;
     
     await channel.send(
-      `🚨 **Quorum Reached**\n` +
+      '🚨 **Quorum Reached**\n' +
       `Target: <@${targetUserId}>\n` +
       `Votes: ${voteCount}/${eligibleCount} (${percentage}%)\n` +
       (modRoleId ? `<@&${modRoleId}>` : '')

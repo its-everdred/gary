@@ -35,7 +35,7 @@ client.on('ready', async () => {
 });
 
 client.on('interactionCreate', async (interaction) => {
-  if (!interaction.isCommand() || !interaction.inGuild() === false) return;
+  if (!interaction.isChatInputCommand() || interaction.inGuild()) return;
   
   try {
     switch (interaction.commandName) {

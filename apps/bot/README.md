@@ -53,9 +53,8 @@ In **Installation** section:
 ## Local Setup
 
 ### Prerequisites
-- Node.js 20+
+- Node.js 20+ or Bun
 - PostgreSQL database
-- Bun (for running tests)
 
 ### Installation
 
@@ -67,7 +66,7 @@ cd gary/apps/bot
 
 2. Install dependencies:
 ```bash
-npm install
+bun install
 ```
 
 3. Set up environment:
@@ -94,12 +93,12 @@ openssl rand -base64 32
 
 5. Initialize database:
 ```bash
-npx prisma db push
+bunx prisma db push
 ```
 
 6. Run the bot:
 ```bash
-npm run dev
+bun run dev
 ```
 
 ## Finding Discord IDs
