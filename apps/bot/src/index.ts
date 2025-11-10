@@ -17,7 +17,7 @@ const client = new Client({
 
 const commands = [warnCommand, whisperCommand, privacyCommand];
 
-client.on('ready', async () => {
+client.on('clientReady', async () => {
   logger.info(`Bot logged in as ${client.user?.tag}`);
   
   const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN!);
