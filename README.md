@@ -37,12 +37,14 @@ Privacy focused discord moderation assistant manager.
 Self-host or use a service like [Railway](https://railway.app).
 
 **Railway Setup:**
+
 1. Fork this repo to your GitHub
 2. [railway.app](https://railway.app) → Start New Project → Deploy from GitHub repo
 3. Add service → Database → Add PostgreSQL
-4. Click on your app → Variables → Add all from step 4
-5. Settings → Generate Domain (for health checks)
-6. Deploys automatically on git push
+4. Click on your app → Variables → Add all variables from step 4
+5. **Important**: Set `DATABASE_URL=${{Postgres.DATABASE_URL}}`
+6. Settings → Generate Domain (for health checks)
+7. Deploys automatically on git push
 
 ### 4. Get IDs & Configure
 
@@ -53,10 +55,11 @@ GUILD_ID=              # Right-click server → Copy Server ID (needs Developer 
 MOD_CHANNEL_ID=        # Right-click mod channel → Copy Channel ID
 KICK_QUORUM_PERCENT=40 # % of members for kick alert
 GUILD_SALT=            # Run: openssl rand -base64 32
-DATABASE_URL=          # Railway provides this automatically
+DATABASE_URL=          # Local: postgres://user:pass@localhost:5432/gary
+                       # Railway: ${{Postgres.DATABASE_URL}}
 ```
 
-*Enable Developer Mode: Discord Settings → Advanced → Developer Mode
+\*Enable Developer Mode: Discord Settings → Advanced → Developer Mode
 
 ## Local Development
 
