@@ -1,0 +1,12 @@
+{
+  "name": "gary-bot-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "cd apps/bot && bun install && bunx prisma generate && bun run build",
+    "start": "cd apps/bot && bunx prisma db push && bun run start"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
