@@ -27,8 +27,7 @@ Privacy focused discord moderation assistant manager.
    - ✅ `applications.commands` - Allows slash commands
 4. **Select Bot Permissions** (what bot can access):
    - ✅ `Send Messages` - Post warnings to mod channel
-   - ✅ `View Channels` - See the mod channel
-   - Total permissions value: 3072
+   - Total permissions value: 2048
 5. Scroll down → Copy the generated URL
 6. Open URL in browser → Choose your server → Authorize
 

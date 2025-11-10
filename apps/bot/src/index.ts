@@ -24,12 +24,12 @@ client.on('clientReady', async () => {
   const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN!);
   
   try {
-    logger.info('Registering slash commands...');
-    await rest.put(
+    logger.info('Registering slash commands...', { commandCount: commands.length });
+    const result = await rest.put(
       Routes.applicationCommands(process.env.DISCORD_APP_ID!),
       { body: commands }
     );
-    logger.info('Commands registered successfully');
+    logger.info('Commands registered successfully', { result });
   } catch (error) {
     logger.error(error, 'Failed to register commands');
   }
@@ -44,10 +44,18 @@ client.on('warn', (warning) => {
 });
 
 client.on('interactionCreate', async (interaction) => {
+  logger.info({ 
+    type: interaction.type,
+    isChatInput: interaction.isChatInputCommand(),
+    inGuild: interaction.inGuild(),
+    user: interaction.user.id
+  }, 'Interaction received');
+
   if (!interaction.isChatInputCommand()) return;
   
   // If command used in guild, provide helpful DM instructions
   if (interaction.inGuild()) {
+    logger.info({ command: interaction.commandName }, 'Guild command blocked');
     await interaction.reply({
       content: 'Commands are not supported from the discord chat. Instead:\n1. Right click me in the members list\n2. Click Message\n3. Resend this in a DM',
       ephemeral: true
