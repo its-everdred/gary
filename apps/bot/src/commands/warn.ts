@@ -20,6 +20,7 @@ export const warnCommand = new SlashCommandBuilder()
       .setDescription('The warning message to send anonymously')
       .setRequired(true)
   )
+  .setContexts([1]) // 1 = DM context
   .toJSON();
 
 export async function warnHandler(interaction: ChatInputCommandInteraction) {

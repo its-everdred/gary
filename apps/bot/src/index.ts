@@ -44,7 +44,16 @@ client.on('warn', (warning) => {
 });
 
 client.on('interactionCreate', async (interaction) => {
-  if (!interaction.isChatInputCommand() || interaction.inGuild()) return;
+  if (!interaction.isChatInputCommand()) return;
+  
+  // If command used in guild, provide helpful DM instructions
+  if (interaction.inGuild()) {
+    await interaction.reply({
+      content: 'Commands are not supported from the discord chat. Instead:\n1. Right click me in the members list\n2. Click Message\n3. Resend this in a DM',
+      ephemeral: true
+    });
+    return;
+  }
   
   logger.info({ 
     command: interaction.commandName, 

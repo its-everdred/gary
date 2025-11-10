@@ -11,6 +11,7 @@ export const whisperCommand = new SlashCommandBuilder()
       .setDescription('The message to whisper anonymously')
       .setRequired(true)
   )
+  .setContexts([1]) // 1 = DM context
   .toJSON();
 
 export async function whisperHandler(interaction: ChatInputCommandInteraction) {
