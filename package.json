@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "cd apps/bot && bun install && bunx prisma generate && bun run build",
-    "start": "cd apps/bot && bunx prisma db push && bun run start"
+    "build": "cd apps/bot && npm install && npx prisma generate && npm run build",
+    "start": "cd apps/bot && npx prisma db push && npm run start"
   },
   "engines": {
     "node": ">=20.0.0"
