@@ -19,6 +19,7 @@ const commands = [warnCommand, whisperCommand, privacyCommand];
 
 client.on('clientReady', async () => {
   logger.info(`Bot logged in as ${client.user?.tag}`);
+  logger.info(`Connected to ${client.guilds.cache.size} guilds`);
   
   const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN!);
   
@@ -34,8 +35,22 @@ client.on('clientReady', async () => {
   }
 });
 
+client.on('error', (error) => {
+  logger.error(error, 'Discord client error');
+});
+
+client.on('warn', (warning) => {
+  logger.warn(warning, 'Discord client warning');
+});
+
 client.on('interactionCreate', async (interaction) => {
   if (!interaction.isChatInputCommand() || interaction.inGuild()) return;
+  
+  logger.info({ 
+    command: interaction.commandName, 
+    user: interaction.user.id,
+    channel: interaction.channelId 
+  }, 'Command received');
   
   try {
     switch (interaction.commandName) {
@@ -58,4 +73,8 @@ client.on('interactionCreate', async (interaction) => {
   }
 });
 
-client.login(process.env.DISCORD_TOKEN);
+logger.info('Starting bot...');
+client.login(process.env.DISCORD_TOKEN).catch((error) => {
+  logger.error(error, 'Failed to login');
+  process.exit(1);
+});
