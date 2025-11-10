@@ -5,7 +5,7 @@ import { hmac } from '../lib/crypto.js';
 
 export const historyCommand = new SlashCommandBuilder()
   .setName('history')
-  .setDescription('View your voting history for this guild')
+  .setDescription('View your warning history for this guild')
   .toJSON();
 
 export async function historyHandler(interaction: ChatInputCommandInteraction) {
@@ -27,25 +27,27 @@ export async function historyHandler(interaction: ChatInputCommandInteraction) {
     });
 
     if (votes.length === 0) {
-      await interaction.editReply('No votes recorded.');
+      await interaction.editReply('No warnings recorded.');
       return;
     }
 
     const guild = await interaction.client.guilds.fetch(guildId);
-    const voteList = await Promise.all(
+    const warningList = await Promise.all(
       votes.map(async (vote) => {
         try {
           const member = await guild.members.fetch(vote.targetUserId);
           const date = vote.createdAt.toISOString().split('T')[0];
-          return `• ${date} — @${member.user.username} (${vote.targetUserId})`;
+          const message = vote.message ? `\n  └─ "${vote.message}"` : '';
+          return `• ${date} — @${member.user.username} (${vote.targetUserId})${message}`;
         } catch {
           const date = vote.createdAt.toISOString().split('T')[0];
-          return `• ${date} — Unknown User (${vote.targetUserId})`;
+          const message = vote.message ? `\n  └─ "${vote.message}"` : '';
+          return `• ${date} — Unknown User (${vote.targetUserId})${message}`;
         }
       })
     );
 
-    const response = `**Your voting history:**\n${voteList.join('\n')}`;
+    const response = `**Your warning history:**\n${warningList.join('\n')}`;
     await interaction.editReply(response.substring(0, 2000));
   } catch (error) {
     console.error('History command error:', error);

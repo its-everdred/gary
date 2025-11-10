@@ -1,6 +1,6 @@
 # GARY - GA Representative Yeoman
 
-Anonymous voting Discord bot for community-driven moderation.
+Anonymous warning and reporting Discord bot for community moderation.
 
 ## Discord Bot Setup
 
@@ -79,9 +79,7 @@ cp .env.example .env
 DISCORD_TOKEN=<bot-token-from-step-1>
 DISCORD_APP_ID=<client-id-from-oauth2>
 GUILD_ID=<your-guild-id>
-ALERT_CHANNEL_ID=<mod-alert-channel-id>
-QUORUM_PERCENT=40
-ELIGIBLE_COUNT_OVERRIDE=0
+MOD_CHANNEL_ID=<moderator-channel-id>
 GUILD_SALT=<generate-random-base64-string>
 DATABASE_URL=postgres://user:pass@localhost:5432/gary
 ```
@@ -110,8 +108,8 @@ To get Discord IDs (user, channel, guild):
 ## Bot Commands
 
 All commands are DM-only:
-- `/kick target_id:<user-id>` - Vote to kick a member
-- `/history` - View your voting history
+- `/warn target_id:<user-id> message:<text>` - Send anonymous warning about a member
+- `/whisper message:<text>` - Send anonymous message to moderators
 - `/privacy` - View privacy information
 
 ## Permissions Summary
@@ -122,8 +120,8 @@ All commands are DM-only:
 - ❌ MessageContent (explicitly disabled)
 
 **Guild Permissions** (when inviting):
-- Send Messages (for alert channel only)
-- View Channels (for alert channel only)
+- Send Messages (for moderator channel only)
+- View Channels (for moderator channel only)
 
 **No access to**:
 - Message content

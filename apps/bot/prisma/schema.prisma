@@ -12,6 +12,7 @@ model Vote {
   guildId      String
   targetUserId String
   voterHash    String
+  message      String?
   createdAt    DateTime @default(now())
 
   @@unique([guildId, targetUserId, voterHash])

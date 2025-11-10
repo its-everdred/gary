@@ -1,7 +1,7 @@
 import { Client, GatewayIntentBits, REST, Routes } from 'discord.js';
 import pino from 'pino';
-import { kickCommand, kickHandler } from './commands/kick.js';
-import { historyCommand, historyHandler } from './commands/history.js';
+import { warnCommand, warnHandler } from './commands/warn.js';
+import { whisperCommand, whisperHandler } from './commands/whisper.js';
 import { privacyCommand, privacyHandler } from './commands/privacy.js';
 
 const logger = pino({
@@ -15,7 +15,7 @@ const client = new Client({
   ],
 });
 
-const commands = [kickCommand, historyCommand, privacyCommand];
+const commands = [warnCommand, whisperCommand, privacyCommand];
 
 client.on('ready', async () => {
   logger.info(`Bot logged in as ${client.user?.tag}`);
@@ -39,11 +39,11 @@ client.on('interactionCreate', async (interaction) => {
   
   try {
     switch (interaction.commandName) {
-      case 'kick':
-        await kickHandler(interaction);
+      case 'warn':
+        await warnHandler(interaction);
         break;
-      case 'history':
-        await historyHandler(interaction);
+      case 'whisper':
+        await whisperHandler(interaction);
         break;
       case 'privacy':
         await privacyHandler(interaction);
