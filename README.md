@@ -4,9 +4,8 @@ Privacy focused discord moderation assistant manager.
 
 ## Commands
 
-- `/warn target_id:<user_id> message:<text>` - Warn about user. Tracks toward kick quorum.
-- `/whisper message:<text>` - Anonymous message to mods
-- `/privacy` - View privacy info
+- `/warn target:<@user> message:<text>` - Warn about user. Tracks toward kick quorum. Message is optional.
+- `/whisper message:<text>` - Anonymous message to mods (rate limited)
 
 ## Quick Setup
 
@@ -48,6 +47,7 @@ DISCORD_APP_ID=        # Application ID from step 1.4
 GUILD_ID=              # Right-click server → Copy Server ID (needs Developer Mode*)
 MOD_CHANNEL_ID=        # Right-click mod channel → Copy Channel ID
 KICK_QUORUM_PERCENT=40 # % of members for kick alert
+WHISPER_RATE_LIMIT_MINS=60 # Minutes before user can whisper again
 GUILD_SALT=            # Run: openssl rand -base64 32
 DATABASE_URL=          # Local: postgres://gary:pass@localhost:5432/gary
                        # Railway: ${{Postgres.DATABASE_URL}}
