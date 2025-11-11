@@ -1,23 +1,23 @@
-import { SlashCommandBuilder, TextChannel } from "discord.js";
-import type { ChatInputCommandInteraction } from "discord.js";
-import { prisma } from "../lib/db.js";
-import { hmac } from "../lib/crypto.js";
-import pino from "pino";
-import { getEligibleCount } from "../lib/eligible.js";
+import { SlashCommandBuilder, TextChannel } from 'discord.js';
+import type { ChatInputCommandInteraction } from 'discord.js';
+import { prisma } from '../lib/db.js';
+import { hmac } from '../lib/crypto.js';
+import pino from 'pino';
+import { getEligibleCount } from '../lib/eligible.js';
 
 export const warnCommand = new SlashCommandBuilder()
-  .setName("warn")
-  .setDescription("Send an anonymous warning about a member")
+  .setName('warn')
+  .setDescription('Send an anonymous warning about a member')
   .addUserOption((option) =>
     option
-      .setName("target")
-      .setDescription("The member to warn")
+      .setName('target')
+      .setDescription('The member to warn')
       .setRequired(true)
   )
   .addStringOption((option) =>
     option
-      .setName("message")
-      .setDescription("The warning message to send anonymously")
+      .setName('message')
+      .setDescription('The warning message to send anonymously')
       .setRequired(true)
   )
   .toJSON();
@@ -36,12 +36,12 @@ async function sendWarning(
       process.env.MOD_CHANNEL_ID!
     )) as TextChannel;
     if (!channel || !channel.isTextBased()) {
-      logger.error("Alert channel not found or not text-based");
+      logger.error('Alert channel not found or not text-based');
       return;
     }
 
     const kickQuorumPercent =
-      parseInt(process.env.KICK_QUORUM_PERCENT || "40") / 100;
+      parseInt(process.env.KICK_QUORUM_PERCENT || '40') / 100;
     const kickThreshold = Math.ceil(eligibleCount * kickQuorumPercent);
     const warningsUntilKick = kickThreshold - totalWarningsCount;
 
@@ -49,29 +49,29 @@ async function sendWarning(
       `⚠️ **WARN** - An anonymous member warns <@${targetUserId}>:\n` +
       `"${message}"\n` +
       `*This member has received ${totalWarningsCount} warning${
-        totalWarningsCount !== 1 ? "s" : ""
+        totalWarningsCount !== 1 ? 's' : ''
       } total.*`;
 
     if (warningsUntilKick > 0) {
       warningMessage += ` They are ${warningsUntilKick} more warning${
-        warningsUntilKick !== 1 ? "s" : ""
+        warningsUntilKick !== 1 ? 's' : ''
       } away from reaching kick quorum.`;
     } else {
-      warningMessage += ` **They have reached kick quorum!**`;
+      warningMessage += ' **They have reached kick quorum!**';
     }
 
     await channel.send(warningMessage);
   } catch (error) {
-    logger.error({ error }, "Failed to send warning");
+    logger.error({ error }, 'Failed to send warning');
   }
 }
 
 export async function warnHandler(interaction: ChatInputCommandInteraction) {
   await interaction.deferReply({ flags: 64 }); // 64 = ephemeral flag
 
-  const target = interaction.options.getUser("target", true);
+  const target = interaction.options.getUser('target', true);
   const targetId = target.id;
-  const message = interaction.options.getString("message", true);
+  const message = interaction.options.getString('message', true);
   const voterId = interaction.user.id;
   const guildId = process.env.GUILD_ID!;
 
@@ -81,18 +81,18 @@ export async function warnHandler(interaction: ChatInputCommandInteraction) {
     const voter = await guild.members.fetch(voterId).catch(() => null);
     if (!voter) {
       await interaction.editReply(
-        "You must be a member of the configured guild to send warnings."
+        'You must be a member of the configured guild to send warnings.'
       );
       return;
     }
     if (voter.user.bot) {
-      await interaction.editReply("Bots cannot send warnings.");
+      await interaction.editReply('Bots cannot send warnings.');
       return;
     }
 
     const targetMember = await guild.members.fetch(targetId).catch(() => null);
     if (!targetMember) {
-      await interaction.editReply("Target not found in guild.");
+      await interaction.editReply('Target not found in guild.');
       return;
     }
 
@@ -111,18 +111,18 @@ export async function warnHandler(interaction: ChatInputCommandInteraction) {
 
     if (existingWarning) {
       await interaction.editReply(
-        "You already submit a warning for this user."
+        'You already submit a warning for this user.'
       );
       return;
     }
 
     // Reply immediately to user
-    await interaction.editReply("Warning sent anonymously to moderators.");
+    await interaction.editReply('Warning sent anonymously to moderators.');
 
     // Handle database and alert operations asynchronously
     (async () => {
       try {
-        logger.info({ targetId, message }, "Creating warning vote");
+        logger.info({ targetId, message }, 'Creating warning vote');
         await prisma.vote.create({
           data: {
             guildId,
@@ -132,7 +132,7 @@ export async function warnHandler(interaction: ChatInputCommandInteraction) {
           },
         });
 
-        logger.info("Vote created, counting warnings");
+        logger.info('Vote created, counting warnings');
         const totalWarningsCount = await prisma.vote.count({
           where: {
             guildId,
@@ -140,10 +140,10 @@ export async function warnHandler(interaction: ChatInputCommandInteraction) {
           },
         });
 
-        logger.info({ totalWarningsCount }, "Getting eligible count");
+        logger.info({ totalWarningsCount }, 'Getting eligible count');
         const eligibleCount = await getEligibleCount(interaction.client);
 
-        logger.info({ eligibleCount }, "Sending warning to channel");
+        logger.info({ eligibleCount }, 'Sending warning to channel');
         await sendWarning(
           interaction.client,
           targetId,
@@ -152,27 +152,27 @@ export async function warnHandler(interaction: ChatInputCommandInteraction) {
           eligibleCount
         );
 
-        logger.info("Warning processing completed");
+        logger.info('Warning processing completed');
       } catch (asyncError) {
         logger.error(
           { error: asyncError, targetId },
-          "Async warning processing failed"
+          'Async warning processing failed'
         );
       }
     })();
   } catch (error) {
     logger.error(
-      { error, command: "warn", user: interaction.user.id },
-      "Warn command error"
+      { error, command: 'warn', user: interaction.user.id },
+      'Warn command error'
     );
 
     if (interaction.deferred) {
       await interaction.editReply(
-        "An error occurred while sending your warning."
+        'An error occurred while sending your warning.'
       );
     } else {
       await interaction.reply({
-        content: "An error occurred while sending your warning.",
+        content: 'An error occurred while sending your warning.',
         flags: 64,
       });
     }
