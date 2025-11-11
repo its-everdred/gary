@@ -57,7 +57,15 @@ export async function whisperHandler(interaction: ChatInputCommandInteraction) {
     await sendWhisper(interaction.client, message);
     await interaction.editReply('Whisper sent anonymously to moderators.');
   } catch (error) {
-    console.error('Whisper command error:', error);
-    await interaction.editReply('An error occurred while sending your whisper.');
+    logger.error({ error, command: 'whisper', user: interaction.user.id }, 'Whisper command error');
+    
+    if (interaction.deferred) {
+      await interaction.editReply('An error occurred while sending your whisper.');
+    } else {
+      await interaction.reply({ 
+        content: 'An error occurred while sending your whisper.',
+        flags: 64
+      });
+    }
   }
 }

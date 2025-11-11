@@ -118,7 +118,15 @@ export async function warnHandler(interaction: ChatInputCommandInteraction) {
     await sendWarning(interaction.client, targetId, message, totalWarningsCount, eligibleCount);
     await interaction.editReply('Warning sent anonymously to moderators.');
   } catch (error) {
-    console.error('Warn command error:', error);
-    await interaction.editReply('An error occurred while sending your warning.');
+    logger.error({ error, command: 'warn', user: interaction.user.id }, 'Warn command error');
+    
+    if (interaction.deferred) {
+      await interaction.editReply('An error occurred while sending your warning.');
+    } else {
+      await interaction.reply({ 
+        content: 'An error occurred while sending your warning.',
+        flags: 64
+      });
+    }
   }
 }
