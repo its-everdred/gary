@@ -1,0 +1,40 @@
+# Environment files
+.env
+.env.local
+.env.production
+.env*.local
+apps/bot/.env
+apps/bot/.env.local
+apps/bot/.env.production
+apps/bot/.env*.local
+
+# Private keys
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Secrets
+secrets/
+private/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs with potentially sensitive data
+*.log
+logs/
+
+# Build artifacts that might contain secrets
+dist/
+build/
+
+# IDE settings that might contain paths
+.vscode/settings.json
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
