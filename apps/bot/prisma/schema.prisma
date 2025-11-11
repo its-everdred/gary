@@ -18,3 +18,12 @@ model Vote {
   @@unique([guildId, targetUserId, voterHash])
   @@index([guildId, targetUserId])
 }
+
+model Whisper {
+  id         String   @id @default(cuid())
+  guildId    String
+  userHash   String
+  createdAt  DateTime @default(now())
+
+  @@index([guildId, userHash, createdAt])
+}

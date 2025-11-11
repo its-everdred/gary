@@ -1,7 +1,12 @@
 import { SlashCommandBuilder } from 'discord.js';
 import type { ChatInputCommandInteraction } from 'discord.js';
 import pino from 'pino';
-import { validateGuildMember, sendToModChannel } from '../lib/utils.js';
+import { prisma } from '../lib/db.js';
+import { 
+  validateGuildMember, 
+  sendToModChannel,
+  hmac
+} from '../lib/utils.js';
 
 export const whisperCommand = new SlashCommandBuilder()
   .setName('whisper')
@@ -20,6 +25,48 @@ function buildWhisperMessage(message: string): string {
   return `🗣️ **PSST** - Anon whispers:\n"${message}"`;
 }
 
+async function checkWhisperRateLimit(
+  guildId: string,
+  userHash: string
+): Promise<{ canWhisper: boolean; nextAllowedTime?: Date }> {
+  const rateLimitMins = parseInt(process.env.WHISPER_RATE_LIMIT_MINS || '60');
+  const rateLimitTime = new Date();
+  rateLimitTime.setMinutes(rateLimitTime.getMinutes() - rateLimitMins);
+
+  const recentWhisper = await prisma.whisper.findFirst({
+    where: {
+      guildId,
+      userHash,
+      createdAt: {
+        gte: rateLimitTime,
+      },
+    },
+    orderBy: {
+      createdAt: 'desc',
+    },
+  });
+
+  if (recentWhisper) {
+    const nextAllowedTime = new Date(recentWhisper.createdAt);
+    nextAllowedTime.setMinutes(nextAllowedTime.getMinutes() + rateLimitMins);
+    return { canWhisper: false, nextAllowedTime };
+  }
+
+  return { canWhisper: true };
+}
+
+async function recordWhisper(
+  guildId: string,
+  userHash: string
+): Promise<void> {
+  await prisma.whisper.create({
+    data: {
+      guildId,
+      userHash,
+    },
+  });
+}
+
 export async function whisperHandler(interaction: ChatInputCommandInteraction) {
   await interaction.deferReply({ flags: 64 });
 
@@ -35,9 +82,21 @@ export async function whisperHandler(interaction: ChatInputCommandInteraction) {
       return;
     }
 
+    // Check rate limit
+    const userHash = hmac(userId, process.env.GUILD_SALT!);
+    const rateLimit = await checkWhisperRateLimit(guildId, userHash);
+    
+    if (!rateLimit.canWhisper) {
+      const minutesLeft = Math.ceil((rateLimit.nextAllowedTime!.getTime() - Date.now()) / 60000);
+      await interaction.editReply(`You can whisper again in ${minutesLeft} minute${minutesLeft !== 1 ? 's' : ''}.`);
+      return;
+    }
+
     // Reply immediately and send whisper asynchronously
     await interaction.editReply('Whisper sent anonymously to moderators.');
     
+    // Record whisper and send to mod channel
+    await recordWhisper(guildId, userHash);
     const whisperMessage = buildWhisperMessage(message);
     await sendToModChannel(interaction.client, whisperMessage);
     
