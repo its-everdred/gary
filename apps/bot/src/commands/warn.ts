@@ -28,7 +28,7 @@ async function sendWarning(
   client: any,
   targetUserId: string,
   message: string,
-  recentWarningsCount: number,
+  totalWarningsCount: number,
   eligibleCount: number
 ): Promise<void> {
   try {
@@ -43,14 +43,14 @@ async function sendWarning(
     const kickQuorumPercent =
       parseInt(process.env.KICK_QUORUM_PERCENT || "40") / 100;
     const kickThreshold = Math.ceil(eligibleCount * kickQuorumPercent);
-    const warningsUntilKick = kickThreshold - recentWarningsCount;
+    const warningsUntilKick = kickThreshold - totalWarningsCount;
 
     let warningMessage =
       `⚠️ **WARN** - An anonymous member warns <@${targetUserId}>:\n` +
       `"${message}"\n` +
-      `*This member has received ${recentWarningsCount} warning${
-        recentWarningsCount !== 1 ? "s" : ""
-      } in the last 30 days.*`;
+      `*This member has received ${totalWarningsCount} warning${
+        totalWarningsCount !== 1 ? "s" : ""
+      } total.*`;
 
     if (warningsUntilKick > 0) {
       warningMessage += ` They are ${warningsUntilKick} more warning${
@@ -105,22 +105,17 @@ export async function warnHandler(interaction: ChatInputCommandInteraction) {
       },
     });
 
-    // Count warnings for this target in the last 30 days
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    
-    const recentWarningsCount = await prisma.vote.count({
+    // Count total warnings for this target
+    const totalWarningsCount = await prisma.vote.count({
       where: {
         guildId,
         targetUserId: targetId,
-        message: { not: null },
-        createdAt: { gte: thirtyDaysAgo },
       },
     });
 
     const eligibleCount = await getEligibleCount(interaction.client);
     
-    await sendWarning(interaction.client, targetId, message, recentWarningsCount, eligibleCount);
+    await sendWarning(interaction.client, targetId, message, totalWarningsCount, eligibleCount);
     await interaction.editReply('Warning sent anonymously to moderators.');
   } catch (error) {
     console.error('Warn command error:', error);
