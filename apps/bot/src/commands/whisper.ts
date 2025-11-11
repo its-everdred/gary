@@ -1,6 +1,7 @@
-import { SlashCommandBuilder, TextChannel } from 'discord.js';
+import { SlashCommandBuilder } from 'discord.js';
 import type { ChatInputCommandInteraction } from 'discord.js';
 import pino from 'pino';
+import { validateGuildMember, sendToModChannel } from '../lib/utils.js';
 
 export const whisperCommand = new SlashCommandBuilder()
   .setName('whisper')
@@ -15,56 +16,36 @@ export const whisperCommand = new SlashCommandBuilder()
 
 const logger = pino();
 
-async function sendWhisper(client: any, message: string): Promise<void> {
-  try {
-    const channel = (await client.channels.fetch(
-      process.env.MOD_CHANNEL_ID!
-    )) as TextChannel;
-    if (!channel || !channel.isTextBased()) {
-      logger.error('Alert channel not found or not text-based');
-      return;
-    }
-
-    await channel.send('🗣️ **PSST** - Anon whispers:\n' + `"${message}"`);
-  } catch (error) {
-    logger.error({ error }, 'Failed to send whisper');
-  }
+function buildWhisperMessage(message: string): string {
+  return `🗣️ **PSST** - Anon whispers:\n"${message}"`;
 }
 
 export async function whisperHandler(interaction: ChatInputCommandInteraction) {
-  await interaction.deferReply({ flags: 64 }); // 64 = ephemeral flag
+  await interaction.deferReply({ flags: 64 });
 
   const message = interaction.options.getString('message', true);
-  const voterId = interaction.user.id;
+  const userId = interaction.user.id;
   const guildId = process.env.GUILD_ID!;
 
   try {
-    const guild = await interaction.client.guilds.fetch(guildId);
-
-    const member = await guild.members.fetch(voterId).catch(() => null);
-    if (!member) {
-      await interaction.editReply(
-        'You must be a member of the configured guild to send whispers.'
-      );
-      return;
-    }
-    if (member.user.bot) {
-      await interaction.editReply('Bots cannot send whispers.');
+    // Validate user
+    const userValidation = await validateGuildMember(interaction.client, guildId, userId);
+    if (!userValidation.isValid) {
+      await interaction.editReply(userValidation.errorMessage!);
       return;
     }
 
-    await sendWhisper(interaction.client, message);
+    // Reply immediately and send whisper asynchronously
     await interaction.editReply('Whisper sent anonymously to moderators.');
+    
+    const whisperMessage = buildWhisperMessage(message);
+    await sendToModChannel(interaction.client, whisperMessage);
+    
   } catch (error) {
-    logger.error(
-      { error, command: 'whisper', user: interaction.user.id },
-      'Whisper command error'
-    );
+    logger.error({ error, command: 'whisper', user: interaction.user.id }, 'Whisper command error');
 
     if (interaction.deferred) {
-      await interaction.editReply(
-        'An error occurred while sending your whisper.'
-      );
+      await interaction.editReply('An error occurred while sending your whisper.');
     } else {
       await interaction.reply({
         content: 'An error occurred while sending your whisper.',
