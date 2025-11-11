@@ -1,23 +1,23 @@
-import { SlashCommandBuilder, TextChannel } from 'discord.js';
-import type { ChatInputCommandInteraction } from 'discord.js';
-import { prisma } from '../lib/db.js';
-import { hmac } from '../lib/crypto.js';
-import pino from 'pino';
-import { getEligibleCount } from '../lib/eligible.js';
+import { SlashCommandBuilder, TextChannel } from "discord.js";
+import type { ChatInputCommandInteraction } from "discord.js";
+import { prisma } from "../lib/db.js";
+import { hmac } from "../lib/crypto.js";
+import pino from "pino";
+import { getEligibleCount } from "../lib/eligible.js";
 
 export const warnCommand = new SlashCommandBuilder()
-  .setName('warn')
-  .setDescription('Send an anonymous warning about a member')
-  .addUserOption(option =>
+  .setName("warn")
+  .setDescription("Send an anonymous warning about a member")
+  .addUserOption((option) =>
     option
-      .setName('target')
-      .setDescription('The member to warn')
+      .setName("target")
+      .setDescription("The member to warn")
       .setRequired(true)
   )
-  .addStringOption(option =>
+  .addStringOption((option) =>
     option
-      .setName('message')
-      .setDescription('The warning message to send anonymously')
+      .setName("message")
+      .setDescription("The warning message to send anonymously")
       .setRequired(true)
   )
   .toJSON();
@@ -69,28 +69,30 @@ async function sendWarning(
 export async function warnHandler(interaction: ChatInputCommandInteraction) {
   await interaction.deferReply({ flags: 64 }); // 64 = ephemeral flag
 
-  const target = interaction.options.getUser('target', true);
+  const target = interaction.options.getUser("target", true);
   const targetId = target.id;
-  const message = interaction.options.getString('message', true);
+  const message = interaction.options.getString("message", true);
   const voterId = interaction.user.id;
   const guildId = process.env.GUILD_ID!;
 
   try {
     const guild = await interaction.client.guilds.fetch(guildId);
-    
+
     const voter = await guild.members.fetch(voterId).catch(() => null);
     if (!voter) {
-      await interaction.editReply('You must be a member of the configured guild to send warnings.');
+      await interaction.editReply(
+        "You must be a member of the configured guild to send warnings."
+      );
       return;
     }
     if (voter.user.bot) {
-      await interaction.editReply('Bots cannot send warnings.');
+      await interaction.editReply("Bots cannot send warnings.");
       return;
     }
 
     const targetMember = await guild.members.fetch(targetId).catch(() => null);
     if (!targetMember) {
-      await interaction.editReply('Target not found in guild.');
+      await interaction.editReply("Target not found in guild.");
       return;
     }
 
@@ -108,40 +110,70 @@ export async function warnHandler(interaction: ChatInputCommandInteraction) {
     });
 
     if (existingWarning) {
-      await interaction.editReply('You have already warned this user.');
+      await interaction.editReply(
+        "You already submit a warning for this user."
+      );
       return;
     }
 
-    await prisma.vote.create({
-      data: {
-        guildId,
-        targetUserId: targetId,
-        voterHash,
-        message,
-      },
-    });
+    // Reply immediately to user
+    await interaction.editReply("Warning sent anonymously to moderators.");
 
-    // Count total warnings for this target
-    const totalWarningsCount = await prisma.vote.count({
-      where: {
-        guildId,
-        targetUserId: targetId,
-      },
-    });
+    // Handle database and alert operations asynchronously
+    (async () => {
+      try {
+        logger.info({ targetId, message }, "Creating warning vote");
+        await prisma.vote.create({
+          data: {
+            guildId,
+            targetUserId: targetId,
+            voterHash,
+            message,
+          },
+        });
 
-    const eligibleCount = await getEligibleCount(interaction.client);
-    
-    await sendWarning(interaction.client, targetId, message, totalWarningsCount, eligibleCount);
-    await interaction.editReply('Warning sent anonymously to moderators.');
+        logger.info("Vote created, counting warnings");
+        const totalWarningsCount = await prisma.vote.count({
+          where: {
+            guildId,
+            targetUserId: targetId,
+          },
+        });
+
+        logger.info({ totalWarningsCount }, "Getting eligible count");
+        const eligibleCount = await getEligibleCount(interaction.client);
+
+        logger.info({ eligibleCount }, "Sending warning to channel");
+        await sendWarning(
+          interaction.client,
+          targetId,
+          message,
+          totalWarningsCount,
+          eligibleCount
+        );
+
+        logger.info("Warning processing completed");
+      } catch (asyncError) {
+        logger.error(
+          { error: asyncError, targetId },
+          "Async warning processing failed"
+        );
+      }
+    })();
   } catch (error) {
-    logger.error({ error, command: 'warn', user: interaction.user.id }, 'Warn command error');
-    
+    logger.error(
+      { error, command: "warn", user: interaction.user.id },
+      "Warn command error"
+    );
+
     if (interaction.deferred) {
-      await interaction.editReply('An error occurred while sending your warning.');
+      await interaction.editReply(
+        "An error occurred while sending your warning."
+      );
     } else {
-      await interaction.reply({ 
-        content: 'An error occurred while sending your warning.',
-        flags: 64
+      await interaction.reply({
+        content: "An error occurred while sending your warning.",
+        flags: 64,
       });
     }
   }
