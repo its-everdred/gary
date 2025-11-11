@@ -67,7 +67,7 @@ async function sendWarning(
 }
 
 export async function warnHandler(interaction: ChatInputCommandInteraction) {
-  await interaction.deferReply({ ephemeral: true });
+  await interaction.deferReply({ flags: 64 }); // 64 = ephemeral flag
 
   const target = interaction.options.getUser('target', true);
   const targetId = target.id;

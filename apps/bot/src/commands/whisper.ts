@@ -35,7 +35,7 @@ async function sendWhisper(
 }
 
 export async function whisperHandler(interaction: ChatInputCommandInteraction) {
-  await interaction.deferReply({ ephemeral: true });
+  await interaction.deferReply({ flags: 64 }); // 64 = ephemeral flag
 
   const message = interaction.options.getString('message', true);
   const voterId = interaction.user.id;

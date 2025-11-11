@@ -97,7 +97,7 @@ client.on('interactionCreate', async (interaction) => {
     logger.error({ error, command: interaction.commandName }, 'Command error');
     await interaction.reply({ 
       content: 'An error occurred while processing your command.', 
-      ephemeral: true 
+      flags: 64 
     }).catch(() => {});
   }
 });
