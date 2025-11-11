@@ -46,7 +46,7 @@ async function sendWarning(
     const warningsUntilKick = kickThreshold - totalWarningsCount;
 
     let warningMessage =
-      `⚠️ **WARN** - An anonymous member warns <@${targetUserId}>:\n` +
+      `⚠️ **WARN** - Anon warns <@${targetUserId}>:\n` +
       `"${message}"\n` +
       `*This member has received ${totalWarningsCount} warning${
         totalWarningsCount !== 1 ? 's' : ''
