@@ -1,6 +1,6 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, TextChannel } from 'discord.js';
 import type { ChatInputCommandInteraction } from 'discord.js';
-import { sendWhisper } from '../lib/alert.js';
+import pino from 'pino';
 
 export const whisperCommand = new SlashCommandBuilder()
   .setName('whisper')
@@ -11,8 +11,28 @@ export const whisperCommand = new SlashCommandBuilder()
       .setDescription('The message to whisper anonymously')
       .setRequired(true)
   )
-  .setContexts([1]) // 1 = DM context
   .toJSON();
+
+const logger = pino();
+
+async function sendWhisper(
+  client: any,
+  message: string
+): Promise<void> {
+  try {
+    const channel = (await client.channels.fetch(
+      process.env.MOD_CHANNEL_ID!
+    )) as TextChannel;
+    if (!channel || !channel.isTextBased()) {
+      logger.error("Alert channel not found or not text-based");
+      return;
+    }
+
+    await channel.send(`**PSST** - Anon whispers:\n` + `"${message}"`);
+  } catch (error) {
+    logger.error({ error }, "Failed to send whisper");
+  }
+}
 
 export async function whisperHandler(interaction: ChatInputCommandInteraction) {
   await interaction.deferReply({ ephemeral: true });

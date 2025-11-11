@@ -1,17 +1,17 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, TextChannel } from 'discord.js';
 import type { ChatInputCommandInteraction } from 'discord.js';
 import { prisma } from '../lib/db.js';
 import { hmac } from '../lib/crypto.js';
-import { sendWarning } from '../lib/alert.js';
+import pino from 'pino';
 import { getEligibleCount } from '../lib/eligible.js';
 
 export const warnCommand = new SlashCommandBuilder()
   .setName('warn')
   .setDescription('Send an anonymous warning about a member')
-  .addStringOption(option =>
+  .addUserOption(option =>
     option
-      .setName('target_id')
-      .setDescription('Discord ID of the target member (right-click > Copy User ID)')
+      .setName('target')
+      .setDescription('The member to warn')
       .setRequired(true)
   )
   .addStringOption(option =>
@@ -20,13 +20,57 @@ export const warnCommand = new SlashCommandBuilder()
       .setDescription('The warning message to send anonymously')
       .setRequired(true)
   )
-  .setContexts([1]) // 1 = DM context
   .toJSON();
+
+const logger = pino();
+
+async function sendWarning(
+  client: any,
+  targetUserId: string,
+  message: string,
+  recentWarningsCount: number,
+  eligibleCount: number
+): Promise<void> {
+  try {
+    const channel = (await client.channels.fetch(
+      process.env.MOD_CHANNEL_ID!
+    )) as TextChannel;
+    if (!channel || !channel.isTextBased()) {
+      logger.error("Alert channel not found or not text-based");
+      return;
+    }
+
+    const kickQuorumPercent =
+      parseInt(process.env.KICK_QUORUM_PERCENT || "40") / 100;
+    const kickThreshold = Math.ceil(eligibleCount * kickQuorumPercent);
+    const warningsUntilKick = kickThreshold - recentWarningsCount;
+
+    let warningMessage =
+      `⚠️ **WARN** - An anonymous member warns <@${targetUserId}>:\n` +
+      `"${message}"\n` +
+      `*This member has received ${recentWarningsCount} warning${
+        recentWarningsCount !== 1 ? "s" : ""
+      } in the last 30 days.*`;
+
+    if (warningsUntilKick > 0) {
+      warningMessage += ` They are ${warningsUntilKick} more warning${
+        warningsUntilKick !== 1 ? "s" : ""
+      } away from reaching kick quorum.`;
+    } else {
+      warningMessage += ` **They have reached kick quorum!**`;
+    }
+
+    await channel.send(warningMessage);
+  } catch (error) {
+    logger.error({ error }, "Failed to send warning");
+  }
+}
 
 export async function warnHandler(interaction: ChatInputCommandInteraction) {
   await interaction.deferReply({ ephemeral: true });
 
-  const targetId = interaction.options.getString('target_id', true);
+  const target = interaction.options.getUser('target', true);
+  const targetId = target.id;
   const message = interaction.options.getString('message', true);
   const voterId = interaction.user.id;
   const guildId = process.env.GUILD_ID!;
@@ -44,9 +88,9 @@ export async function warnHandler(interaction: ChatInputCommandInteraction) {
       return;
     }
 
-    const target = await guild.members.fetch(targetId).catch(() => null);
-    if (!target) {
-      await interaction.editReply('Target not found in guild. Make sure to use their Discord ID.');
+    const targetMember = await guild.members.fetch(targetId).catch(() => null);
+    if (!targetMember) {
+      await interaction.editReply('Target not found in guild.');
       return;
     }
 

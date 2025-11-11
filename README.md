@@ -24,12 +24,14 @@ Privacy focused discord moderation assistant manager.
 2. Left sidebar → OAuth2 → URL Generator
 3. **Select Scopes** (what the bot can do):
    - ✅ `bot` - Allows bot to join servers
-   - ✅ `applications.commands` - Allows slash commands
+   - ✅ `applications.commands` - **REQUIRED** for slash commands
 4. **Select Bot Permissions** (what bot can access):
    - ✅ `Send Messages` - Post warnings to mod channel
    - Total permissions value: 2048
 5. Scroll down → Copy the generated URL
 6. Open URL in browser → Choose your server → Authorize
+
+**Important**: If you get "Unknown Integration" errors when using slash commands, re-invite the bot with the `applications.commands` scope.
 
 ### 3. Get IDs & Configure
 
