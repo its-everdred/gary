@@ -57,6 +57,12 @@ DATABASE_URL=          # Local: postgres://gary:pass@localhost:5432/gary
 
 ### 4. Run locally
 
+##### Dependencies
+
+- Node.js 20+
+- PostgreSQL 15+
+- Bun (package manager)
+
 ##### Install PostgreSQL
 
 ```bash
