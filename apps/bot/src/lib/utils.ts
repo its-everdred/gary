@@ -80,13 +80,13 @@ export async function sendToModChannel(
   }
 }
 
-// Vote utilities
+// Warn utilities
 export async function checkExistingWarning(
   guildId: string,
   targetUserId: string,
   voterHash: string
 ): Promise<boolean> {
-  const existingWarning = await prisma.vote.findUnique({
+  const existingWarning = await prisma.warn.findUnique({
     where: {
       guildId_targetUserId_voterHash: {
         guildId,
@@ -105,7 +105,7 @@ export async function createWarning(
   voterHash: string,
   message: string
 ): Promise<void> {
-  await prisma.vote.create({
+  await prisma.warn.create({
     data: {
       guildId,
       targetUserId,
@@ -119,7 +119,7 @@ export async function countWarnings(
   guildId: string,
   targetUserId: string
 ): Promise<number> {
-  return await prisma.vote.count({
+  return await prisma.warn.count({
     where: {
       guildId,
       targetUserId,
