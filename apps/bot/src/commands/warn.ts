@@ -96,6 +96,22 @@ export async function warnHandler(interaction: ChatInputCommandInteraction) {
 
     const voterHash = hmac(voterId, process.env.GUILD_SALT!);
 
+    // Check if user has already warned this target
+    const existingWarning = await prisma.vote.findUnique({
+      where: {
+        guildId_targetUserId_voterHash: {
+          guildId,
+          targetUserId: targetId,
+          voterHash,
+        },
+      },
+    });
+
+    if (existingWarning) {
+      await interaction.editReply('You have already warned this user.');
+      return;
+    }
+
     await prisma.vote.create({
       data: {
         guildId,
