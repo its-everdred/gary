@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch --env-file=.env src/index.ts",
-    "build": "tsup src/index.ts --format esm,cjs --dts",
+    "build": "prisma generate && prisma db push --skip-generate && tsup src/index.ts --format esm,cjs --dts",
     "start": "node dist/index.js",
     "lint": "eslint .",
     "test": "bun test",
