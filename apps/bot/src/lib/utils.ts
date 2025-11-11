@@ -110,7 +110,7 @@ export async function createWarning(
       guildId,
       targetUserId,
       voterHash,
-      message,
+      message: message || null,
     },
   });
 }
