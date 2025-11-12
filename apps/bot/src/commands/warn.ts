@@ -24,8 +24,8 @@ export const warnCommand = new SlashCommandBuilder()
   .addStringOption((option) =>
     option
       .setName('message')
-      .setDescription('The warning message to send anonymously (optional)')
-      .setRequired(false)
+      .setDescription('The warning message to send anonymously')
+      .setRequired(true)
   )
   .toJSON();
 
@@ -41,15 +41,12 @@ function buildWarningMessage(
   const kickThreshold = Math.ceil(eligibleCount * kickQuorumPercent);
   const warningsUntilKick = kickThreshold - totalWarningsCount;
 
-  let warningMessage = `⚠️ **WARN** - Anon warns <@${targetUserId}>`;
-  
-  if (message) {
-    warningMessage += `:\n"${message}"`;
-  }
-  
-  warningMessage += `\n*This member has received ${totalWarningsCount} warning${
-    totalWarningsCount !== 1 ? 's' : ''
-  } total.*`;
+  let warningMessage =
+    `⚠️ **WARN** - Anon warns <@${targetUserId}>:\n` +
+    `"${message}"\n` +
+    `*This member has received ${totalWarningsCount} warning${
+      totalWarningsCount !== 1 ? 's' : ''
+    } total.*`;
 
   if (warningsUntilKick > 0) {
     warningMessage += ` They are ${warningsUntilKick} more warning${
@@ -94,7 +91,7 @@ export async function warnHandler(interaction: ChatInputCommandInteraction) {
 
   const target = interaction.options.getUser('target', true);
   const targetId = target.id;
-  const message = interaction.options.getString('message') || '';
+  const message = interaction.options.getString('message', true);
   const voterId = interaction.user.id;
   const guildId = process.env.GUILD_ID!;
 
