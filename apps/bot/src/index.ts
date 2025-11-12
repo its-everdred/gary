@@ -1,6 +1,7 @@
 import { Client, GatewayIntentBits, REST, Routes, Partials } from 'discord.js';
 import pino from 'pino';
 import { warnCommand, warnHandler } from './commands/warn.js';
+import { unwarnCommand, unwarnHandler } from './commands/unwarn.js';
 
 const logger = pino({
   level: process.env.LOG_LEVEL || 'info',
@@ -14,7 +15,7 @@ const client = new Client({
   partials: [Partials.Channel],
 });
 
-const commands = [warnCommand];
+const commands = [warnCommand, unwarnCommand];
 
 client.on('clientReady', async () => {
   logger.info(`Bot logged in as ${client.user?.tag}`);
@@ -87,6 +88,9 @@ client.on('interactionCreate', async (interaction) => {
     switch (interaction.commandName) {
       case 'warn':
         await warnHandler(interaction);
+        break;
+      case 'unwarn':
+        await unwarnHandler(interaction);
         break;
     }
   } catch (error) {
