@@ -4,7 +4,8 @@ Privacy focused discord moderation assistant manager.
 
 ## Commands
 
-- `/warn target:<@user> message:<text>` - Warn about user. Tracks toward kick quorum. Message is optional.
+- `/warn target:<@user> message:<text>` - Warn mods about a user, tracks toward kick quorum.
+- `/unwarn target:<@user>` - Remove your warning about a user
 
 ## Quick Setup
 
