@@ -209,16 +209,68 @@ describe('nominate command', () => {
       });
     });
 
-    test('handles moderator nomination placeholder', async () => {
+    test('allows moderator to nominate on behalf of others', async () => {
+      const mockValidateModeratorPermission = mock(() => Promise.resolve({ isValid: true }));
+      const mockValidateNominatorUser = mock(() => Promise.resolve({ isValid: true }));
+      
+      const mockPermissions = {
+        validateModeratorPermission: mockValidateModeratorPermission,
+        validateNominatorUser: mockValidateNominatorUser
+      };
+      
+      mock.module('../lib/permissions.js', () => mockPermissions);
+      
+      const { nominateHandler: updatedNominateHandler } = await import('../commands/nominate.js');
+
       const mockInteraction = createMockNominateInteraction('name', { 
         name: 'John Doe',
-        nominator: { id: 'mod-user-456' }
+        nominator: { id: 'nominator-456', username: 'nominator-user' }
+      });
+      
+      mockPrisma.nominee.findUnique.mockReturnValue(Promise.resolve(null));
+      mockPrisma.nominee.create.mockReturnValue(Promise.resolve({ id: 'test-id-456' }));
+
+      await updatedNominateHandler(mockInteraction);
+
+      expect(mockPrisma.nominee.create).toHaveBeenCalledWith({
+        data: {
+          name: 'John Doe',
+          state: NomineeState.ACTIVE,
+          nominator: 'nominator-user',
+          guildId: 'test-guild-123',
+          discussionStart: null
+        }
       });
 
-      await nominateHandler(mockInteraction);
+      expect(mockInteraction.reply).toHaveBeenCalledWith({
+        content: 'John Doe has been nominated for GA membership on behalf of nominator-user. They will be added to the nomination queue.',
+        flags: 64
+      });
+    });
+
+    test('rejects moderator nomination for insufficient permissions', async () => {
+      const mockValidateModeratorPermission = mock(() => Promise.resolve({ 
+        isValid: false, 
+        errorMessage: 'You do not have permission to use this moderator command.' 
+      }));
+      
+      const mockPermissions = {
+        validateModeratorPermission: mockValidateModeratorPermission
+      };
+      
+      mock.module('../lib/permissions.js', () => mockPermissions);
+      
+      const { nominateHandler: updatedNominateHandler } = await import('../commands/nominate.js');
+
+      const mockInteraction = createMockNominateInteraction('name', { 
+        name: 'John Doe',
+        nominator: { id: 'nominator-456' }
+      });
+
+      await updatedNominateHandler(mockInteraction);
 
       expect(mockInteraction.reply).toHaveBeenCalledWith({
-        content: 'Moderator nomination feature not yet implemented.',
+        content: 'You do not have permission to use this moderator command.',
         flags: 64
       });
     });

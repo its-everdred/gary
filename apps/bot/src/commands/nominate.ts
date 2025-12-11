@@ -3,6 +3,7 @@ import type { ChatInputCommandInteraction } from 'discord.js';
 import pino from 'pino';
 import { prisma } from '../lib/db.js';
 import { NomineeState } from '@prisma/client';
+import { validateModeratorPermission, validateNominatorUser } from '../lib/permissions.js';
 
 export const nominateCommand = new SlashCommandBuilder()
   .setName('nominate')
@@ -142,11 +143,58 @@ async function handleNameCommand(interaction: ChatInputCommandInteraction): Prom
 
     // If nominator is specified, this is a mod-only command
     if (nominator) {
-      // TODO: Add mod permission check in Task 5
+      const modPermission = await validateModeratorPermission(
+        interaction.client,
+        guildId,
+        userId
+      );
+      
+      if (!modPermission.isValid) {
+        await interaction.reply({
+          content: modPermission.errorMessage!,
+          flags: 64
+        });
+        return;
+      }
+
+      const nominatorValidation = await validateNominatorUser(
+        interaction.client,
+        guildId,
+        nominator.id
+      );
+
+      if (!nominatorValidation.isValid) {
+        await interaction.reply({
+          content: nominatorValidation.errorMessage!,
+          flags: 64
+        });
+        return;
+      }
+
+      // Create nomination on behalf of nominator
+      const nominee = await prisma.nominee.create({
+        data: {
+          name,
+          state: NomineeState.ACTIVE,
+          nominator: nominator.username || nominator.id,
+          guildId,
+          discussionStart: null
+        }
+      });
+
       await interaction.reply({
-        content: 'Moderator nomination feature not yet implemented.',
+        content: `${name} has been nominated for GA membership on behalf of ${nominator.username}. They will be added to the nomination queue.`,
         flags: 64
       });
+
+      logger.info({
+        nomineeId: nominee.id,
+        name,
+        nominator: nominator.username || nominator.id,
+        moderator: username,
+        user: userId
+      }, 'Moderator nomination created');
+      
       return;
     }
 
