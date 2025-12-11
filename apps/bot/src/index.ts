@@ -3,6 +3,7 @@ import pino from 'pino';
 import { warnCommand, warnHandler } from './commands/warn.js';
 import { unwarnCommand, unwarnHandler } from './commands/unwarn.js';
 import { nominateCommand, nominateHandler } from './commands/nominate/index.js';
+import { NominationJobScheduler } from './lib/jobScheduler.js';
 
 const logger = pino({
   level: process.env.LOG_LEVEL || 'info',
@@ -17,6 +18,8 @@ const client = new Client({
 });
 
 const commands = [warnCommand, unwarnCommand, nominateCommand];
+
+let jobScheduler: NominationJobScheduler | null = null;
 
 client.on('clientReady', async () => {
   logger.info(`Bot logged in as ${client.user?.tag}`);
@@ -52,6 +55,18 @@ client.on('clientReady', async () => {
       stack: error?.stack,
       appId: process.env.DISCORD_APP_ID 
     }, 'Failed to register commands');
+  }
+
+  // Start nomination job scheduler
+  try {
+    jobScheduler = NominationJobScheduler.getInstance(client);
+    jobScheduler.start();
+    logger.info('Nomination job scheduler started successfully');
+  } catch (error: any) {
+    logger.error({ 
+      error: error?.message || 'Unknown error',
+      stack: error?.stack 
+    }, 'Failed to start nomination job scheduler');
   }
 });
 
@@ -111,6 +126,23 @@ logger.info('Starting bot...', {
   hasAppId: !!process.env.DISCORD_APP_ID,
   tokenStart: process.env.DISCORD_TOKEN?.substring(0, 10)
 });
+
+// Graceful shutdown handling
+const gracefulShutdown = (signal: string) => {
+  logger.info(`Received ${signal}, starting graceful shutdown...`);
+  
+  if (jobScheduler?.isRunning()) {
+    logger.info('Stopping nomination job scheduler...');
+    jobScheduler.stop();
+  }
+  
+  client.destroy();
+  logger.info('Bot shutdown complete');
+  process.exit(0);
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 client.login(process.env.DISCORD_TOKEN).catch((error) => {
   logger.error(error, 'Failed to login');
