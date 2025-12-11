@@ -1,4 +1,4 @@
-import type { Client, Guild, TextChannel } from 'discord.js';
+import type { Client, Guild, TextChannel, Role } from 'discord.js';
 import { ChannelType as DJSChannelType, PermissionFlagsBits } from 'discord.js';
 import pino from 'pino';
 import { prisma } from './db.js';
@@ -281,7 +281,18 @@ export class ChannelManagementService {
    */
   private async sendVoteStartMessage(channel: TextChannel, nominee: Nominee): Promise<void> {
     try {
-      const embed = {
+      // Calculate timestamps for poll
+      const startTime = Math.floor(Date.now() / 1000);
+      const endTime = startTime + (5 * 24 * 60 * 60); // 5 days in seconds
+      
+      // Generate the exact EasyPoll command
+      const pollCommand = `/poll question:Should we invite ${nominee.name} to GA? time:5d type:Anonymous (Buttons) maxchoices:1 text:Start: <t:${startTime}:F>\\nEnd: <t:${endTime}:F> answer-1:✅:Yes, Accept answer-2:❌:No, Reject`;
+
+      // Get moderator role (this should be configured per guild)
+      const moderatorRole = await this.getModeratorRole(channel.guild);
+      const moderatorMention = moderatorRole ? `<@&${moderatorRole.id}>` : '@Moderator';
+
+      const infoEmbed = {
         title: `🗳️ Vote: ${nominee.name}`,
         description: `Voting period has begun for nominee **${nominee.name}**.`,
         fields: [
@@ -299,26 +310,77 @@ export class ChannelManagementService {
             name: '✅ Pass Threshold',
             value: '80% yes votes',
             inline: true
-          },
-          {
-            name: '🔗 Poll Location',
-            value: 'Poll will be posted here shortly via polling bot',
-            inline: false
           }
         ],
-        color: 0xe74c3c,
+        color: 0x3498db,
         timestamp: new Date().toISOString(),
         footer: {
           text: 'GA Governance Vote'
         }
       };
 
+      const commandEmbed = {
+        title: '🚨 MODERATOR ACTION REQUIRED',
+        description: 'Please create the EasyPoll by copying and pasting this command **exactly**:',
+        fields: [
+          {
+            name: 'EasyPoll Command',
+            value: `\`\`\`${pollCommand}\`\`\``
+          },
+          {
+            name: 'Instructions',
+            value: '1. Copy the command above\n2. Paste it in this channel\n3. Press Enter to create the poll\n4. The poll will run for 5 days automatically',
+            inline: false
+          }
+        ],
+        color: 0xff6600,
+        footer: {
+          text: 'This is a time-sensitive action - please create the poll immediately'
+        }
+      };
+
+      // Send the message with moderator ping
       await channel.send({
-        content: '🗳️ **Voting has started!**\n\nPlease wait for the poll to be created.',
-        embeds: [embed]
+        content: `${moderatorMention} **Immediate action required to create the vote poll!**`,
+        embeds: [infoEmbed, commandEmbed]
       });
+
+      // Log the poll creation request
+      logger.info({
+        nomineeId: nominee.id,
+        nomineeName: nominee.name,
+        channelId: channel.id,
+        pollCommand,
+        startTimestamp: startTime,
+        endTimestamp: endTime
+      }, 'Vote poll creation requested');
+
     } catch (error) {
       logger.error({ error, channelId: channel.id }, 'Failed to send vote start message');
     }
+  }
+
+  /**
+   * Gets the moderator role for a guild
+   */
+  private async getModeratorRole(guild: Guild): Promise<Role | null> {
+    // Check common moderator role names
+    const moderatorRoleNames = ['moderator', 'mod', 'admin', 'administrator', 'staff'];
+    
+    for (const roleName of moderatorRoleNames) {
+      const role = guild.roles.cache.find(r => 
+        r.name.toLowerCase() === roleName || 
+        r.name.toLowerCase().includes(roleName)
+      );
+      if (role) return role;
+    }
+
+    // If no role found, check for roles with moderate members permission
+    const modRole = guild.roles.cache.find(r => 
+      r.permissions.has(PermissionFlagsBits.ModerateMembers) ||
+      r.permissions.has(PermissionFlagsBits.Administrator)
+    );
+
+    return modRole || null;
   }
 }

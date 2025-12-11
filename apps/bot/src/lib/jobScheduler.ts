@@ -4,6 +4,7 @@ import pino from 'pino';
 import { NomineeStateManager } from './nomineeService.js';
 import { TimeCalculationService } from './timeCalculation.js';
 import { ChannelManagementService } from './channelService.js';
+import { AnnouncementService } from './announcementService.js';
 import { NomineeState } from '@prisma/client';
 import { prisma } from './db.js';
 
@@ -20,11 +21,13 @@ export class NominationJobScheduler implements JobScheduler {
   private jobs: Map<string, cron.ScheduledTask> = new Map();
   private client: Client;
   private channelService: ChannelManagementService;
+  private announcementService: AnnouncementService;
   private _isRunning = false;
 
   private constructor(client: Client) {
     this.client = client;
     this.channelService = new ChannelManagementService(client);
+    this.announcementService = new AnnouncementService(client);
   }
 
   static getInstance(client: Client): NominationJobScheduler {
@@ -197,9 +200,13 @@ export class NominationJobScheduler implements JobScheduler {
           nomineeId: nominee.id,
           error: channelResult.errorMessage
         }, 'Failed to create discussion channel');
+      } else {
+        // Send announcement to GA governance channel
+        await this.announcementService.announceDiscussionStart(
+          result.nominee, 
+          channelResult.channel!.id
+        );
       }
-      
-      // TODO: Send announcement to GA governance channel
     } else {
       logger.error({
         nomineeId: nominee.id,
@@ -234,9 +241,13 @@ export class NominationJobScheduler implements JobScheduler {
           nomineeId: nominee.id,
           error: channelResult.errorMessage
         }, 'Failed to create vote channel');
+      } else {
+        // Send announcement to GA governance channel
+        await this.announcementService.announceVoteStart(
+          result.nominee, 
+          channelResult.channel!.id
+        );
       }
-      
-      // TODO: Create vote poll (Task 16)
     } else {
       logger.error({
         nomineeId: nominee.id,
