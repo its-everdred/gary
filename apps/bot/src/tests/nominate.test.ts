@@ -14,7 +14,7 @@ const mockPrisma = {
 
 mock.module('../lib/db.js', () => ({ prisma: mockPrisma }));
 
-const { nominateHandler } = await import('../commands/nominate.js');
+const { nominateHandler } = await import('../commands/nominate/index.js');
 
 function createMockNominateInteraction(subcommand: string, options: Record<string, any> = {}): ChatInputCommandInteraction {
   return {
@@ -220,7 +220,7 @@ describe('nominate command', () => {
       
       mock.module('../lib/permissions.js', () => mockPermissions);
       
-      const { nominateHandler: updatedNominateHandler } = await import('../commands/nominate.js');
+      const { nominateHandler: updatedNominateHandler } = await import('../commands/nominate/index.js');
 
       const mockInteraction = createMockNominateInteraction('name', { 
         name: 'John Doe',
@@ -260,7 +260,7 @@ describe('nominate command', () => {
       
       mock.module('../lib/permissions.js', () => mockPermissions);
       
-      const { nominateHandler: updatedNominateHandler } = await import('../commands/nominate.js');
+      const { nominateHandler: updatedNominateHandler } = await import('../commands/nominate/index.js');
 
       const mockInteraction = createMockNominateInteraction('name', { 
         name: 'John Doe',
@@ -276,19 +276,93 @@ describe('nominate command', () => {
     });
   });
 
-  describe('unimplemented subcommands', () => {
+  describe('remove subcommand', () => {
+    test('allows moderator to remove nominee successfully', async () => {
+      const mockValidateModeratorPermission = mock(() => Promise.resolve({ isValid: true }));
+      
+      const mockPermissions = {
+        validateModeratorPermission: mockValidateModeratorPermission
+      };
+      
+      mock.module('../lib/permissions.js', () => mockPermissions);
+      
+      const { nominateHandler: updatedNominateHandler } = await import('../commands/nominate/index.js');
 
-    test('returns not implemented message for remove subcommand', async () => {
-      const mockInteraction = createMockNominateInteraction('remove', { name: 'Test User' });
+      const mockInteraction = createMockNominateInteraction('remove', { name: 'John Doe' });
+      
+      mockPrisma.nominee.findUnique.mockReturnValue(Promise.resolve({
+        id: 'test-id-123',
+        name: 'John Doe',
+        state: NomineeState.ACTIVE
+      }));
+      mockPrisma.nominee.delete.mockReturnValue(Promise.resolve());
 
-      await nominateHandler(mockInteraction);
+      await updatedNominateHandler(mockInteraction);
+
+      expect(mockPrisma.nominee.delete).toHaveBeenCalledWith({
+        where: {
+          guildId_name: {
+            guildId: 'test-guild-123',
+            name: 'John Doe'
+          }
+        }
+      });
 
       expect(mockInteraction.reply).toHaveBeenCalledWith({
-        content: 'This nomination command is not yet implemented.',
+        content: 'John Doe has been removed from the nominations list.',
         flags: 64
       });
     });
 
+    test('rejects remove for non-moderator', async () => {
+      const mockValidateModeratorPermission = mock(() => Promise.resolve({ 
+        isValid: false, 
+        errorMessage: 'You do not have permission to use this moderator command.' 
+      }));
+      
+      const mockPermissions = {
+        validateModeratorPermission: mockValidateModeratorPermission
+      };
+      
+      mock.module('../lib/permissions.js', () => mockPermissions);
+      
+      const { nominateHandler: updatedNominateHandler } = await import('../commands/nominate/index.js');
+
+      const mockInteraction = createMockNominateInteraction('remove', { name: 'John Doe' });
+
+      await updatedNominateHandler(mockInteraction);
+
+      expect(mockInteraction.reply).toHaveBeenCalledWith({
+        content: 'You do not have permission to use this moderator command.',
+        flags: 64
+      });
+    });
+
+    test('handles nominee not found', async () => {
+      const mockValidateModeratorPermission = mock(() => Promise.resolve({ isValid: true }));
+      
+      const mockPermissions = {
+        validateModeratorPermission: mockValidateModeratorPermission
+      };
+      
+      mock.module('../lib/permissions.js', () => mockPermissions);
+      
+      const { nominateHandler: updatedNominateHandler } = await import('../commands/nominate/index.js');
+
+      const mockInteraction = createMockNominateInteraction('remove', { name: 'Nonexistent User' });
+      
+      mockPrisma.nominee.findUnique.mockReturnValue(Promise.resolve(null));
+
+      await updatedNominateHandler(mockInteraction);
+
+      expect(mockInteraction.reply).toHaveBeenCalledWith({
+        content: 'No nominee found with the name "Nonexistent User".',
+        flags: 64
+      });
+    });
+  });
+
+  describe('unimplemented subcommands', () => {
     test('returns not implemented message for start subcommand', async () => {
       const mockInteraction = createMockNominateInteraction('start', { name: 'Test User' });
 

@@ -2,7 +2,7 @@ import { Client, GatewayIntentBits, REST, Routes, Partials } from 'discord.js';
 import pino from 'pino';
 import { warnCommand, warnHandler } from './commands/warn.js';
 import { unwarnCommand, unwarnHandler } from './commands/unwarn.js';
-import { nominateCommand, nominateHandler } from './commands/nominate.js';
+import { nominateCommand, nominateHandler } from './commands/nominate/index.js';
 
 const logger = pino({
   level: process.env.LOG_LEVEL || 'info',
