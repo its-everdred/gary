@@ -3,6 +3,7 @@ import type { Client } from 'discord.js';
 import pino from 'pino';
 import { NomineeStateManager } from './nomineeService.js';
 import { TimeCalculationService } from './timeCalculation.js';
+import { ChannelManagementService } from './channelService.js';
 import { NomineeState } from '@prisma/client';
 import { prisma } from './db.js';
 
@@ -18,10 +19,12 @@ export class NominationJobScheduler implements JobScheduler {
   private static instance: NominationJobScheduler | null = null;
   private jobs: Map<string, cron.ScheduledTask> = new Map();
   private client: Client;
+  private channelService: ChannelManagementService;
   private _isRunning = false;
 
   private constructor(client: Client) {
     this.client = client;
+    this.channelService = new ChannelManagementService(client);
   }
 
   static getInstance(client: Client): NominationJobScheduler {
@@ -187,7 +190,15 @@ export class NominationJobScheduler implements JobScheduler {
         guildId: nominee.guildId
       }, 'Nominee transitioned to DISCUSSION state');
       
-      // TODO: Create discussion channel (Task 12)
+      // Create discussion channel
+      const channelResult = await this.channelService.createDiscussionChannel(result.nominee);
+      if (!channelResult.success) {
+        logger.error({
+          nomineeId: nominee.id,
+          error: channelResult.errorMessage
+        }, 'Failed to create discussion channel');
+      }
+      
       // TODO: Send announcement to GA governance channel
     } else {
       logger.error({
@@ -216,7 +227,15 @@ export class NominationJobScheduler implements JobScheduler {
         guildId: nominee.guildId
       }, 'Nominee transitioned to VOTE state');
       
-      // TODO: Create vote channel (Task 14)
+      // Create vote channel
+      const channelResult = await this.channelService.createVoteChannel(result.nominee);
+      if (!channelResult.success) {
+        logger.error({
+          nomineeId: nominee.id,
+          error: channelResult.errorMessage
+        }, 'Failed to create vote channel');
+      }
+      
       // TODO: Create vote poll (Task 16)
     } else {
       logger.error({
