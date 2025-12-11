@@ -5,6 +5,7 @@ import { NomineeState } from '@prisma/client';
 const mockPrisma = {
   nominee: {
     findMany: mock(() => Promise.resolve([])),
+    findUnique: mock(() => Promise.resolve(null)),
     create: mock(() => Promise.resolve({ id: 'test-id' })),
     update: mock(() => Promise.resolve({ id: 'test-id' })),
     delete: mock(() => Promise.resolve())
@@ -22,7 +23,7 @@ function createMockNominateInteraction(subcommand: string, options: Record<strin
       getString: mock((name: string) => options[name] || null),
       getUser: mock((name: string) => options[name] || null)
     },
-    user: { id: 'user-123' },
+    user: { id: 'user-123', username: 'user-123' },
     reply: mock(() => Promise.resolve())
   } as any;
 }
@@ -30,6 +31,7 @@ function createMockNominateInteraction(subcommand: string, options: Record<strin
 describe('nominate command', () => {
   beforeEach(() => {
     mockPrisma.nominee.findMany.mockReset();
+    mockPrisma.nominee.findUnique.mockReset();
     mockPrisma.nominee.create.mockReset();
     mockPrisma.nominee.update.mockReset();
     mockPrisma.nominee.delete.mockReset();
@@ -148,17 +150,81 @@ describe('nominate command', () => {
     });
   });
 
-  describe('unimplemented subcommands', () => {
-    test('returns not implemented message for name subcommand', async () => {
-      const mockInteraction = createMockNominateInteraction('name', { name: 'Test User' });
+  describe('name subcommand', () => {
+    test('creates new nomination successfully', async () => {
+      const mockInteraction = createMockNominateInteraction('name', { name: 'John Doe' });
+      mockPrisma.nominee.findUnique.mockReturnValue(Promise.resolve(null));
+      mockPrisma.nominee.create.mockReturnValue(Promise.resolve({ id: 'test-id-123' }));
+
+      await nominateHandler(mockInteraction);
+
+      expect(mockPrisma.nominee.findUnique).toHaveBeenCalledWith({
+        where: {
+          guildId_name: {
+            guildId: 'test-guild-123',
+            name: 'John Doe'
+          }
+        }
+      });
+
+      expect(mockPrisma.nominee.create).toHaveBeenCalledWith({
+        data: {
+          name: 'John Doe',
+          state: NomineeState.ACTIVE,
+          nominator: 'user-123',
+          guildId: 'test-guild-123',
+          discussionStart: null
+        }
+      });
+
+      expect(mockInteraction.reply).toHaveBeenCalledWith({
+        content: 'John Doe has been nominated for GA membership. They will be added to the nomination queue.',
+        flags: 64
+      });
+    });
+
+    test('rejects nomination for existing nominee', async () => {
+      const mockInteraction = createMockNominateInteraction('name', { name: 'Existing User' });
+      mockPrisma.nominee.findUnique.mockReturnValue(Promise.resolve({
+        id: 'existing-id',
+        state: NomineeState.ACTIVE
+      }));
 
       await nominateHandler(mockInteraction);
 
       expect(mockInteraction.reply).toHaveBeenCalledWith({
-        content: 'This nomination command is not yet implemented.',
+        content: 'Existing User is already nominated and in active state.',
         flags: 64
       });
     });
+
+    test('validates name length', async () => {
+      const mockInteraction = createMockNominateInteraction('name', { name: 'A' });
+
+      await nominateHandler(mockInteraction);
+
+      expect(mockInteraction.reply).toHaveBeenCalledWith({
+        content: 'Nominee name must be between 2 and 100 characters.',
+        flags: 64
+      });
+    });
+
+    test('handles moderator nomination placeholder', async () => {
+      const mockInteraction = createMockNominateInteraction('name', { 
+        name: 'John Doe',
+        nominator: { id: 'mod-user-456' }
+      });
+
+      await nominateHandler(mockInteraction);
+
+      expect(mockInteraction.reply).toHaveBeenCalledWith({
+        content: 'Moderator nomination feature not yet implemented.',
+        flags: 64
+      });
+    });
+  });
+
+  describe('unimplemented subcommands', () => {
 
     test('returns not implemented message for remove subcommand', async () => {
       const mockInteraction = createMockNominateInteraction('remove', { name: 'Test User' });
