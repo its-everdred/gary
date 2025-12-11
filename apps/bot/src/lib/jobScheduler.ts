@@ -5,6 +5,7 @@ import { NomineeStateManager } from './nomineeService.js';
 import { TimeCalculationService } from './timeCalculation.js';
 import { ChannelManagementService } from './channelService.js';
 import { AnnouncementService } from './announcementService.js';
+import { VoteResultService } from './voteResultService.js';
 import { NomineeState } from '@prisma/client';
 import { prisma } from './db.js';
 
@@ -22,12 +23,14 @@ export class NominationJobScheduler implements JobScheduler {
   private client: Client;
   private channelService: ChannelManagementService;
   private announcementService: AnnouncementService;
+  private voteResultService: VoteResultService;
   private _isRunning = false;
 
   private constructor(client: Client) {
     this.client = client;
     this.channelService = new ChannelManagementService(client);
     this.announcementService = new AnnouncementService(client);
+    this.voteResultService = new VoteResultService(client);
   }
 
   static getInstance(client: Client): NominationJobScheduler {
@@ -154,15 +157,16 @@ export class NominationJobScheduler implements JobScheduler {
       await this.transitionToVote(readyForVote);
     }
 
-    // Check for nominees ready for certification
-    const readyForCertify = TimeCalculationService.getNomineeForStateAtTime(
-      activeNominees,
-      NomineeState.CERTIFY,
-      currentTime
-    );
-
-    if (readyForCertify) {
-      await this.transitionToCertify(readyForCertify);
+    // Check for nominees in VOTE state - either ready by time or poll completed
+    const voteNominees = activeNominees.filter(n => n.state === NomineeState.VOTE);
+    for (const nominee of voteNominees) {
+      // Check if vote has completed (either by time or poll closure)
+      const voteResults = await this.voteResultService.checkVoteCompletion(nominee);
+      const readyByTime = nominee.certifyStart && nominee.certifyStart <= currentTime;
+      
+      if (voteResults || readyByTime) {
+        await this.transitionToCertify(nominee, voteResults);
+      }
     }
 
     // Check for nominees that should transition to PAST
@@ -259,7 +263,7 @@ export class NominationJobScheduler implements JobScheduler {
   /**
    * Transitions a nominee from VOTE to CERTIFY
    */
-  private async transitionToCertify(nominee: any): Promise<void> {
+  private async transitionToCertify(nominee: any, voteResults?: any): Promise<void> {
     const result = await NomineeStateManager.transitionNominee(
       nominee.id,
       NomineeState.CERTIFY,
@@ -272,11 +276,24 @@ export class NominationJobScheduler implements JobScheduler {
       logger.info({
         nomineeId: nominee.id,
         name: nominee.name,
-        guildId: nominee.guildId
+        guildId: nominee.guildId,
+        voteResults: voteResults ? {
+          passed: voteResults.passed,
+          yesVotes: voteResults.yesVotes,
+          noVotes: voteResults.noVotes
+        } : undefined
       }, 'Nominee transitioned to CERTIFY state');
       
-      // TODO: Calculate vote results (Task 17)
-      // TODO: Post results to #general (Task 18)
+      // Post results to #general if we have vote results
+      if (voteResults) {
+        await this.announcementService.announceResults(
+          result.nominee!,
+          voteResults.passed,
+          voteResults.yesVotes,
+          voteResults.noVotes,
+          voteResults.quorumMet
+        );
+      }
     } else {
       logger.error({
         nomineeId: nominee.id,

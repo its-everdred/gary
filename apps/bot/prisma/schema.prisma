@@ -31,6 +31,10 @@ model Nominee {
   createdAt           DateTime     @default(now())
   discussionChannelId String?
   voteChannelId       String?
+  votePollMessageId   String?
+  voteYesCount        Int          @default(0)
+  voteNoCount         Int          @default(0)
+  votePassed          Boolean?
 
   @@unique([guildId, name])
   @@index([guildId, state])
