@@ -3,6 +3,7 @@ import type { ChatInputCommandInteraction } from 'discord.js';
 import { handleListCommand } from './list.js';
 import { handleNameCommand } from './name.js';
 import { handleRemoveCommand } from './remove.js';
+import { handleStartCommand } from './start.js';
 
 export const nominateCommand = new SlashCommandBuilder()
   .setName('nominate')
@@ -65,6 +66,9 @@ export async function nominateHandler(interaction: ChatInputCommandInteraction):
       break;
     case 'remove':
       await handleRemoveCommand(interaction);
+      break;
+    case 'start':
+      await handleStartCommand(interaction);
       break;
     default:
       await interaction.reply({

@@ -250,4 +250,37 @@ export class NomineeStateManager {
       }
     });
   }
+
+  /**
+   * Finds a nominee by name in a guild
+   */
+  static async findNomineeByName(guildId: string, name: string): Promise<Nominee | null> {
+    return await prisma.nominee.findUnique({
+      where: {
+        guildId_name: {
+          guildId,
+          name
+        }
+      }
+    });
+  }
+
+  /**
+   * Gets the current nominee in any progress state (DISCUSSION, VOTE, CERTIFY)
+   */
+  static async getCurrentNomineeInProgress(guildId: string): Promise<Nominee | null> {
+    const inProgressStates: NomineeState[] = [NomineeState.DISCUSSION, NomineeState.VOTE, NomineeState.CERTIFY];
+    
+    return await prisma.nominee.findFirst({
+      where: {
+        guildId,
+        state: {
+          in: inProgressStates
+        }
+      },
+      orderBy: {
+        createdAt: 'asc'
+      }
+    });
+  }
 }

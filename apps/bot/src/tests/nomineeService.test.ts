@@ -265,5 +265,58 @@ describe('NomineeStateManager', () => {
         }
       });
     });
+
+    test('findNomineeByName returns nominee when found', async () => {
+      const nominee = createMockNominee({ name: 'John Doe' });
+      mockPrisma.nominee.findUnique.mockReturnValue(Promise.resolve(nominee));
+
+      const result = await NomineeStateManager.findNomineeByName('test-guild', 'John Doe');
+
+      expect(result).toBe(nominee);
+      expect(mockPrisma.nominee.findUnique).toHaveBeenCalledWith({
+        where: {
+          guildId_name: {
+            guildId: 'test-guild',
+            name: 'John Doe'
+          }
+        }
+      });
+    });
+
+    test('findNomineeByName returns null when not found', async () => {
+      mockPrisma.nominee.findUnique.mockReturnValue(Promise.resolve(null));
+
+      const result = await NomineeStateManager.findNomineeByName('test-guild', 'Nonexistent');
+
+      expect(result).toBeNull();
+    });
+
+    test('getCurrentNomineeInProgress returns nominee in progress state', async () => {
+      const nominee = createMockNominee({ state: NomineeState.VOTE });
+      mockPrisma.nominee.findFirst.mockReturnValue(Promise.resolve(nominee));
+
+      const result = await NomineeStateManager.getCurrentNomineeInProgress('test-guild');
+
+      expect(result).toBe(nominee);
+      expect(mockPrisma.nominee.findFirst).toHaveBeenCalledWith({
+        where: {
+          guildId: 'test-guild',
+          state: {
+            in: [NomineeState.DISCUSSION, NomineeState.VOTE, NomineeState.CERTIFY]
+          }
+        },
+        orderBy: {
+          createdAt: 'asc'
+        }
+      });
+    });
+
+    test('getCurrentNomineeInProgress returns null when no nominee in progress', async () => {
+      mockPrisma.nominee.findFirst.mockReturnValue(Promise.resolve(null));
+
+      const result = await NomineeStateManager.getCurrentNomineeInProgress('test-guild');
+
+      expect(result).toBeNull();
+    });
   });
 });
