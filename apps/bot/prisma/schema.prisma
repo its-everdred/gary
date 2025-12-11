@@ -19,3 +19,31 @@ model Warn {
   @@index([guildId, targetUserId])
 }
 
+model Nominee {
+  id                  String       @id @default(cuid())
+  name                String
+  state               NomineeState
+  nominator           String
+  guildId             String
+  discussionStart     DateTime?
+  voteStart           DateTime?
+  certifyStart        DateTime?
+  createdAt           DateTime     @default(now())
+  discussionChannelId String?
+  voteChannelId       String?
+
+  @@unique([guildId, name])
+  @@index([guildId, state])
+  @@index([guildId, discussionStart])
+  @@index([guildId, voteStart])
+  @@index([guildId, certifyStart])
+}
+
+enum NomineeState {
+  ACTIVE
+  DISCUSSION
+  VOTE
+  CERTIFY
+  PAST
+}
+
