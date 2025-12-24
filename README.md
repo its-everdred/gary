@@ -19,7 +19,7 @@ Privacy focused discord moderation assistant manager.
 
 ### 2. Generate Invite Link
 
-1. In Discord Developer Portal, go to your app
+1. In [Discord Developer Portal](https://discord.com/developers/applications), go to your app
 2. Left sidebar → OAuth2 → URL Generator
 3. **Select Scopes** (what the bot can do):
    - ✅ `bot` - Allows bot to join servers
