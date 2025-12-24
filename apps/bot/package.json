@@ -31,5 +31,8 @@
     "tsup": "^8.0.1",
     "tsx": "^4.6.2",
     "typescript": "^5.3.3"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "4.9.5"
   }
 }
