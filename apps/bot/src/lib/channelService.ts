@@ -36,12 +36,33 @@ export class ChannelManagementService {
       const channelName = this.generateDiscussionChannelName(nominee.name);
       
       // Create the channel
-      const channel = await guild.channels.create({
+      const createOptions = {
         name: channelName,
         type: DJSChannelType.GuildText,
         topic: `Discussion for nominee: ${nominee.name}`,
         reason: `Discussion channel for nominee ${nominee.name}`
-      });
+      } as any;
+
+      // Add parent category if configured
+      const nominationsCategoryId = NOMINATION_CONFIG.CATEGORIES.NOMINATIONS;
+      if (nominationsCategoryId) {
+        const category = guild.channels.cache.get(nominationsCategoryId);
+        if (category && category.type === DJSChannelType.GuildCategory) {
+          createOptions.parent = nominationsCategoryId;
+          logger.info({
+            nomineeId: nominee.id,
+            categoryId: nominationsCategoryId,
+            categoryName: category.name
+          }, 'Creating discussion channel under nominations category');
+        } else {
+          logger.warn({
+            nomineeId: nominee.id,
+            categoryId: nominationsCategoryId
+          }, 'Nominations category not found or invalid, creating channel without parent');
+        }
+      }
+
+      const channel = await guild.channels.create(createOptions);
 
       // Update the nominee record with the channel ID
       await prisma.nominee.update({
@@ -94,7 +115,7 @@ export class ChannelManagementService {
       const channelName = this.generateVoteChannelName(nominee.name);
       
       // Create the channel with restricted permissions
-      const channel = await guild.channels.create({
+      const createOptions = {
         name: channelName,
         type: DJSChannelType.GuildText,
         topic: `Vote for nominee: ${nominee.name}`,
@@ -106,7 +127,28 @@ export class ChannelManagementService {
             allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.ReadMessageHistory]
           }
         ]
-      });
+      } as any;
+
+      // Add parent category if configured
+      const nominationsCategoryId = NOMINATION_CONFIG.CATEGORIES.NOMINATIONS;
+      if (nominationsCategoryId) {
+        const category = guild.channels.cache.get(nominationsCategoryId);
+        if (category && category.type === DJSChannelType.GuildCategory) {
+          createOptions.parent = nominationsCategoryId;
+          logger.info({
+            nomineeId: nominee.id,
+            categoryId: nominationsCategoryId,
+            categoryName: category.name
+          }, 'Creating vote channel under nominations category');
+        } else {
+          logger.warn({
+            nomineeId: nominee.id,
+            categoryId: nominationsCategoryId
+          }, 'Nominations category not found or invalid, creating vote channel without parent');
+        }
+      }
+
+      const channel = await guild.channels.create(createOptions);
 
       // Update the nominee record with the vote channel ID
       await prisma.nominee.update({

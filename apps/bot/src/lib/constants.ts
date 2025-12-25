@@ -19,6 +19,9 @@ export const NOMINATION_CONFIG = {
     GA_GOVERNANCE: process.env.GOVERNANCE_CHANNEL_ID || '',
     GENERAL: process.env.GENERAL_CHANNEL_ID || '',
     MOD: process.env.MOD_CHANNEL_ID || ''
+  },
+  CATEGORIES: {
+    NOMINATIONS: process.env.NOMINATIONS_CHANNEL_CATEGORY_ID || ''
   }
 } as const;
 
