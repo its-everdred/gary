@@ -1,10 +1,34 @@
-import type { ChatInputCommandInteraction } from 'discord.js';
+import type { ChatInputCommandInteraction, TextChannel } from 'discord.js';
 import pino from 'pino';
 import { prisma } from '../../lib/db.js';
 import { NomineeState } from '@prisma/client';
 import { validateModeratorPermission, validateNominatorUser } from '../../lib/permissions.js';
+import { NOMINATION_CONFIG } from '../../lib/constants.js';
 
 const logger = pino();
+
+async function postToGovernanceChannel(interaction: ChatInputCommandInteraction, message: string): Promise<void> {
+  try {
+    const governanceChannelId = NOMINATION_CONFIG.CHANNELS.GA_GOVERNANCE;
+    if (!governanceChannelId) {
+      logger.warn('GOVERNANCE_CHANNEL_ID not configured');
+      return;
+    }
+
+    const guild = interaction.guild;
+    if (!guild) return;
+
+    const channel = guild.channels.cache.get(governanceChannelId) as TextChannel;
+    if (!channel?.isTextBased()) {
+      logger.warn(`Governance channel ${governanceChannelId} not found or not text-based`);
+      return;
+    }
+
+    await channel.send(message);
+  } catch (error) {
+    logger.error({ error }, 'Failed to post to governance channel');
+  }
+}
 
 export async function handleNameCommand(interaction: ChatInputCommandInteraction): Promise<void> {
   try {
@@ -64,10 +88,19 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
         }
       });
 
+      // Send private acknowledgment to mod
       await interaction.reply({
-        content: `${name} has been nominated for GA membership on behalf of ${nominator.username}. They will be added to the nomination queue.`,
+        content: `Successfully nominated ${name} on behalf of ${nominator.username}.`,
         flags: 64
       });
+      
+      // Send public announcement
+      await interaction.followUp({
+        content: `${name} has been nominated for GA membership. They will be added to the nomination queue.`
+      });
+
+      // Post to governance channel
+      await postToGovernanceChannel(interaction, `${name} has been nominated for GA membership by ${nominator.username}. They will be added to the nomination queue.`);
 
       logger.info({
         nomineeId: nominee.id,
@@ -110,12 +143,20 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
       }
     });
 
+    // Send private acknowledgment to nominator
     await interaction.reply({
-      content: `${name} has been nominated for GA membership. They will be added to the nomination queue.`,
+      content: `Successfully nominated ${name}.`,
       flags: 64
     });
+    
+    // Send public announcement
+    await interaction.followUp({
+      content: `${name} has been nominated for GA membership. They will be added to the nomination queue.`
+    });
 
-    // TODO: Send announcement to GA governance channel
+    // Post to governance channel
+    await postToGovernanceChannel(interaction, `${name} has been nominated for GA membership by ${username}. They will be added to the nomination queue.`);
+
     logger.info({
       nomineeId: nominee.id,
       name,

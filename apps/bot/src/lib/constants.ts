@@ -16,7 +16,7 @@ export const NOMINATION_CONFIG = {
   },
   
   CHANNELS: {
-    GA_GOVERNANCE: process.env.GA_GOVERNANCE_CHANNEL_ID || '',
+    GA_GOVERNANCE: process.env.GOVERNANCE_CHANNEL_ID || '',
     GENERAL: process.env.GENERAL_CHANNEL_ID || '',
     MOD: process.env.MOD_CHANNEL_ID || ''
   }

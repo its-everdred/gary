@@ -2,6 +2,7 @@ import type { Client, TextChannel, Guild } from 'discord.js';
 import pino from 'pino';
 import type { Nominee } from '@prisma/client';
 import { NOMINATION_CONFIG } from './constants.js';
+import { NomineeStateManager } from './nomineeService.js';
 
 const logger = pino();
 
@@ -229,6 +230,9 @@ export class AnnouncementService {
         embeds: [embed]
       });
 
+      // Also post to governance channel with next nominee info
+      await this.postResultsToGovernanceChannel(nominee, passed, yesVotes, noVotes, quorumMet);
+
       logger.info({
         nomineeId: nominee.id,
         nomineeName: nominee.name,
@@ -247,6 +251,60 @@ export class AnnouncementService {
         nomineeName: nominee.name
       }, 'Failed to post results announcement');
       return false;
+    }
+  }
+
+  /**
+   * Posts vote results to governance channel with next nominee info
+   */
+  private async postResultsToGovernanceChannel(
+    nominee: Nominee, 
+    passed: boolean, 
+    yesVotes: number, 
+    noVotes: number, 
+    quorumMet: boolean
+  ): Promise<void> {
+    try {
+      const guild = await this.client.guilds.fetch(nominee.guildId);
+      const governanceChannel = await this.findGovernanceChannel(guild);
+      
+      if (!governanceChannel) {
+        logger.warn({ guildId: nominee.guildId }, 'Governance channel not found for results posting');
+        return;
+      }
+
+      // Get next nominee in queue
+      const nextNominee = await NomineeStateManager.getNextNomineeForDiscussion(nominee.guildId);
+      
+      const resultText = passed ? '✅ **APPROVED**' : '❌ **NOT APPROVED**';
+      const totalVotes = yesVotes + noVotes;
+      const yesPercentage = totalVotes > 0 ? Math.round((yesVotes / totalVotes) * 100) : 0;
+      
+      let message = `**Vote Complete:** ${nominee.name} - ${resultText}\n`;
+      message += `📊 Results: ${yesVotes} Yes (${yesPercentage}%), ${noVotes} No\n`;
+      message += `📋 Quorum: ${quorumMet ? '✅ Met' : '❌ Not met'}\n\n`;
+      
+      if (nextNominee) {
+        message += `**Next Up:** ${nextNominee.name} (nominated by ${nextNominee.nominator})`;
+      } else {
+        message += `**Next Up:** No nominees in queue`;
+      }
+
+      await governanceChannel.send(message);
+
+      logger.info({
+        nomineeId: nominee.id,
+        nomineeName: nominee.name,
+        nextNomineeName: nextNominee?.name,
+        governanceChannelId: governanceChannel.id
+      }, 'Vote results posted to governance channel with next nominee info');
+
+    } catch (error) {
+      logger.error({
+        error,
+        nomineeId: nominee.id,
+        nomineeName: nominee.name
+      }, 'Failed to post results to governance channel');
     }
   }
 
