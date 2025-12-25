@@ -246,14 +246,39 @@ export class ChannelManagementService {
         channelId: channel.id
       }, 'Sending discussion start message');
 
-      // Ensure guild members are cached
-      await channel.guild.members.fetch();
-      
-      // Try to find the nominator by username to ping them
-      const nominatorMember = channel.guild.members.cache.find(member => 
+      // Try to find the nominator by username to ping them (using cached members only)
+      let nominatorMember = channel.guild.members.cache.find(member => 
         member.user.username === nominee.nominator || 
         member.displayName === nominee.nominator
       );
+
+      // If not found in cache, try a limited fetch with timeout
+      if (!nominatorMember) {
+        try {
+          logger.info({
+            nomineeId: nominee.id,
+            nominator: nominee.nominator
+          }, 'Attempting to fetch guild members to find nominator');
+          
+          // Use a Promise.race with timeout to prevent hanging
+          await Promise.race([
+            channel.guild.members.fetch({ limit: 100 }), // Only fetch recent 100 members
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Member fetch timeout')), 5000)) // 5 second timeout
+          ]);
+          
+          // Try to find the nominator again after fetch
+          nominatorMember = channel.guild.members.cache.find(member => 
+            member.user.username === nominee.nominator || 
+            member.displayName === nominee.nominator
+          );
+        } catch (fetchError) {
+          logger.warn({
+            error: fetchError,
+            nomineeId: nominee.id,
+            nominator: nominee.nominator
+          }, 'Failed to fetch guild members for nominator lookup, proceeding without ping');
+        }
+      }
       
       const nominatorMention = nominatorMember ? nominatorMember.toString() : nominee.nominator;
       const nominatorDisplay = nominee.nominator || 'Unknown user';
@@ -288,6 +313,13 @@ export class ChannelManagementService {
       const content = nominatorMember 
         ? `**Discussion has started!**\n\n${nominatorMention}, please kick us off with why you think ${nominee.name} should be invited.\n\nAll members are welcome to participate in this discussion.`
         : `**Discussion has started!**\n\nThe discussion period for **${nominee.name}** has begun. All members are welcome to participate.`;
+
+      logger.info({
+        nomineeId: nominee.id,
+        nomineeName: nominee.name,
+        channelId: channel.id,
+        nominatorFound: !!nominatorMember
+      }, 'About to send discussion start message to channel');
 
       const message = await channel.send({
         content,

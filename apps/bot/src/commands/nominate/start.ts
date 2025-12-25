@@ -131,12 +131,32 @@ export async function handleStartCommand(interaction: ChatInputCommandInteractio
     
     if (channelResult.success) {
       // Post announcement to governance channel
-      const announcementService = new AnnouncementService(interaction.client);
-      await announcementService.announceDiscussionStart(
-        transitionResult.nominee!,
-        channelResult.channel!.id,
-        interaction.user.id // Pass user ID to indicate manual start
-      );
+      try {
+        logger.info({
+          nomineeId: nominee.id,
+          name: nominee.name,
+          channelId: channelResult.channel!.id
+        }, 'Starting governance announcement for manual discussion start');
+        
+        const announcementService = new AnnouncementService(interaction.client);
+        await announcementService.announceDiscussionStart(
+          transitionResult.nominee!,
+          channelResult.channel!.id,
+          interaction.user.id // Pass user ID to indicate manual start
+        );
+        
+        logger.info({
+          nomineeId: nominee.id,
+          name: nominee.name
+        }, 'Governance announcement completed for manual discussion start');
+      } catch (announcementError) {
+        logger.error({
+          error: announcementError,
+          nomineeId: nominee.id,
+          name: nominee.name
+        }, 'Failed to post governance announcement for manual discussion start');
+        // Continue execution - don't let announcement failure block the command
+      }
     } else {
       logger.error({
         nomineeId: nominee.id,
