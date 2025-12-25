@@ -17,6 +17,52 @@ async function calculateNomineeSchedule(guildId: string): Promise<{ discussionSt
   return TimeCalculationService.calculateScheduledTimes(queuePosition);
 }
 
+async function generateNominationQueueText(guildId: string): Promise<string> {
+  try {
+    const nominees = await prisma.nominee.findMany({
+      where: {
+        guildId,
+        state: {
+          not: 'PAST'
+        }
+      },
+      orderBy: {
+        createdAt: 'asc'
+      }
+    });
+
+    if (nominees.length === 0) {
+      return '\n\n**Current Queue:** Empty';
+    }
+
+    const queueLines: string[] = ['\n\n**Current Queue:**'];
+    
+    nominees.forEach((nominee, index) => {
+      const position = index + 1;
+      
+      if (nominee.state === 'VOTE' && nominee.certifyStart) {
+        const endTime = `<t:${Math.floor(nominee.certifyStart.getTime() / 1000)}:f>`;
+        queueLines.push(`${position}. ${nominee.name} - Vote until ${endTime}`);
+      } else if (nominee.state === 'DISCUSSION' && nominee.voteStart) {
+        const voteTime = `<t:${Math.floor(nominee.voteStart.getTime() / 1000)}:f>`;
+        queueLines.push(`${position}. ${nominee.name} - Vote begins ${voteTime}`);
+      } else if (nominee.state === 'CERTIFY') {
+        queueLines.push(`${position}. ${nominee.name} - Results pending`);
+      } else if (nominee.state === 'ACTIVE' && nominee.discussionStart) {
+        const discussionTime = `<t:${Math.floor(nominee.discussionStart.getTime() / 1000)}:f>`;
+        queueLines.push(`${position}. ${nominee.name} - Discussion begins ${discussionTime}`);
+      } else {
+        queueLines.push(`${position}. ${nominee.name} - Pending schedule`);
+      }
+    });
+    
+    return queueLines.join('\n');
+  } catch (error) {
+    logger.error({ error, guildId }, 'Failed to generate nomination queue text');
+    return '\n\n**Current Queue:** Unable to load';
+  }
+}
+
 async function postToGovernanceChannel(interaction: ChatInputCommandInteraction, message: string): Promise<{ success: boolean; channelName?: string }> {
   try {
     const governanceChannelId = NOMINATION_CONFIG.CHANNELS.GA_GOVERNANCE;
@@ -105,8 +151,9 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
         }
       });
 
-      // Post to governance channel
-      const governanceResult = await postToGovernanceChannel(interaction, `${name} has been nominated for membership by ${nominator.username}. They will be added to the nomination queue.`);
+      // Generate queue text and post to governance channel
+      const queueText = await generateNominationQueueText(guildId);
+      const governanceResult = await postToGovernanceChannel(interaction, `${name} has been nominated for membership by ${nominator.username}.${queueText}`);
       
       // Send private acknowledgment to mod
       const channelRef = governanceResult.success && governanceResult.channelName ? `#${governanceResult.channelName}` : 'governance channel';
@@ -160,8 +207,9 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
       }
     });
 
-    // Post to governance channel
-    const governanceResult = await postToGovernanceChannel(interaction, `${name} has been nominated for membership by ${username}. They will be added to the nomination queue.`);
+    // Generate queue text and post to governance channel
+    const queueText = await generateNominationQueueText(guildId);
+    const governanceResult = await postToGovernanceChannel(interaction, `${name} has been nominated for membership by ${username}.${queueText}`);
     
     // Send private acknowledgment to nominator
     const channelRef = governanceResult.success && governanceResult.channelName ? `#${governanceResult.channelName}` : 'governance channel';
