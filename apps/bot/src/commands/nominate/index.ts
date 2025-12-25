@@ -2,8 +2,6 @@ import { SlashCommandBuilder } from 'discord.js';
 import type { ChatInputCommandInteraction } from 'discord.js';
 import { handleListCommand } from './list.js';
 import { handleNameCommand } from './name.js';
-import { handleRemoveCommand } from './remove.js';
-import { handleStartCommand } from './start.js';
 
 export const nominateCommand = new SlashCommandBuilder()
   .setName('nominate')
@@ -23,34 +21,6 @@ export const nominateCommand = new SlashCommandBuilder()
           .setDescription('The name of the person to nominate')
           .setRequired(true)
       )
-      .addUserOption(option =>
-        option
-          .setName('nominator')
-          .setDescription('[MOD ONLY] Nominate on behalf of someone else')
-          .setRequired(false)
-      )
-  )
-  .addSubcommand(subcommand =>
-    subcommand
-      .setName('remove')
-      .setDescription('[MOD ONLY] Remove a nominee from the list')
-      .addStringOption(option =>
-        option
-          .setName('name')
-          .setDescription('The name of the nominee to remove')
-          .setRequired(true)
-      )
-  )
-  .addSubcommand(subcommand =>
-    subcommand
-      .setName('start')
-      .setDescription('[MOD ONLY] Start discussion for a nominee immediately')
-      .addStringOption(option =>
-        option
-          .setName('name')
-          .setDescription('The name of the nominee to start discussion for')
-          .setRequired(true)
-      )
   )
   .toJSON();
 
@@ -63,12 +33,6 @@ export async function nominateHandler(interaction: ChatInputCommandInteraction):
       break;
     case 'name':
       await handleNameCommand(interaction);
-      break;
-    case 'remove':
-      await handleRemoveCommand(interaction);
-      break;
-    case 'start':
-      await handleStartCommand(interaction);
       break;
     default:
       await interaction.reply({

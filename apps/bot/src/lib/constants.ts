@@ -1,7 +1,7 @@
 export const NOMINATION_CONFIG = {
-  DISCUSSION_DURATION_HOURS: 48,
-  VOTE_DURATION_HOURS: 120, // 5 days
-  CERTIFY_DURATION_HOURS: 24,
+  DISCUSSION_DURATION_MINUTES: parseInt(process.env.NOMINATE_DISCUSSION_PERIOD_MINUTES || '2880'),
+  VOTE_DURATION_MINUTES: parseInt(process.env.NOMINATE_VOTE_PERIOD_MINUTES || '7200'),
+  CERTIFY_DURATION_MINUTES: 1440, // 24 hours
   
   DISCUSSION_START_DAY: 1, // Monday = 1
   DISCUSSION_START_HOUR: 9, // 9 AM
@@ -30,7 +30,7 @@ export const NOMINATION_MESSAGES = {
     `Member ${nominator} has nominated ${name} for invitation to GA. Discussion period will begin ${startTime} after all existing nominations are resolved.`,
   
   VOTE_MESSAGE: (name: string, discussionLink: string, startTimestamp: string, endTimestamp: string) =>
-    `Should we invite ${name} to GA?\n\nAs per discussion ${discussionLink}, the anonymous vote for ${name} is now LIVE for the next 5 days.\n\nStart: ${startTimestamp}\nEnd: ${endTimestamp}`,
+    `Should we invite ${name} to GA?\n\nAs per discussion ${discussionLink}, the anonymous vote for ${name} is now LIVE for the next ${Math.round(parseInt(process.env.NOMINATE_VOTE_PERIOD_MINUTES || '7200') / 1440)} days.\n\nStart: ${startTimestamp}\nEnd: ${endTimestamp}`,
   
   VOTE_EMOJI_MESSAGE: 'Though not required, you are welcome click the :PepeVoted: emoji to indicate that you have voted, so we have a sense of whether quorum has been achieved.',
   

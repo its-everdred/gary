@@ -3,6 +3,7 @@ import pino from 'pino';
 import { warnCommand, warnHandler } from './commands/warn.js';
 import { unwarnCommand, unwarnHandler } from './commands/unwarn.js';
 import { nominateCommand, nominateHandler } from './commands/nominate/index.js';
+import { modnomCommand, modnomHandler } from './commands/modnom.js';
 import { NominationJobScheduler } from './lib/jobScheduler.js';
 
 const logger = pino({
@@ -17,7 +18,7 @@ const client = new Client({
   partials: [Partials.Channel],
 });
 
-const commands = [warnCommand, unwarnCommand, nominateCommand];
+const commands = [warnCommand, unwarnCommand, nominateCommand, modnomCommand];
 
 let jobScheduler: NominationJobScheduler | null = null;
 
@@ -110,6 +111,9 @@ client.on('interactionCreate', async (interaction) => {
         break;
       case 'nominate':
         await nominateHandler(interaction);
+        break;
+      case 'modnom':
+        await modnomHandler(interaction);
         break;
     }
   } catch (error) {

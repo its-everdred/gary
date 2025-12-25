@@ -59,13 +59,13 @@ export class TimeCalculationService {
     const discussionStart = this.calculateDiscussionStart(queuePosition);
     
     const voteStart = new Date(discussionStart);
-    voteStart.setUTCHours(
-      voteStart.getUTCHours() + NOMINATION_CONFIG.DISCUSSION_DURATION_HOURS
+    voteStart.setUTCMinutes(
+      voteStart.getUTCMinutes() + NOMINATION_CONFIG.DISCUSSION_DURATION_MINUTES
     );
     
     const certifyStart = new Date(voteStart);
-    certifyStart.setUTCHours(
-      certifyStart.getUTCHours() + NOMINATION_CONFIG.VOTE_DURATION_HOURS
+    certifyStart.setUTCMinutes(
+      certifyStart.getUTCMinutes() + NOMINATION_CONFIG.VOTE_DURATION_MINUTES
     );
     
     return {
@@ -150,8 +150,8 @@ export class TimeCalculationService {
   static shouldTransitionToPast(nominee: Nominee, currentTime: Date = new Date()): boolean {
     if (nominee.state === NomineeState.CERTIFY && nominee.certifyStart) {
       const certifyEndTime = new Date(nominee.certifyStart);
-      certifyEndTime.setUTCHours(
-        certifyEndTime.getUTCHours() + NOMINATION_CONFIG.CERTIFY_DURATION_HOURS
+      certifyEndTime.setUTCMinutes(
+        certifyEndTime.getUTCMinutes() + NOMINATION_CONFIG.CERTIFY_DURATION_MINUTES
       );
       
       return currentTime >= certifyEndTime;
