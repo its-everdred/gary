@@ -13,19 +13,19 @@ const logger = pino();
 export const startSubcommand = (subcommand: SlashCommandSubcommandBuilder) =>
   subcommand
     .setName('start')
-    .setDescription('Immediately start discussion for a nominee (moderator only)')
+    .setDescription('Start discussion for a nominee or the next in queue (moderator only)')
     .addStringOption(option =>
       option
         .setName('name')
-        .setDescription('Name of the nominee to start discussion for')
-        .setRequired(true)
+        .setDescription('Name of the nominee to start (optional - if not provided, starts next in queue)')
+        .setRequired(false)
         .setMaxLength(100)
     );
 
 export async function handleStartCommand(interaction: ChatInputCommandInteraction): Promise<void> {
   const guildId = interaction.guildId;
   const userId = interaction.user.id;
-  const nomineeName = interaction.options.getString('name', true);
+  const nomineeName = interaction.options.getString('name'); // Now optional
 
   if (!guildId) {
     await interaction.reply({
@@ -51,35 +51,50 @@ export async function handleStartCommand(interaction: ChatInputCommandInteractio
   }
 
   try {
-    // Find the nominee
-    const nominee = await NomineeStateManager.findNomineeByName(guildId, nomineeName);
-    
-    if (!nominee) {
-      await interaction.reply({
-        content: `❌ **Nominee Not Found**\n\nNo nominee named "${nomineeName}" found in this server.`,
-        ephemeral: true
-      });
-      return;
-    }
+    let nominee;
 
-    // Check if nominee is in ACTIVE state
-    if (nominee.state !== NomineeState.ACTIVE) {
-      await interaction.reply({
-        content: `❌ **Invalid State**\n\nNominee "${nomineeName}" is currently in ${nominee.state} state. Only ACTIVE nominees can be manually started.`,
-        ephemeral: true
-      });
-      return;
-    }
-
-    // Check if another nominee is already in progress
+    // Check if another nominee is already in progress first
     const hasInProgress = await NomineeStateManager.hasNomineeInProgress(guildId);
     if (hasInProgress) {
       const inProgressNominee = await NomineeStateManager.getCurrentNomineeInProgress(guildId);
       await interaction.reply({
-        content: `❌ **Another Nominee In Progress**\n\nCannot start "${nomineeName}" because "${inProgressNominee?.name}" is currently in ${inProgressNominee?.state} state.\n\nOnly one nominee can be in progress at a time.`,
+        content: `❌ **Another Nominee In Progress**\n\nCannot start discussion because "${inProgressNominee?.name}" is currently in ${inProgressNominee?.state} state.\n\nOnly one nominee can be in progress at a time.`,
         ephemeral: true
       });
       return;
+    }
+
+    if (nomineeName) {
+      // Specific nominee requested
+      nominee = await NomineeStateManager.findNomineeByName(guildId, nomineeName);
+      
+      if (!nominee) {
+        await interaction.reply({
+          content: `❌ **Nominee Not Found**\n\nNo nominee named "${nomineeName}" found in this server.`,
+          ephemeral: true
+        });
+        return;
+      }
+
+      // Check if nominee is in ACTIVE state
+      if (nominee.state !== NomineeState.ACTIVE) {
+        await interaction.reply({
+          content: `❌ **Invalid State**\n\nNominee "${nomineeName}" is currently in ${nominee.state} state. Only ACTIVE nominees can be manually started.`,
+          ephemeral: true
+        });
+        return;
+      }
+    } else {
+      // No specific nominee - find the next one in queue
+      nominee = await NomineeStateManager.getNextNomineeForDiscussion(guildId);
+      
+      if (!nominee) {
+        await interaction.reply({
+          content: `❌ **No Nominees Available**\n\nThere are no active nominees ready to start discussion.`,
+          ephemeral: true
+        });
+        return;
+      }
     }
 
     await interaction.deferReply();
@@ -105,7 +120,7 @@ export async function handleStartCommand(interaction: ChatInputCommandInteractio
 
     if (!transitionResult.success) {
       await interaction.editReply({
-        content: `❌ **Transition Failed**\n\nFailed to start discussion for "${nomineeName}":\n${transitionResult.errorMessage}`
+        content: `❌ **Transition Failed**\n\nFailed to start discussion for "${nominee.name}":\n${transitionResult.errorMessage}`
       });
       return;
     }
@@ -134,12 +149,16 @@ export async function handleStartCommand(interaction: ChatInputCommandInteractio
       nomineeId: nominee.id,
       name: nominee.name,
       moderator: interaction.user.id,
-      user: interaction.user.id
+      user: interaction.user.id,
+      specifiedName: !!nomineeName
     }, 'Nominee discussion started manually by moderator');
 
+    const targetName = nomineeName || nominee.name;
+    const autoSelectedNote = nomineeName ? '' : ' (next in queue)';
+    
     const successMessage = channelResult.success 
-      ? `✅ Discussion for "${nomineeName}" started successfully.\n📁 Channel: ${channelResult.channel?.toString()}\n📢 Announced in governance channel.`
-      : `⚠️ Discussion for "${nomineeName}" started, but channel creation failed.`;
+      ? `✅ Discussion for "${targetName}"${autoSelectedNote} started successfully.\n📁 Channel: ${channelResult.channel?.toString()}\n📢 Announced in governance channel.`
+      : `⚠️ Discussion for "${targetName}"${autoSelectedNote} started, but channel creation failed.`;
     
     await interaction.editReply({
       content: successMessage
@@ -149,11 +168,13 @@ export async function handleStartCommand(interaction: ChatInputCommandInteractio
     logger.error({
       error,
       user: userId,
-      nomineeName
+      nomineeName,
+      selectedNominee: nominee?.name
     }, 'Start command error');
 
+    const targetName = nomineeName || nominee?.name || 'nominee';
     const content = interaction.replied || interaction.deferred
-      ? `❌ **Error**\n\nAn error occurred while starting discussion for "${nomineeName}".`
+      ? `❌ **Error**\n\nAn error occurred while starting discussion for "${targetName}".`
       : '❌ An error occurred while processing your command.';
 
     if (interaction.deferred) {
