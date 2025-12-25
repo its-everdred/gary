@@ -40,7 +40,7 @@ export async function handleStartCommand(interaction: ChatInputCommandInteractio
     userId
   );
 
-  if (!permissionResult.hasPermission) {
+  if (!permissionResult.isValid) {
     await interaction.reply({
       content: `❌ **Access Denied**\n\n${permissionResult.errorMessage}`,
       ephemeral: true
