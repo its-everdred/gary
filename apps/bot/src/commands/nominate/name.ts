@@ -1,11 +1,13 @@
-import type { ChatInputCommandInteraction, TextChannel } from 'discord.js';
+import type { ChatInputCommandInteraction } from 'discord.js';
 import pino from 'pino';
 import { prisma } from '../../lib/db.js';
 import { NomineeState } from '@prisma/client';
-import { validateModeratorPermission, validateNominatorUser } from '../../lib/permissions.js';
-import { NOMINATION_CONFIG } from '../../lib/constants.js';
+import { validateNominatorUser } from '../../lib/permissions.js';
 import { NomineeStateManager } from '../../lib/nomineeService.js';
 import { TimeCalculationService } from '../../lib/timeCalculation.js';
+import { NomineeDisplayUtils } from '../../lib/nomineeDisplayUtils.js';
+import { CommandUtils } from '../../lib/commandUtils.js';
+import { AnnouncementUtils } from '../../lib/announcementUtils.js';
 
 const logger = pino();
 
@@ -31,62 +33,13 @@ async function generateNominationQueueText(guildId: string): Promise<string> {
       }
     });
 
-    if (nominees.length === 0) {
-      return '\n\n**Current Queue:** Empty';
-    }
-
-    const queueLines: string[] = ['\n\n**Current Queue:**'];
-    
-    nominees.forEach((nominee, index) => {
-      const position = index + 1;
-      
-      if (nominee.state === 'VOTE' && nominee.certifyStart) {
-        const endTime = `<t:${Math.floor(nominee.certifyStart.getTime() / 1000)}:f>`;
-        queueLines.push(`${position}. ${nominee.name} - Vote until ${endTime}`);
-      } else if (nominee.state === 'DISCUSSION' && nominee.voteStart) {
-        const voteTime = `<t:${Math.floor(nominee.voteStart.getTime() / 1000)}:f>`;
-        queueLines.push(`${position}. ${nominee.name} - Vote begins ${voteTime}`);
-      } else if (nominee.state === 'CERTIFY') {
-        queueLines.push(`${position}. ${nominee.name} - Results pending`);
-      } else if (nominee.state === 'ACTIVE' && nominee.discussionStart) {
-        const discussionTime = `<t:${Math.floor(nominee.discussionStart.getTime() / 1000)}:f>`;
-        queueLines.push(`${position}. ${nominee.name} - Discussion begins ${discussionTime}`);
-      } else {
-        queueLines.push(`${position}. ${nominee.name} - Pending schedule`);
-      }
-    });
-    
-    return queueLines.join('\n');
+    return NomineeDisplayUtils.formatNominationQueue(nominees);
   } catch (error) {
     logger.error({ error, guildId }, 'Failed to generate nomination queue text');
     return '\n\n**Current Queue:** Unable to load';
   }
 }
 
-async function postToGovernanceChannel(interaction: ChatInputCommandInteraction, message: string): Promise<{ success: boolean; channelName?: string }> {
-  try {
-    const governanceChannelId = NOMINATION_CONFIG.CHANNELS.GA_GOVERNANCE;
-    if (!governanceChannelId) {
-      logger.warn('GOVERNANCE_CHANNEL_ID not configured');
-      return { success: false };
-    }
-
-    const guild = interaction.guild;
-    if (!guild) return { success: false };
-
-    const channel = guild.channels.cache.get(governanceChannelId) as TextChannel;
-    if (!channel?.isTextBased()) {
-      logger.warn(`Governance channel ${governanceChannelId} not found or not text-based`);
-      return { success: false };
-    }
-
-    await channel.send(message);
-    return { success: true, channelName: channel.name };
-  } catch (error) {
-    logger.error({ error }, 'Failed to post to governance channel');
-    return { success: false };
-  }
-}
 
 export async function handleNameCommand(interaction: ChatInputCommandInteraction): Promise<void> {
   try {
@@ -107,17 +60,8 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
 
     // If nominator is specified, this is a mod-only command
     if (nominator) {
-      const modPermission = await validateModeratorPermission(
-        interaction.client,
-        guildId,
-        userId
-      );
-      
-      if (!modPermission.isValid) {
-        await interaction.reply({
-          content: modPermission.errorMessage!,
-          flags: 64
-        });
+      const modValidation = await CommandUtils.validateModeratorAccess(interaction, guildId);
+      if (!modValidation.isValid) {
         return;
       }
 
@@ -153,10 +97,14 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
 
       // Generate queue text and post to governance channel
       const queueText = await generateNominationQueueText(guildId);
-      const governanceResult = await postToGovernanceChannel(interaction, `${name} has been nominated for membership by ${nominator.username}.${queueText}`);
+      await AnnouncementUtils.postToGovernanceChannel(
+        interaction.client,
+        guildId,
+        `${name} has been nominated for membership by ${nominator.username}.${queueText}`
+      );
       
       // Send private acknowledgment to mod
-      const channelRef = governanceResult.success && governanceResult.channelName ? `#${governanceResult.channelName}` : 'governance channel';
+      const channelRef = AnnouncementUtils.getGovernanceChannelReference();
       await interaction.reply({
         content: `Successfully nominated ${name} on behalf of ${nominator.username} and announced in ${channelRef}.`,
         flags: 64
@@ -209,10 +157,14 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
 
     // Generate queue text and post to governance channel
     const queueText = await generateNominationQueueText(guildId);
-    const governanceResult = await postToGovernanceChannel(interaction, `${name} has been nominated for membership by ${username}.${queueText}`);
+    await AnnouncementUtils.postToGovernanceChannel(
+      interaction.client,
+      guildId,
+      `${name} has been nominated for membership by ${username}.${queueText}`
+    );
     
     // Send private acknowledgment to nominator
-    const channelRef = governanceResult.success && governanceResult.channelName ? `#${governanceResult.channelName}` : 'governance channel';
+    const channelRef = AnnouncementUtils.getGovernanceChannelReference();
     await interaction.reply({
       content: `Successfully nominated ${name} and announced in ${channelRef}.`,
       flags: 64
@@ -226,10 +178,11 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
     }, 'New nomination created');
 
   } catch (error) {
-    logger.error({ error, command: 'nominate name', user: interaction.user.id }, 'Name command error');
-    await interaction.reply({
-      content: 'An error occurred while creating the nomination.',
-      flags: 64
-    });
+    await CommandUtils.handleCommandError(
+      interaction,
+      error,
+      'nominate name',
+      'creating the nomination'
+    );
   }
 }

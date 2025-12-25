@@ -3,6 +3,7 @@ import { ChannelType as DJSChannelType, PermissionFlagsBits } from 'discord.js';
 import pino from 'pino';
 import { prisma } from './db.js';
 import type { Nominee } from '@prisma/client';
+import { NOMINATION_CONFIG } from './constants.js';
 
 const logger = pino();
 
@@ -238,7 +239,24 @@ export class ChannelManagementService {
    */
   private async sendDiscussionStartMessage(channel: TextChannel, nominee: Nominee): Promise<void> {
     try {
-      const nominator = await this.client.users.fetch(nominee.nominator);
+      logger.info({
+        nomineeId: nominee.id,
+        nomineeName: nominee.name,
+        nominator: nominee.nominator,
+        channelId: channel.id
+      }, 'Sending discussion start message');
+
+      // Ensure guild members are cached
+      await channel.guild.members.fetch();
+      
+      // Try to find the nominator by username to ping them
+      const nominatorMember = channel.guild.members.cache.find(member => 
+        member.user.username === nominee.nominator || 
+        member.displayName === nominee.nominator
+      );
+      
+      const nominatorMention = nominatorMember ? nominatorMember.toString() : nominee.nominator;
+      const nominatorDisplay = nominee.nominator || 'Unknown user';
       
       const embed = {
         title: `📋 Discussion: ${nominee.name}`,
@@ -246,12 +264,12 @@ export class ChannelManagementService {
         fields: [
           {
             name: '👤 Nominated by',
-            value: nominator ? nominator.toString() : 'Unknown user',
+            value: nominatorDisplay,
             inline: true
           },
           {
             name: '⏰ Discussion Duration',
-            value: '48 hours',
+            value: `${Math.round(NOMINATION_CONFIG.DISCUSSION_DURATION_MINUTES / 60)} hours`,
             inline: true
           },
           {
@@ -263,16 +281,37 @@ export class ChannelManagementService {
         color: 0x3498db,
         timestamp: new Date().toISOString(),
         footer: {
-          text: 'GA Governance Discussion'
+          text: 'Governance Discussion'
         }
       };
 
-      await channel.send({
-        content: '🎯 **Discussion has started!**\n\nAll members are welcome to participate in this discussion.',
+      const content = nominatorMember 
+        ? `**Discussion has started!**\n\n${nominatorMention}, please kick us off with why you think ${nominee.name} should be invited.\n\nAll members are welcome to participate in this discussion.`
+        : `**Discussion has started!**\n\nThe discussion period for **${nominee.name}** has begun. All members are welcome to participate.`;
+
+      const message = await channel.send({
+        content,
         embeds: [embed]
       });
+
+      logger.info({
+        nomineeId: nominee.id,
+        nomineeName: nominee.name,
+        channelId: channel.id,
+        messageId: message.id,
+        nominatorFound: !!nominatorMember,
+        nominatorUserId: nominatorMember?.user.id
+      }, 'Discussion start message sent successfully');
+
     } catch (error) {
-      logger.error({ error, channelId: channel.id }, 'Failed to send discussion start message');
+      logger.error({ 
+        error, 
+        channelId: channel.id,
+        nomineeId: nominee.id,
+        nomineeName: nominee.name,
+        nominator: nominee.nominator
+      }, 'Failed to send discussion start message');
+      throw error; // Re-throw so the calling function knows it failed
     }
   }
 

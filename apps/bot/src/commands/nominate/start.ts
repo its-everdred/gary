@@ -4,7 +4,9 @@ import pino from 'pino';
 import { validateModeratorPermission } from '../../lib/permissions.js';
 import { NomineeStateManager } from '../../lib/nomineeService.js';
 import { ChannelManagementService } from '../../lib/channelService.js';
+import { AnnouncementService } from '../../lib/announcementService.js';
 import { NomineeState } from '@prisma/client';
+import { NOMINATION_CONFIG } from '../../lib/constants.js';
 
 const logger = pino();
 
@@ -82,12 +84,22 @@ export async function handleStartCommand(interaction: ChatInputCommandInteractio
 
     await interaction.deferReply();
 
+    // Calculate new times based on current time
+    const now = new Date();
+    const voteStart = new Date(now);
+    voteStart.setUTCMinutes(voteStart.getUTCMinutes() + NOMINATION_CONFIG.DISCUSSION_DURATION_MINUTES);
+    
+    const certifyStart = new Date(voteStart);
+    certifyStart.setUTCMinutes(certifyStart.getUTCMinutes() + NOMINATION_CONFIG.VOTE_DURATION_MINUTES);
+    
     // Transition nominee to DISCUSSION state
     const transitionResult = await NomineeStateManager.transitionNominee(
       nominee.id,
       NomineeState.DISCUSSION,
       {
-        discussionStart: new Date()
+        discussionStart: now,
+        voteStart: voteStart,
+        certifyStart: certifyStart
       }
     );
 
@@ -102,17 +114,21 @@ export async function handleStartCommand(interaction: ChatInputCommandInteractio
     const channelService = new ChannelManagementService(interaction.client);
     const channelResult = await channelService.createDiscussionChannel(transitionResult.nominee!);
     
-    let channelInfo = '';
     if (channelResult.success) {
-      channelInfo = `\n📁 Discussion channel: ${channelResult.channel?.toString()}`;
+      // Post announcement to governance channel
+      const announcementService = new AnnouncementService(interaction.client);
+      await announcementService.announceDiscussionStart(
+        transitionResult.nominee!,
+        channelResult.channel!.id,
+        interaction.user.id // Pass user ID to indicate manual start
+      );
     } else {
       logger.error({
         nomineeId: nominee.id,
         error: channelResult.errorMessage
       }, 'Failed to create discussion channel for manual start');
-      channelInfo = '\n⚠️ Discussion started but channel creation failed.';
     }
-
+    
     // Log the manual start
     logger.info({
       nomineeId: nominee.id,
@@ -121,8 +137,12 @@ export async function handleStartCommand(interaction: ChatInputCommandInteractio
       user: interaction.user.id
     }, 'Nominee discussion started manually by moderator');
 
+    const successMessage = channelResult.success 
+      ? `✅ Discussion for "${nomineeName}" started successfully.\n📁 Channel: ${channelResult.channel?.toString()}\n📢 Announced in governance channel.`
+      : `⚠️ Discussion for "${nomineeName}" started, but channel creation failed.`;
+    
     await interaction.editReply({
-      content: `✅ **Discussion Started**\n\nDiscussion has been manually started for "${nomineeName}".\n\n⏰ **Duration:** 48 hours\n📅 **Started:** ${new Date().toLocaleString()}${channelInfo}`
+      content: successMessage
     });
 
   } catch (error) {

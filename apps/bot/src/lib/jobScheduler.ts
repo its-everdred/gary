@@ -223,11 +223,17 @@ export class NominationJobScheduler implements JobScheduler {
    * Transitions a nominee from DISCUSSION to VOTE
    */
   private async transitionToVote(nominee: any): Promise<void> {
+    // Calculate new certify time based on current time
+    const now = new Date();
+    const certifyStart = new Date(now);
+    certifyStart.setUTCMinutes(certifyStart.getUTCMinutes() + NOMINATION_CONFIG.VOTE_DURATION_MINUTES);
+    
     const result = await NomineeStateManager.transitionNominee(
       nominee.id,
       NomineeState.VOTE,
       {
-        voteStart: new Date()
+        voteStart: now,
+        certifyStart: certifyStart
       }
     );
 
