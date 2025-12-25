@@ -5,7 +5,7 @@ import { handleNameCommand } from './name.js';
 
 export const nominateCommand = new SlashCommandBuilder()
   .setName('nominate')
-  .setDescription('Manage GA nominations')
+  .setDescription('Manage nominations')
   .addSubcommand(subcommand =>
     subcommand
       .setName('list')
@@ -14,7 +14,7 @@ export const nominateCommand = new SlashCommandBuilder()
   .addSubcommand(subcommand =>
     subcommand
       .setName('name')
-      .setDescription('Nominate someone for GA membership')
+      .setDescription('Nominate someone for membership')
       .addStringOption(option =>
         option
           .setName('name')

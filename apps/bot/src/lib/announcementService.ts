@@ -34,7 +34,7 @@ export class AnnouncementService {
 
       const embed = {
         title: '🗳️ New Vote Started',
-        description: `Voting has begun for **${nominee.name}**'s nomination to GA membership.`,
+        description: `Voting has begun for **${nominee.name}**'s nomination to membership.`,
         fields: [
           {
             name: '📍 Vote Location',
@@ -60,12 +60,12 @@ export class AnnouncementService {
         color: 0x00ff00,
         timestamp: new Date().toISOString(),
         footer: {
-          text: 'GA Governance • All members are encouraged to vote'
+          text: 'Governance • All members are encouraged to vote'
         }
       };
 
       await governanceChannel.send({
-        content: '@everyone A new GA membership vote has started!',
+        content: '@everyone A new membership vote has started!',
         embeds: [embed]
       });
 
@@ -108,7 +108,7 @@ export class AnnouncementService {
 
       const embed = {
         title: '💬 New Discussion Started',
-        description: `Discussion period has begun for **${nominee.name}**'s nomination to GA membership.`,
+        description: `Discussion period has begun for **${nominee.name}**'s nomination to membership.`,
         fields: [
           {
             name: '📍 Discussion Location',
@@ -185,7 +185,7 @@ export class AnnouncementService {
       const resultColor = passed ? 0x00ff00 : 0xff0000;
 
       const embed = {
-        title: `${resultEmoji} GA Membership Vote Results`,
+        title: `${resultEmoji} Membership Vote Results`,
         description: `The vote for **${nominee.name}** has concluded.`,
         fields: [
           {
@@ -217,13 +217,13 @@ export class AnnouncementService {
         color: resultColor,
         timestamp: new Date().toISOString(),
         footer: {
-          text: passed ? 'Welcome to GA!' : 'Better luck next time'
+          text: passed ? 'Vote passed' : 'Vote failed'
         }
       };
 
       const announcement = passed 
-        ? `🎉 **Congratulations!** ${nominee.name} has been approved for GA membership!`
-        : `The GA membership vote for ${nominee.name} has concluded.`;
+        ? `🎉 **Congratulations!** ${nominee.name} has been approved for membership!`
+        : `The membership vote for ${nominee.name} has concluded.`;
 
       await generalChannel.send({
         content: announcement,
@@ -309,15 +309,22 @@ export class AnnouncementService {
   }
 
   /**
-   * Finds the #ga-governance channel in a guild
+   * Finds the governance channel in a guild
    */
   private async findGovernanceChannel(guild: Guild): Promise<TextChannel | null> {
-    const channel = guild.channels.cache.find(ch => 
-      ch.isTextBased() && 
-      ch.name === 'ga-governance'
-    ) as TextChannel | undefined;
+    const governanceChannelId = NOMINATION_CONFIG.CHANNELS.GA_GOVERNANCE;
+    if (!governanceChannelId) {
+      logger.warn('GOVERNANCE_CHANNEL_ID not configured');
+      return null;
+    }
 
-    return channel || null;
+    const channel = guild.channels.cache.get(governanceChannelId) as TextChannel;
+    if (!channel?.isTextBased()) {
+      logger.warn(`Governance channel ${governanceChannelId} not found or not text-based`);
+      return null;
+    }
+
+    return channel;
   }
 
   /**

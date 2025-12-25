@@ -106,12 +106,12 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
       });
 
       // Post to governance channel
-      const governanceResult = await postToGovernanceChannel(interaction, `${name} has been nominated for GA membership by ${nominator.username}. They will be added to the nomination queue.`);
+      const governanceResult = await postToGovernanceChannel(interaction, `${name} has been nominated for membership by ${nominator.username}. They will be added to the nomination queue.`);
       
       // Send private acknowledgment to mod
       const channelRef = governanceResult.success && governanceResult.channelName ? `#${governanceResult.channelName}` : 'governance channel';
       await interaction.reply({
-        content: `Successfully nominated ${name} on behalf of ${nominator.username}. Nomination announced in ${channelRef}.`,
+        content: `Successfully nominated ${name} on behalf of ${nominator.username} and announced in ${channelRef}.`,
         flags: 64
       });
 
@@ -161,12 +161,12 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
     });
 
     // Post to governance channel
-    const governanceResult = await postToGovernanceChannel(interaction, `${name} has been nominated for GA membership by ${username}. They will be added to the nomination queue.`);
+    const governanceResult = await postToGovernanceChannel(interaction, `${name} has been nominated for membership by ${username}. They will be added to the nomination queue.`);
     
     // Send private acknowledgment to nominator
     const channelRef = governanceResult.success && governanceResult.channelName ? `#${governanceResult.channelName}` : 'governance channel';
     await interaction.reply({
-      content: `Successfully nominated ${name}. Nomination announced in ${channelRef}.`,
+      content: `Successfully nominated ${name} and announced in ${channelRef}.`,
       flags: 64
     });
 

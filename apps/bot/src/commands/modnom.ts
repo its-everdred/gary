@@ -6,7 +6,7 @@ import { handleStartCommand } from './nominate/start.js';
 
 export const modnomCommand = new SlashCommandBuilder()
   .setName('modnom')
-  .setDescription('Mod tools for managing GA nominations')
+  .setDescription('Mod tools for managing nominations')
   .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
   .addSubcommand(subcommand =>
     subcommand

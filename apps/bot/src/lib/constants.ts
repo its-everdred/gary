@@ -24,25 +24,25 @@ export const NOMINATION_CONFIG = {
 
 export const NOMINATION_MESSAGES = {
   NOMINATION_CREATED: (nominator: string, name: string, startTime: string) =>
-    `Member ${nominator} has nominated ${name} for invitation to GA. Discussion period will begin ${startTime}.`,
+    `Member ${nominator} has nominated ${name} for invitation. Discussion period will begin ${startTime}.`,
   
   NOMINATION_CREATED_QUEUED: (nominator: string, name: string, startTime: string) =>
-    `Member ${nominator} has nominated ${name} for invitation to GA. Discussion period will begin ${startTime} after all existing nominations are resolved.`,
+    `Member ${nominator} has nominated ${name} for invitation. Discussion period will begin ${startTime} after all existing nominations are resolved.`,
   
   VOTE_MESSAGE: (name: string, discussionLink: string, startTimestamp: string, endTimestamp: string) =>
-    `Should we invite ${name} to GA?\n\nAs per discussion ${discussionLink}, the anonymous vote for ${name} is now LIVE for the next ${Math.round(parseInt(process.env.NOMINATE_VOTE_PERIOD_MINUTES || '7200') / 1440)} days.\n\nStart: ${startTimestamp}\nEnd: ${endTimestamp}`,
+    `Should we invite ${name}?\n\nAs per discussion ${discussionLink}, the anonymous vote for ${name} is now LIVE for the next ${Math.round(parseInt(process.env.NOMINATE_VOTE_PERIOD_MINUTES || '7200') / 1440)} days.\n\nStart: ${startTimestamp}\nEnd: ${endTimestamp}`,
   
   VOTE_EMOJI_MESSAGE: 'Though not required, you are welcome click the :PepeVoted: emoji to indicate that you have voted, so we have a sense of whether quorum has been achieved.',
   
   RESULTS: {
     PASSED: (name: string, yesVotes: number, noVotes: number, nominator: string) =>
-      `The vote to invite ${name} to GA PASSED with ${yesVotes} Yes votes, ${noVotes} No votes. An invite link will be given to ${nominator} in 24 hours.`,
+      `The vote to invite ${name} PASSED with ${yesVotes} Yes votes, ${noVotes} No votes. An invite link will be given to ${nominator} in 24 hours.`,
     
     FAILED_VOTES: (name: string, yesVotes: number, noVotes: number, yesPercent: number) =>
-      `The vote to invite ${name} to GA FAILED with ${yesVotes} yes votes, ${noVotes} No votes. (Only ${yesPercent}% yes)`,
+      `The vote to invite ${name} FAILED with ${yesVotes} yes votes, ${noVotes} No votes. (Only ${yesPercent}% yes)`,
     
     FAILED_QUORUM: (name: string, votePercent: number) =>
-      `The vote to invite ${name} to GA FAILED to meet quorum with only ${votePercent}% of members voting.`
+      `The vote to invite ${name} FAILED to meet quorum with only ${votePercent}% of members voting.`
   }
 } as const;
 
