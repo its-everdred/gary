@@ -13,7 +13,7 @@ export const nominateCommand = new SlashCommandBuilder()
   )
   .addSubcommand(subcommand =>
     subcommand
-      .setName('name')
+      .setName('add')
       .setDescription('Nominate someone for membership')
       .addStringOption(option =>
         option
@@ -31,7 +31,7 @@ export async function nominateHandler(interaction: ChatInputCommandInteraction):
     case 'list':
       await handleListCommand(interaction);
       break;
-    case 'name':
+    case 'add':
       await handleNameCommand(interaction);
       break;
     default:
