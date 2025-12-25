@@ -10,7 +10,7 @@ export const modnomCommand = new SlashCommandBuilder()
   .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
   .addSubcommand(subcommand =>
     subcommand
-      .setName('name')
+      .setName('add')
       .setDescription('Nominate someone on behalf of another member')
       .addUserOption(option =>
         option
@@ -39,12 +39,12 @@ export const modnomCommand = new SlashCommandBuilder()
   .addSubcommand(subcommand =>
     subcommand
       .setName('start')
-      .setDescription('Start discussion for a nominee immediately')
+      .setDescription('Start discussion for a nominee or next in queue')
       .addStringOption(option =>
         option
           .setName('name')
-          .setDescription('The name of the nominee to start discussion for')
-          .setRequired(true)
+          .setDescription('Name of the nominee to start (optional - if not provided, starts next in queue)')
+          .setRequired(false)
       )
   )
   .toJSON();
@@ -53,7 +53,7 @@ export async function modnomHandler(interaction: ChatInputCommandInteraction): P
   const subcommand = interaction.options.getSubcommand();
   
   switch (subcommand) {
-    case 'name':
+    case 'add':
       await handleNameCommand(interaction);
       break;
     case 'remove':

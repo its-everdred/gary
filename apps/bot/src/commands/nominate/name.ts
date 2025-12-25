@@ -100,7 +100,7 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
       await AnnouncementUtils.postToGovernanceChannel(
         interaction.client,
         guildId,
-        `${name} has been nominated for membership by ${nominator.username}.${queueText}`
+        `${name} has been nominated for membership by ${nominator.username} (via ${username}).${queueText}`
       );
       
       // Send private acknowledgment to mod
