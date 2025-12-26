@@ -98,13 +98,46 @@ export class VoteResultService {
       // Fetch recent messages to find the poll
       const messages = await channel.messages.fetch({ limit: 50 });
       
+      logger.info({
+        channelId: channel.id,
+        nomineeName,
+        messageCount: messages.size
+      }, 'Searching for poll message in channel');
+      
       for (const message of messages.values()) {
+        // Log details about each message for debugging
+        logger.info({
+          messageId: message.id,
+          authorId: message.author.id,
+          authorUsername: message.author.username,
+          isEasyPoll: this.isEasyPollMessage(message),
+          hasEmbeds: message.embeds.length > 0,
+          content: message.content.substring(0, 100),
+          embedTitles: message.embeds.map(e => e.title).filter(Boolean)
+        }, 'Checking message for poll data');
+        
         // Check if message is from EasyPoll bot
         if (!this.isEasyPollMessage(message)) continue;
         
         // Check if poll is about this nominee
-        if (!message.content.includes(nomineeName) && 
-            !message.embeds[0]?.title?.includes(nomineeName)) continue;
+        const contentMatches = message.content.includes(nomineeName);
+        const embedMatches = message.embeds[0]?.title?.includes(nomineeName) || 
+                            message.embeds[0]?.description?.includes(nomineeName);
+        
+        logger.info({
+          messageId: message.id,
+          nomineeName,
+          contentMatches,
+          embedMatches,
+          messageContent: message.content,
+          embedData: message.embeds[0] ? {
+            title: message.embeds[0].title,
+            description: message.embeds[0].description,
+            fields: message.embeds[0].fields
+          } : null
+        }, 'Checking if message matches nominee');
+        
+        if (!contentMatches && !embedMatches) continue;
 
         // Parse poll data from the message
         const pollData = await this.parsePollMessage(message);
@@ -113,6 +146,12 @@ export class VoteResultService {
         }
       }
 
+      logger.warn({
+        channelId: channel.id,
+        nomineeName,
+        totalMessages: messages.size
+      }, 'No matching poll found in channel');
+      
       return null;
     } catch (error) {
       logger.error({ error, channelId: channel.id }, 'Failed to find poll in channel');
@@ -136,13 +175,38 @@ export class VoteResultService {
   private async parsePollMessage(message: Message): Promise<PollData | null> {
     try {
       const embed = message.embeds[0];
-      if (!embed) return null;
+      if (!embed) {
+        logger.warn({ messageId: message.id }, 'No embed found in message');
+        return null;
+      }
+
+      logger.info({
+        messageId: message.id,
+        embedStructure: {
+          title: embed.title,
+          description: embed.description,
+          fields: embed.fields?.map(f => ({ name: f.name, value: f.value })),
+          footer: embed.footer?.text,
+          color: embed.color
+        }
+      }, 'Parsing poll message embed structure');
 
       // Extract question from embed
       const question = embed.title || embed.description || '';
       
       // Check if poll is closed/completed
-      if (!this.isPollClosed(embed)) {
+      const isClosed = this.isPollClosed(embed);
+      logger.info({
+        messageId: message.id,
+        question,
+        isClosed,
+        title: embed.title,
+        description: embed.description,
+        footer: embed.footer?.text
+      }, 'Poll closure check');
+      
+      if (!isClosed) {
+        logger.info({ messageId: message.id }, 'Poll is still active, skipping');
         return null; // Poll is still active
       }
       
@@ -150,16 +214,33 @@ export class VoteResultService {
       const yesVotes = this.extractVoteCount(embed, 'yes') || 0;
       const noVotes = this.extractVoteCount(embed, 'no') || 0;
       
+      logger.info({
+        messageId: message.id,
+        yesVotes,
+        noVotes,
+        extractionDetails: {
+          fields: embed.fields?.map(f => ({ name: f.name, value: f.value })),
+          description: embed.description
+        }
+      }, 'Vote count extraction results');
+      
       // Extract voter IDs from reactions or embed data
       const voterIds = await this.extractVoterIds(message);
 
-      return {
+      const pollData = {
         question,
         yesVotes,
         noVotes,
         voterIds,
         pollMessageId: message.id
       };
+      
+      logger.info({
+        messageId: message.id,
+        pollData
+      }, 'Successfully parsed poll data');
+
+      return pollData;
     } catch (error) {
       logger.error({ error, messageId: message.id }, 'Failed to parse poll message');
       return null;
