@@ -380,7 +380,7 @@ export class ChannelManagementService {
         fields: [
           {
             name: '⏰ Vote Duration',
-            value: '5 days (120 hours)',
+            value: NomineeDisplayUtils.formatDuration(NOMINATION_CONFIG.VOTE_DURATION_MINUTES),
             inline: true
           },
           {

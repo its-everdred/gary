@@ -237,7 +237,7 @@ export class AnnouncementService {
   /**
    * Posts vote results to governance channel with next nominee info
    */
-  private async postResultsToGovernanceChannel(
+  async postResultsToGovernanceChannel(
     nominee: Nominee, 
     passed: boolean, 
     yesVotes: number, 
@@ -256,21 +256,42 @@ export class AnnouncementService {
       // Get next nominee in queue
       const nextNominee = await NomineeStateManager.getNextNomineeForDiscussion(nominee.guildId);
       
-      const resultText = passed ? '✅ **APPROVED**' : '❌ **NOT APPROVED**';
+      const resultText = passed ? 'APPROVED' : 'NOT APPROVED';
+      const resultEmoji = passed ? '✅' : '❌';
+      const embedColor = passed ? 0x00ff00 : 0xff0000; // Green if passed, red if failed
       const totalVotes = yesVotes + noVotes;
       const yesPercentage = totalVotes > 0 ? Math.round((yesVotes / totalVotes) * 100) : 0;
       
-      let message = `**Vote Complete:** ${nominee.name} - ${resultText}\n`;
-      message += `📊 Results: ${yesVotes} Yes (${yesPercentage}%), ${noVotes} No\n`;
-      message += `📋 Quorum: ${quorumMet ? '✅ Met' : '❌ Not met'}\n\n`;
-      
-      if (nextNominee) {
-        message += `**Next Up:** ${nextNominee.name} (nominated by ${nextNominee.nominator})`;
-      } else {
-        message += `**Next Up:** No nominees in queue`;
-      }
+      const embed = {
+        title: `${resultEmoji} Vote Complete: ${nominee.name}`,
+        description: `**Result: ${resultText}**`,
+        fields: [
+          {
+            name: '📊 Vote Results',
+            value: `${yesVotes} Yes (${yesPercentage}%) • ${noVotes} No (${100 - yesPercentage}%)`,
+            inline: false
+          },
+          {
+            name: '📋 Quorum Status',
+            value: quorumMet ? '✅ Met' : '❌ Not met',
+            inline: true
+          },
+          {
+            name: '👤 Next Up',
+            value: nextNominee 
+              ? `${nextNominee.name} (by ${nextNominee.nominator})`
+              : 'No nominees in queue',
+            inline: true
+          }
+        ],
+        color: embedColor,
+        timestamp: new Date().toISOString(),
+        footer: {
+          text: 'Governance • Vote Results'
+        }
+      };
 
-      await governanceChannel.send(message);
+      await governanceChannel.send({ embeds: [embed] });
 
       logger.info({
         nomineeId: nominee.id,

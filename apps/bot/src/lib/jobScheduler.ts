@@ -178,16 +178,22 @@ export class NominationJobScheduler implements JobScheduler {
       const voteResults = await this.voteResultService.checkVoteCompletion(nominee);
       const readyByTime = nominee.certifyStart && nominee.certifyStart <= currentTime;
       
+      // Add 1-minute buffer after vote expiration to allow EasyPoll to finalize results
+      const bufferTime = new Date(currentTime);
+      bufferTime.setMinutes(bufferTime.getMinutes() - 1);
+      const readyWithBuffer = nominee.certifyStart && nominee.certifyStart <= bufferTime;
+      
       logger.info({
         nomineeId: nominee.id,
         nomineeName: nominee.name,
         certifyStart: nominee.certifyStart?.toISOString(),
         currentTime: currentTime.toISOString(),
         readyByTime,
+        readyWithBuffer,
         hasVoteResults: !!voteResults
       }, 'Checking vote completion for nominee');
 
-      if (voteResults || readyByTime) {
+      if (voteResults || readyWithBuffer) {
         await this.transitionToCertify(nominee, voteResults);
       }
     }
@@ -316,10 +322,10 @@ export class NominationJobScheduler implements JobScheduler {
         } : undefined
       }, 'Nominee transitioned to CERTIFY state');
       
-      // Post results to #general
+      // Post results to governance channel only
       if (voteResults) {
-        // We have actual poll results from EasyPoll
-        await this.announcementService.announceResults(
+        // We have actual poll results from EasyPoll - post to governance only
+        await this.announcementService.postResultsToGovernanceChannel(
           result.nominee!,
           voteResults.passed,
           voteResults.yesVotes,
@@ -327,8 +333,14 @@ export class NominationJobScheduler implements JobScheduler {
           voteResults.quorumMet
         );
       } else {
-        // Vote period expired - post time expiration notice
-        await this.announcementService.announceVoteTimeExpired(result.nominee!);
+        // Vote period expired - post to governance only
+        await this.announcementService.postResultsToGovernanceChannel(
+          result.nominee!,
+          false,
+          0,
+          0,
+          false
+        );
       }
     } else {
       logger.error({
