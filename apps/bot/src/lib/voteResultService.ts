@@ -120,15 +120,33 @@ export class VoteResultService {
         if (!this.isEasyPollMessage(message)) continue;
         
         // Check if poll is about this nominee
+        // For EasyPoll, the nominee name might be in the original poll command or embed
         const contentMatches = message.content.includes(nomineeName);
-        const embedMatches = message.embeds[0]?.title?.includes(nomineeName) || 
-                            message.embeds[0]?.description?.includes(nomineeName);
+        const embedMatches = message.embeds.some(embed => 
+          embed.title?.includes(nomineeName) || 
+          embed.description?.includes(nomineeName) ||
+          embed.fields?.some(field => 
+            field.name?.includes(nomineeName) || 
+            field.value?.includes(nomineeName)
+          )
+        );
+        
+        // Also check if this is a poll about inviting someone to GA (generic match)
+        const isGAPoll = message.content.toLowerCase().includes('invite') && 
+                        message.content.toLowerCase().includes('ga') ||
+                        message.embeds.some(embed => 
+                          embed.description?.toLowerCase().includes('invite') &&
+                          embed.description?.toLowerCase().includes('ga')
+                        );
         
         logger.info({
           messageId: message.id,
           nomineeName,
           contentMatches,
           embedMatches,
+          isGAPoll,
+          isRecentPoll,
+          messageCreated: new Date(message.createdTimestamp).toISOString(),
           messageContent: message.content,
           embedCount: message.embeds.length,
           allEmbedData: message.embeds.map(embed => ({
@@ -140,7 +158,10 @@ export class VoteResultService {
           }))
         }, 'Checking if message matches nominee');
         
-        if (!contentMatches && !embedMatches) continue;
+        // Try specific name match first, then fall back to GA poll match or timing-based match
+        const isRecentPoll = message.createdTimestamp > (Date.now() - (2 * 60 * 60 * 1000)); // Within last 2 hours
+        
+        if (!contentMatches && !embedMatches && !isGAPoll && !isRecentPoll) continue;
 
         // Parse poll data from the message
         const pollData = await this.parsePollMessage(message);
