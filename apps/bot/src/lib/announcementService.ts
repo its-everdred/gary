@@ -98,13 +98,8 @@ export class AnnouncementService {
 
       const embed = {
         title: '💬 New Discussion Started',
-        description: `Discussion period has begun for **${nominee.name}**'s nomination.`,
+        description: `Discussion period has begun for **${nominee.name}**'s nomination in ${discussionChannelMention}.`,
         fields: [
-          {
-            name: '📍 Discussion Location',
-            value: `Join the discussion in ${discussionChannelMention}`,
-            inline: false
-          },
           {
             name: '⏱️ Duration',
             value: NomineeDisplayUtils.formatDuration(NOMINATION_CONFIG.DISCUSSION_DURATION_MINUTES),
