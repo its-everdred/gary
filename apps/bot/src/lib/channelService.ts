@@ -433,18 +433,13 @@ export class ChannelManagementService {
               description: `A vote has started for **${nominee.name}** and requires immediate moderator action.`,
               fields: [
                 {
-                  name: '📍 Vote Channel',
-                  value: `<#${channel.id}>`,
-                  inline: true
-                },
-                {
-                  name: '⏰ Time Sensitive',
-                  value: 'Please create poll ASAP',
-                  inline: true
-                },
-                {
                   name: '📋 Copy/Paste Command',
                   value: `\`\`\`${pollCommand}\`\`\``
+                },
+                {
+                  name: '📍 Vote Channel',
+                  value: `<#${channel.id}>`,
+                  inline: false
                 }
               ],
               color: 0xff6600,
