@@ -350,14 +350,33 @@ export class VoteResultService {
   }
 
   /**
+   * Gets the appropriate description text based on vote results
+   */
+  private getVoteResultDescription(nomineeName: string, voteResults: VoteResults): string {
+    if (voteResults.passed) {
+      return `🗳️ ${nomineeName} met quorum and succeeded! Will receive an invite within 24 hours.`;
+    }
+    
+    // Failed - determine the reason
+    if (!voteResults.quorumMet) {
+      return `🗳️ ${nomineeName} failed to meet quorum.`;
+    }
+    
+    // Met quorum but didn't get enough yes votes
+    const yesPercentage = voteResults.totalVotes > 0 
+      ? Math.round((voteResults.yesVotes / voteResults.totalVotes) * 100) 
+      : 0;
+    
+    return `🗳️ ${nomineeName} met quorum but only received ${yesPercentage}% yes votes.`;
+  }
+
+  /**
    * Creates the vote results embed (shared between vote and governance channels)
    */
   private createVoteResultsEmbed(nominee: Nominee, voteResults: VoteResults): any {
     return {
       title: voteResults.passed ? `✅ Vote PASSED` : `❌ Vote FAILED`,
-      description: voteResults.passed 
-        ? `🗳️ ${nominee.name} will receive an invite within 24 hours.`
-        : `🗳️ ${nominee.name} will not proceed.`,
+      description: this.getVoteResultDescription(nominee.name, voteResults),
       fields: [
         {
           name: '📊 Vote Breakdown',
