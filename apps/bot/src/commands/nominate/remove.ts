@@ -55,9 +55,6 @@ export async function handleRemoveCommand(interaction: ChatInputCommandInteracti
     // Recalculate schedules for all remaining active nominees
     await recalculateRemainingNominees(guildId, nominee.name);
 
-    // Send announcement to governance channel
-    await announceNomineeRemoval(interaction.client, guildId, nominee.name, nominee.state, username);
-
     await interaction.reply({
       content: `${nominee.name} has been removed from the nominations list. Schedules updated for remaining nominees.`,
       flags: 64
@@ -141,43 +138,3 @@ async function recalculateRemainingNominees(guildId: string, removedNomineeName:
   }
 }
 
-/**
- * Announces nominee removal to governance channel
- */
-async function announceNomineeRemoval(
-  client: any,
-  guildId: string,
-  nomineeName: string,
-  previousState: NomineeState,
-  moderatorUsername: string
-): Promise<void> {
-  try {
-    const stateDisplayNames = {
-      [NomineeState.ACTIVE]: 'Active (pending)',
-      [NomineeState.DISCUSSION]: 'Discussion',
-      [NomineeState.VOTE]: 'Voting',
-      [NomineeState.CERTIFY]: 'Certification',
-      [NomineeState.PAST]: 'Past'
-    };
-
-    const stateDisplay = stateDisplayNames[previousState] || previousState.toLowerCase();
-    const message = `🗑️ **Nominee Removed**\n\n**${nomineeName}** has been removed from the nominations list by ${moderatorUsername}.\n\n**Previous State:** ${stateDisplay}\n**Action:** Schedules have been recalculated for all remaining nominees.`;
-
-    await AnnouncementUtils.postToGovernanceChannel(client, guildId, message);
-
-    logger.info({
-      guildId,
-      nomineeName,
-      previousState,
-      moderatorUsername
-    }, 'Nominee removal announced to governance channel');
-
-  } catch (error) {
-    logger.error({ 
-      error, 
-      guildId, 
-      nomineeName, 
-      moderatorUsername 
-    }, 'Failed to announce nominee removal to governance channel');
-  }
-}
