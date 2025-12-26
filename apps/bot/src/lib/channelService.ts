@@ -434,12 +434,18 @@ export class ChannelManagementService {
               description: `A vote has started for **${nominee.name}** and requires immediate moderator action.`,
               fields: [
                 {
-                  name: '📋 Copy/Paste Command',
-                  value: `\`\`\`${pollCommand}\`\`\``
+                  name: '1️⃣ Copy/Paste Command',
+                  value: `\`\`\`${pollCommand}\`\`\`in <#${channel.id}>`,
+                  inline: false
                 },
                 {
-                  name: '📍 Vote Channel',
-                  value: `<#${channel.id}>`,
+                  name: '2️⃣ Copy/Paste Emoji React',
+                  value: `\`\`\`Optionally, react to this message with :PepeVoted: so we can estimate quorum.\`\`\`Then react to your own message with :PepeVoted:`,
+                  inline: false
+                },
+                {
+                  name: '3️⃣ Delete this',
+                  value: 'Once posted, delete this message to remove the ping from other mods.',
                   inline: false
                 }
               ],

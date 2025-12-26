@@ -131,21 +131,20 @@ export class VoteResultService {
    */
   private async parsePollMessage(message: Message): Promise<PollData | null> {
     try {
-      // EasyPoll may put results in the message content or embed
+      // EasyPoll puts results in the embed description
       const content = message.content;
       const embed = message.embeds[0];
       
-      // Check if poll has final results
-      const hasFinalResults = content.includes('Final Result') || 
-                             embed?.description?.includes('Final Result');
+      // Check if poll has final results in embed
+      const hasFinalResults = embed?.description?.includes('Final Result');
       
       if (!hasFinalResults) return null;
       
-      // Extract from content if present, otherwise from embed
-      const textToParse = content || embed?.description || '';
+      // EasyPoll results are always in the embed description
+      const textToParse = embed.description || '';
       
-      // Extract question - look for "Question" section
-      const questionMatch = textToParse.match(/Question\s*\n(.+?)(?:\n|$)/);
+      // Extract question - look for "Question" section with bold markers
+      const questionMatch = textToParse.match(/\*\*Question\*\*\s*\n(.+?)(?:\n|$)/);
       const question = questionMatch ? questionMatch[1].trim() : 'Unknown';
       
       // Parse vote counts from "Final Result" section
@@ -215,11 +214,18 @@ export class VoteResultService {
     const lines = text.split('\n');
     
     for (const line of lines) {
-      if (line.includes(emoji) && line.includes('|')) {
-        // Look for pattern: | percentage% (count)
-        const match = line.match(/\|\s*\d+\.?\d*%\s*\((\d+)\)/);
+      if (line.includes(emoji)) {
+        // Look for pattern with progress bars: ▓▓▓ | percentage% (count)
+        // The line format is: ✅ ▓▓▓▓▓▓▓▓▓▓ | 100.0% (1)
+        const match = line.match(/[▓░]+\s*\|\s*(\d+\.?\d*)%\s*\((\d+)\)/);
         if (match) {
-          return parseInt(match[1], 10);
+          const count = parseInt(match[2], 10);
+          logger.debug({
+            line: line,
+            percentage: match[1],
+            count: count
+          }, 'Successfully parsed vote count from EasyPoll format');
+          return count;
         }
       }
     }
