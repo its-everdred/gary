@@ -73,12 +73,6 @@ export class VoteResultService {
       // Update nominee with poll results
       await this.updateNomineeWithResults(nominee.id, results, pollData);
 
-      logger.info({
-        nomineeId: nominee.id,
-        nomineeName: nominee.name,
-        ...results
-      }, 'Vote results calculated');
-
       return results;
     } catch (error) {
       logger.error({
@@ -98,70 +92,34 @@ export class VoteResultService {
       // Fetch recent messages to find the poll
       const messages = await channel.messages.fetch({ limit: 50 });
       
-      logger.info({
-        channelId: channel.id,
-        nomineeName,
-        messageCount: messages.size
-      }, 'Searching for poll message in channel');
+      // Collect debug data for all messages
+      const allMessagesData = Array.from(messages.values()).map(msg => ({
+        id: msg.id,
+        authorId: msg.author.id,
+        authorUsername: msg.author.username,
+        content: msg.content,
+        embedCount: msg.embeds.length,
+        embeds: msg.embeds.map(embed => ({
+          title: embed.title,
+          description: embed.description,
+          fields: embed.fields?.map(f => ({ name: f.name, value: f.value })),
+          footer: embed.footer?.text
+        })),
+        timestamp: new Date(msg.createdTimestamp).toISOString()
+      }));
+      
+      // Send debug message to channel
+      await channel.send({
+        content: `**DEBUG: Vote Channel Messages (${allMessagesData.length} total)**\n\`\`\`json\n${JSON.stringify(allMessagesData, null, 2).substring(0, 1900)}\n\`\`\``
+      });
       
       for (const message of messages.values()) {
-        // Log details about each message for debugging
-        logger.info({
-          messageId: message.id,
-          authorId: message.author.id,
-          authorUsername: message.author.username,
-          isEasyPoll: this.isEasyPollMessage(message),
-          hasEmbeds: message.embeds.length > 0,
-          content: message.content.substring(0, 100),
-          embedTitles: message.embeds.map(e => e.title).filter(Boolean)
-        }, 'Checking message for poll data');
-        
-        // Check if message is from EasyPoll bot
+        // Only check EasyPoll messages
         if (!this.isEasyPollMessage(message)) continue;
         
-        // Check if poll is about this nominee
-        // For EasyPoll, the nominee name might be in the original poll command or embed
-        const contentMatches = message.content.includes(nomineeName);
-        const embedMatches = message.embeds.some(embed => 
-          embed.title?.includes(nomineeName) || 
-          embed.description?.includes(nomineeName) ||
-          embed.fields?.some(field => 
-            field.name?.includes(nomineeName) || 
-            field.value?.includes(nomineeName)
-          )
-        );
-        
-        // Also check if this is a poll about inviting someone to GA (generic match)
-        const isGAPoll = message.content.toLowerCase().includes('invite') && 
-                        message.content.toLowerCase().includes('ga') ||
-                        message.embeds.some(embed => 
-                          embed.description?.toLowerCase().includes('invite') &&
-                          embed.description?.toLowerCase().includes('ga')
-                        );
-        
-        logger.info({
-          messageId: message.id,
-          nomineeName,
-          contentMatches,
-          embedMatches,
-          isGAPoll,
-          isRecentPoll,
-          messageCreated: new Date(message.createdTimestamp).toISOString(),
-          messageContent: message.content,
-          embedCount: message.embeds.length,
-          allEmbedData: message.embeds.map(embed => ({
-            title: embed.title,
-            description: embed.description?.substring(0, 500), // First 500 chars
-            fields: embed.fields?.map(f => ({ name: f.name, value: f.value?.substring(0, 200) })),
-            footer: embed.footer?.text,
-            author: embed.author?.name
-          }))
-        }, 'Checking if message matches nominee');
-        
-        // Try specific name match first, then fall back to GA poll match or timing-based match
-        const isRecentPoll = message.createdTimestamp > (Date.now() - (2 * 60 * 60 * 1000)); // Within last 2 hours
-        
-        if (!contentMatches && !embedMatches && !isGAPoll && !isRecentPoll) continue;
+        // For EasyPoll, try to match any recent poll (assume it's the one we want)
+        const isRecentPoll = message.createdTimestamp > (Date.now() - (2 * 60 * 60 * 1000));
+        if (!isRecentPoll) continue;
 
         // Parse poll data from the message
         const pollData = await this.parsePollMessage(message);
@@ -170,12 +128,6 @@ export class VoteResultService {
         }
       }
 
-      logger.warn({
-        channelId: channel.id,
-        nomineeName,
-        totalMessages: messages.size
-      }, 'No matching poll found in channel');
-      
       return null;
     } catch (error) {
       logger.error({ error, channelId: channel.id }, 'Failed to find poll in channel');
@@ -188,25 +140,8 @@ export class VoteResultService {
    */
   private isEasyPollMessage(message: Message): boolean {
     const authorId = message.author.id;
-    const username = message.author.username?.toLowerCase() || '';
-    
-    // Known EasyPoll bot IDs and patterns
     const easyPollIds = ['437618149505105920'];
-    const usernamePatterns = ['easypoll', 'easy poll', 'poll'];
-    
-    const matchesId = easyPollIds.includes(authorId);
-    const matchesUsername = usernamePatterns.some(pattern => username.includes(pattern));
-    
-    logger.info({
-      messageId: message.id,
-      authorId,
-      username: message.author.username,
-      matchesId,
-      matchesUsername,
-      isEasyPoll: matchesId || matchesUsername
-    }, 'EasyPoll bot detection check');
-    
-    return matchesId || matchesUsername;
+    return easyPollIds.includes(authorId);
   }
 
   /**
@@ -215,72 +150,29 @@ export class VoteResultService {
   private async parsePollMessage(message: Message): Promise<PollData | null> {
     try {
       const embed = message.embeds[0];
-      if (!embed) {
-        logger.warn({ messageId: message.id }, 'No embed found in message');
-        return null;
-      }
-
-      logger.info({
-        messageId: message.id,
-        embedStructure: {
-          title: embed.title,
-          description: embed.description,
-          fields: embed.fields?.map(f => ({ name: f.name, value: f.value })),
-          footer: embed.footer?.text,
-          color: embed.color
-        }
-      }, 'Parsing poll message embed structure');
+      if (!embed) return null;
 
       // Extract question from embed
       const question = embed.title || embed.description || '';
       
       // Check if poll is closed/completed
       const isClosed = this.isPollClosed(embed);
-      logger.info({
-        messageId: message.id,
-        question,
-        isClosed,
-        title: embed.title,
-        description: embed.description,
-        footer: embed.footer?.text
-      }, 'Poll closure check');
-      
-      if (!isClosed) {
-        logger.info({ messageId: message.id }, 'Poll is still active, skipping');
-        return null; // Poll is still active
-      }
+      if (!isClosed) return null; // Poll is still active
       
       // Parse vote counts from embed fields or description
       const yesVotes = this.extractVoteCount(embed, 'yes') || 0;
       const noVotes = this.extractVoteCount(embed, 'no') || 0;
       
-      logger.info({
-        messageId: message.id,
-        yesVotes,
-        noVotes,
-        extractionDetails: {
-          fields: embed.fields?.map(f => ({ name: f.name, value: f.value })),
-          description: embed.description
-        }
-      }, 'Vote count extraction results');
-      
       // Extract voter IDs from reactions or embed data
       const voterIds = await this.extractVoterIds(message);
 
-      const pollData = {
+      return {
         question,
         yesVotes,
         noVotes,
         voterIds,
         pollMessageId: message.id
       };
-      
-      logger.info({
-        messageId: message.id,
-        pollData
-      }, 'Successfully parsed poll data');
-
-      return pollData;
     } catch (error) {
       logger.error({ error, messageId: message.id }, 'Failed to parse poll message');
       return null;
@@ -310,42 +202,18 @@ export class VoteResultService {
    */
   private extractVoteCount(embed: any, option: 'yes' | 'no'): number {
     const description = embed.description || '';
-    
-    // Look for EasyPoll "Final Result" section
-    // Format: ✅ ▓▓▓▓▓▓▓▓▓▓ | 100.0% (1)
-    // or:     ❌ ░░░░░░░░░░ | 0.0% (0)
-    
     const emoji = option === 'yes' ? '✅' : '❌';
     const lines = description.split('\n');
-    
-    logger.info({
-      option,
-      emoji,
-      descriptionLines: lines,
-      searchingFor: `${emoji} pattern with vote count`
-    }, 'Extracting vote count from EasyPoll format');
     
     for (const line of lines) {
       if (line.includes(emoji)) {
         // Look for pattern: | percentage% (count)
         const match = line.match(/\|\s*\d+\.?\d*%\s*\((\d+)\)/);
         if (match) {
-          const count = parseInt(match[1], 10);
-          logger.info({
-            option,
-            line,
-            extractedCount: count
-          }, 'Successfully extracted vote count');
-          return count;
+          return parseInt(match[1], 10);
         }
       }
     }
-    
-    logger.warn({
-      option,
-      emoji,
-      description
-    }, 'Could not extract vote count from EasyPoll format');
     
     return 0;
   }
@@ -357,9 +225,7 @@ export class VoteResultService {
     const voterIds: string[] = [];
     
     try {
-      // Try to get voter IDs from reactions
       const reactions = message.reactions.cache;
-      
       for (const [emoji, reaction] of reactions) {
         if (emoji === '✅' || emoji === '❌') {
           const users = await reaction.users.fetch();
@@ -371,7 +237,7 @@ export class VoteResultService {
         }
       }
     } catch (error) {
-      logger.warn({ error, messageId: message.id }, 'Failed to extract voter IDs from reactions');
+      // Silent fail for voter ID extraction
     }
     
     return voterIds;
