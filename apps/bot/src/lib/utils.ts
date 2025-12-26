@@ -66,7 +66,7 @@ export async function sendToModChannel(
 ): Promise<void> {
   try {
     const channel = (await client.channels.fetch(
-      process.env.MOD_CHANNEL_ID!
+      process.env.MOD_WARN_CHANNEL_ID!
     )) as TextChannel;
     
     if (!channel || !channel.isTextBased()) {

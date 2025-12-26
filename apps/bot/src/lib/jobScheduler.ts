@@ -205,7 +205,7 @@ export class NominationJobScheduler implements JobScheduler {
           error: channelResult.errorMessage
         }, 'Failed to create discussion channel');
       } else {
-        // Send announcement to GA governance channel
+        // Send announcement to governance channel
         await this.announcementService.announceDiscussionStart(
           result.nominee, 
           channelResult.channel!.id

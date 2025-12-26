@@ -19,26 +19,6 @@ async function calculateNomineeSchedule(guildId: string): Promise<{ discussionSt
   return TimeCalculationService.calculateScheduledTimes(queuePosition);
 }
 
-async function generateNominationQueueText(guildId: string): Promise<string> {
-  try {
-    const nominees = await prisma.nominee.findMany({
-      where: {
-        guildId,
-        state: {
-          not: 'PAST'
-        }
-      },
-      orderBy: {
-        createdAt: 'asc'
-      }
-    });
-
-    return NomineeDisplayUtils.formatNominationQueue(nominees);
-  } catch (error) {
-    logger.error({ error, guildId }, 'Failed to generate nomination queue text');
-    return '\n\n**Current Queue:** Unable to load';
-  }
-}
 
 
 export async function handleNameCommand(interaction: ChatInputCommandInteraction): Promise<void> {
@@ -95,12 +75,31 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
         }
       });
 
-      // Generate queue text and post to governance channel
-      const queueText = await generateNominationQueueText(guildId);
+      // Get all nominees for the queue display
+      const nominees = await prisma.nominee.findMany({
+        where: {
+          guildId,
+          state: {
+            not: 'PAST'
+          }
+        },
+        orderBy: {
+          createdAt: 'asc'
+        }
+      });
+
+      // Create embed for governance channel
+      const nominationEmbed = NomineeDisplayUtils.createNominationEmbed(
+        name,
+        nominator.username,
+        username,
+        nominees
+      );
+
       await AnnouncementUtils.postToGovernanceChannel(
         interaction.client,
         guildId,
-        `${name} has been nominated for membership by ${nominator.username} (via ${username}).${queueText}`
+        { embeds: [nominationEmbed] }
       );
       
       // Send private acknowledgment to mod
@@ -155,12 +154,31 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
       }
     });
 
-    // Generate queue text and post to governance channel
-    const queueText = await generateNominationQueueText(guildId);
+    // Get all nominees for the queue display
+    const allNominees = await prisma.nominee.findMany({
+      where: {
+        guildId,
+        state: {
+          not: 'PAST'
+        }
+      },
+      orderBy: {
+        createdAt: 'asc'
+      }
+    });
+
+    // Create embed for governance channel
+    const nominationEmbed = NomineeDisplayUtils.createNominationEmbed(
+      name,
+      username,
+      null, // No moderator for regular nominations
+      allNominees
+    );
+
     await AnnouncementUtils.postToGovernanceChannel(
       interaction.client,
       guildId,
-      `${name} has been nominated for membership by ${username}.${queueText}`
+      { embeds: [nominationEmbed] }
     );
     
     // Send private acknowledgment to nominator

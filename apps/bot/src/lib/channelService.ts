@@ -4,6 +4,7 @@ import pino from 'pino';
 import { prisma } from './db.js';
 import type { Nominee } from '@prisma/client';
 import { NOMINATION_CONFIG } from './constants.js';
+import { NomineeDisplayUtils } from './nomineeDisplayUtils.js';
 
 const logger = pino();
 
@@ -336,7 +337,7 @@ export class ChannelManagementService {
           },
           {
             name: '⏰ Discussion Duration',
-            value: `${Math.round(NOMINATION_CONFIG.DISCUSSION_DURATION_MINUTES / 60)} hours`,
+            value: NomineeDisplayUtils.formatDuration(NOMINATION_CONFIG.DISCUSSION_DURATION_MINUTES),
             inline: true
           },
           {
@@ -353,8 +354,8 @@ export class ChannelManagementService {
       };
 
       const content = nominatorMember 
-        ? `**Discussion has started!**\n\n${nominatorMention}, please kick us off with why you think ${nominee.name} should be invited.\n\nAll members are welcome to participate in this discussion.`
-        : `**Discussion has started!**\n\nThe discussion period for **${nominee.name}** has begun. All members are welcome to participate.`;
+        ? `${nominatorMention}, please kick us off with why you think ${nominee.name} should be invited.`
+        : `The discussion period for **${nominee.name}** has begun.`;
 
       logger.info({
         nomineeId: nominee.id,
@@ -457,6 +458,59 @@ export class ChannelManagementService {
         content: `${moderatorMention} **Immediate action required to create the vote poll!**`,
         embeds: [infoEmbed, commandEmbed]
       });
+
+      // Also notify in mod comms channel if configured
+      const modCommsChannelId = NOMINATION_CONFIG.CHANNELS.MOD_COMMS;
+      if (modCommsChannelId) {
+        try {
+          const modCommsChannel = channel.guild.channels.cache.get(modCommsChannelId) as TextChannel;
+          if (modCommsChannel?.isTextBased()) {
+            const modNotifyEmbed = {
+              title: '🚨 Poll Creation Required',
+              description: `A vote has started for **${nominee.name}** and requires immediate moderator action.`,
+              fields: [
+                {
+                  name: '📍 Vote Channel',
+                  value: `<#${channel.id}>`,
+                  inline: true
+                },
+                {
+                  name: '⏰ Time Sensitive',
+                  value: 'Please create poll ASAP',
+                  inline: true
+                },
+                {
+                  name: '📋 Copy/Paste Command',
+                  value: `\`\`\`${pollCommand}\`\`\``
+                }
+              ],
+              color: 0xff6600,
+              timestamp: new Date().toISOString(),
+              footer: {
+                text: 'Nomination System • Action Required'
+              }
+            };
+
+            await modCommsChannel.send({
+              content: `${moderatorMention} **Vote poll needs to be created!**`,
+              embeds: [modNotifyEmbed]
+            });
+
+            logger.info({
+              nomineeId: nominee.id,
+              nomineeName: nominee.name,
+              modCommsChannelId,
+              voteChannelId: channel.id
+            }, 'Mod notification sent to mod comms channel');
+          }
+        } catch (error) {
+          logger.error({
+            error,
+            nomineeId: nominee.id,
+            modCommsChannelId
+          }, 'Failed to send notification to mod comms channel');
+        }
+      }
 
       // Log the poll creation request
       logger.info({

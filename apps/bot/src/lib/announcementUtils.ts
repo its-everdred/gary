@@ -36,7 +36,7 @@ export class AnnouncementUtils {
   static async postToGovernanceChannel(
     client: Client,
     guildId: string,
-    message: string
+    message: string | { content?: string; embeds?: any[] }
   ): Promise<ChannelPostResult> {
     try {
       const governanceChannelId = NOMINATION_CONFIG.CHANNELS.GA_GOVERNANCE;

@@ -3,6 +3,7 @@ import pino from 'pino';
 import type { Nominee } from '@prisma/client';
 import { NOMINATION_CONFIG } from './constants.js';
 import { NomineeStateManager } from './nomineeService.js';
+import { NomineeDisplayUtils } from './nomineeDisplayUtils.js';
 
 const logger = pino();
 
@@ -90,7 +91,7 @@ export class AnnouncementService {
   /**
    * Posts discussion announcement to #ga-governance channel
    */
-  async announceDiscussionStart(nominee: Nominee, discussionChannelId: string, manualStartBy?: string): Promise<boolean> {
+  async announceDiscussionStart(nominee: Nominee, discussionChannelId: string): Promise<boolean> {
     try {
       const guild = await this.client.guilds.fetch(nominee.guildId);
       const governanceChannel = await this.findGovernanceChannel(guild);
@@ -106,37 +107,22 @@ export class AnnouncementService {
       const discussionChannel = guild.channels.cache.get(discussionChannelId);
       const discussionChannelMention = discussionChannel ? `<#${discussionChannelId}>` : '#discussion-channel';
 
-      const fields = [
-        {
-          name: '📍 Discussion Location',
-          value: `Join the discussion in ${discussionChannelMention}`,
-          inline: false
-        },
-        {
-          name: '⏱️ Duration',
-          value: `${Math.round(NOMINATION_CONFIG.DISCUSSION_DURATION_MINUTES / 60)} hours`,
-          inline: true
-        },
-        {
-          name: '🎯 Purpose',
-          value: 'Share thoughts on the nominee\'s qualifications and contributions',
-          inline: true
-        }
-      ];
-
-      if (manualStartBy) {
-        fields.push({
-          name: '👨‍💼 Started By',
-          value: `<@${manualStartBy}> (manual override)`,
-          inline: true
-        });
-      }
-
       const embed = {
-        title: manualStartBy ? '💬 Discussion Started (Manual)' : '💬 New Discussion Started',
+        title: '💬 New Discussion Started',
         description: `Discussion period has begun for **${nominee.name}**'s nomination to membership.`,
-        fields,
-        color: manualStartBy ? 0xff9900 : 0x3498db, // Orange for manual, blue for automatic
+        fields: [
+          {
+            name: '📍 Discussion Location',
+            value: `Join the discussion in ${discussionChannelMention}`,
+            inline: false
+          },
+          {
+            name: '⏱️ Duration',
+            value: NomineeDisplayUtils.formatDuration(NOMINATION_CONFIG.DISCUSSION_DURATION_MINUTES),
+            inline: true
+          }
+        ],
+        color: 0x3498db,
         timestamp: new Date().toISOString(),
         footer: {
           text: 'Governance • All members welcome to participate'

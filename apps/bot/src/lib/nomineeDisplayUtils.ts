@@ -1,5 +1,6 @@
 import type { Nominee } from '@prisma/client';
 import { NomineeState } from '@prisma/client';
+import type { EmbedBuilder } from 'discord.js';
 
 export interface NomineeDisplayOptions {
   showHeader?: boolean;
@@ -13,6 +14,18 @@ export class NomineeDisplayUtils {
    */
   static formatDiscordTimestamp(date: Date, format: 'f' | 'F' | 'R' | 't' | 'T' | 'd' | 'D' = 'R'): string {
     return `<t:${Math.floor(date.getTime() / 1000)}:${format}>`;
+  }
+
+  /**
+   * Formats duration in minutes to a human-readable string
+   */
+  static formatDuration(minutes: number): string {
+    if (minutes < 60) {
+      return `${minutes} minute${minutes === 1 ? '' : 's'}`;
+    } else {
+      const hours = Math.round(minutes / 60);
+      return `${hours} hour${hours === 1 ? '' : 's'}`;
+    }
   }
 
   /**
@@ -82,5 +95,76 @@ export class NomineeDisplayUtils {
     });
     
     return queueLines.join('\n');
+  }
+
+  /**
+   * Creates an embed for nomination announcements with queue
+   */
+  static createNominationEmbed(nomineeName: string, nominatorName: string, moderatorName: string | null, nominees: Nominee[]): any {
+    const embed = {
+      title: '📋 New Nomination',
+      description: moderatorName 
+        ? `**${nomineeName}** has been nominated for membership by ${nominatorName} (via ${moderatorName}).`
+        : `**${nomineeName}** has been nominated for membership by ${nominatorName}.`,
+      color: 0x3498db,
+      fields: [],
+      timestamp: new Date().toISOString(),
+      footer: {
+        text: 'Governance • Nomination Queue'
+      }
+    };
+
+    if (nominees.length > 0) {
+      // Create table-like format for queue
+      const queueTable = nominees.map((nominee, index) => {
+        const position = index + 1;
+        const state = this.getStateDisplay(nominee);
+        const timing = this.getTimingDisplay(nominee);
+        
+        // Use code block for aligned table
+        return `\`${position.toString().padEnd(2)}\` **${nominee.name}**\n    └ *by ${nominee.nominator}* • ${state} ${timing}`;
+      }).join('\n\n');
+
+      embed.fields.push({
+        name: '📊 Current Queue',
+        value: queueTable || 'No nominees in queue',
+        inline: false
+      });
+    }
+
+    return embed;
+  }
+
+  /**
+   * Gets state display text for a nominee
+   */
+  private static getStateDisplay(nominee: Nominee): string {
+    switch (nominee.state) {
+      case NomineeState.VOTE:
+        return '🗳️ Voting';
+      case NomineeState.DISCUSSION:
+        return '💬 Discussion';
+      case NomineeState.CERTIFY:
+        return '⏳ Results pending';
+      case NomineeState.ACTIVE:
+        return '📅 Scheduled';
+      default:
+        return nominee.state.toLowerCase();
+    }
+  }
+
+  /**
+   * Gets timing display for a nominee
+   */
+  private static getTimingDisplay(nominee: Nominee): string {
+    if (nominee.state === NomineeState.VOTE && nominee.certifyStart) {
+      return `ends ${this.formatDiscordTimestamp(nominee.certifyStart)}`;
+    } else if (nominee.state === NomineeState.DISCUSSION && nominee.voteStart) {
+      return `vote ${this.formatDiscordTimestamp(nominee.voteStart)}`;
+    } else if (nominee.state === NomineeState.ACTIVE && nominee.discussionStart) {
+      return `starts ${this.formatDiscordTimestamp(nominee.discussionStart)}`;
+    } else {
+      return '';
+    }
   }
 }

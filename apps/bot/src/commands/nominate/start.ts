@@ -141,8 +141,7 @@ export async function handleStartCommand(interaction: ChatInputCommandInteractio
         const announcementService = new AnnouncementService(interaction.client);
         await announcementService.announceDiscussionStart(
           transitionResult.nominee!,
-          channelResult.channel!.id,
-          interaction.user.id // Pass user ID to indicate manual start
+          channelResult.channel!.id
         );
         
         logger.info({
