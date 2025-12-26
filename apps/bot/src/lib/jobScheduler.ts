@@ -183,15 +183,7 @@ export class NominationJobScheduler implements JobScheduler {
       bufferTime.setMinutes(bufferTime.getMinutes() - 1);
       const readyWithBuffer = nominee.certifyStart && nominee.certifyStart <= bufferTime;
       
-      logger.info({
-        nomineeId: nominee.id,
-        nomineeName: nominee.name,
-        certifyStart: nominee.certifyStart?.toISOString(),
-        currentTime: currentTime.toISOString(),
-        readyByTime,
-        readyWithBuffer,
-        hasVoteResults: !!voteResults
-      }, 'Checking vote completion for nominee');
+      // Checking vote completion for nominee
 
       if (voteResults || readyWithBuffer) {
         await this.transitionToCertify(nominee, voteResults);
@@ -321,6 +313,13 @@ export class NominationJobScheduler implements JobScheduler {
           noVotes: voteResults.noVotes
         } : undefined
       }, 'Nominee transitioned to CERTIFY state');
+      
+      // Post detailed results to vote channel if we have vote results
+      if (voteResults) {
+        this.voteResultService.postDetailedVoteResults(nominee, voteResults).catch(error => {
+          logger.error({ error, nomineeId: nominee.id }, 'Failed to post detailed vote results');
+        });
+      }
       
       // Post results to governance channel only
       if (voteResults) {

@@ -57,10 +57,7 @@ export class VoteResultService {
       // Find EasyPoll message in the channel
       const pollData = await this.findPollInChannel(voteChannel, nominee.name);
       if (!pollData) {
-        logger.debug({ 
-          nomineeId: nominee.id,
-          channelId: voteChannel.id 
-        }, 'No completed poll found yet');
+        // No completed poll found yet
         return null;
       }
 
@@ -103,25 +100,12 @@ export class VoteResultService {
         // Force refetch the specific message to get latest embed data
         const refreshedMessage = await channel.messages.fetch(message.id, { force: true });
         
-        // Debug log the refreshed message
-        logger.info({
-          messageId: refreshedMessage.id,
-          hasEmbeds: refreshedMessage.embeds.length > 0,
-          embedCount: refreshedMessage.embeds.length,
-          firstEmbedDescription: refreshedMessage.embeds[0]?.description?.substring(0, 200),
-          content: refreshedMessage.content?.substring(0, 200)
-        }, 'Checking refreshed EasyPoll message');
+        // Check the refreshed message
         
         // Parse poll data from the refreshed message
         const pollData = await this.parsePollMessage(refreshedMessage);
         if (pollData) {
-          // Log successful parse for debugging
-          logger.info({
-            nomineeId: nomineeName,
-            pollMessageId: message.id,
-            yesVotes: pollData.yesVotes,
-            noVotes: pollData.noVotes
-          }, 'Successfully parsed EasyPoll results');
+          // Successfully parsed EasyPoll results
           return pollData;
         }
       }
@@ -362,5 +346,163 @@ export class VoteResultService {
     await this.updateNomineeWithResults(nominee.id, results, pollData);
     
     return results;
+  }
+
+  /**
+   * Posts the detailed vote results with EasyPoll scan to the vote channel
+   */
+  async postDetailedVoteResults(nominee: Nominee, voteResults: VoteResults): Promise<void> {
+    try {
+      if (!nominee.voteChannelId) {
+        logger.warn({ nomineeId: nominee.id }, 'No vote channel ID found');
+        return;
+      }
+
+      const channel = await this.client.channels.fetch(nominee.voteChannelId) as TextChannel;
+      if (!channel) {
+        logger.warn({ nomineeId: nominee.id, voteChannelId: nominee.voteChannelId }, 'Vote channel not found');
+        return;
+      }
+
+      // Scan the channel for detailed results
+      const scanResults = await this.scanVoteChannel(nominee.voteChannelId);
+
+      // Split the results into chunks if too long for Discord
+      const chunks = this.splitIntoChunks(scanResults, 1900); // Discord limit is 2000, leaving some margin
+
+      // Post the scan results first
+      await channel.send('**📊 Vote Results - Detailed EasyPoll Data**');
+      
+      for (const chunk of chunks) {
+        await channel.send(`\`\`\`\n${chunk}\n\`\`\``);
+      }
+
+      // Then post the parsed vote results
+      const resultEmbed = {
+        title: `🗳️ Vote Results: ${nominee.name}`,
+        description: voteResults.passed 
+          ? `✅ **Vote PASSED** - ${nominee.name} will proceed to certification.`
+          : `❌ **Vote FAILED** - ${nominee.name} will not proceed.`,
+        fields: [
+          {
+            name: '📊 Vote Breakdown',
+            value: `✅ Yes: ${voteResults.yesVotes}\n❌ No: ${voteResults.noVotes}\n📈 Total: ${voteResults.totalVotes}`,
+            inline: true
+          },
+          {
+            name: '📋 Requirements',
+            value: `Quorum: ${voteResults.quorumMet ? '✅' : '❌'} ${voteResults.totalVotes}/${voteResults.requiredQuorum}\nPass Threshold: ${voteResults.passThresholdMet ? '✅' : '❌'} ${Math.round((voteResults.yesVotes / voteResults.totalVotes) * 100)}%/80%`,
+            inline: true
+          }
+        ],
+        color: voteResults.passed ? 0x00ff00 : 0xff0000,
+        timestamp: new Date().toISOString()
+      };
+
+      await channel.send({ embeds: [resultEmbed] });
+
+      logger.info({ nomineeId: nominee.id, channelId: channel.id }, 'Posted detailed vote results to channel');
+    } catch (error) {
+      logger.error({ error, nomineeId: nominee.id }, 'Failed to post detailed vote results');
+    }
+  }
+
+  /**
+   * Splits text into chunks for Discord message limits
+   */
+  private splitIntoChunks(text: string, maxLength: number): string[] {
+    const chunks: string[] = [];
+    let currentChunk = '';
+    const lines = text.split('\n');
+
+    for (const line of lines) {
+      if (currentChunk.length + line.length + 1 > maxLength) {
+        chunks.push(currentChunk);
+        currentChunk = line;
+      } else {
+        currentChunk += (currentChunk ? '\n' : '') + line;
+      }
+    }
+
+    if (currentChunk) {
+      chunks.push(currentChunk);
+    }
+
+    return chunks;
+  }
+
+  /**
+   * Scans vote channel and returns detailed information about all messages
+   * Used for debugging vote parsing issues
+   */
+  async scanVoteChannel(voteChannelId: string): Promise<string> {
+    try {
+      const channel = await this.client.channels.fetch(voteChannelId) as TextChannel;
+      if (!channel) {
+        return 'Vote channel not found';
+      }
+
+      const messages = await channel.messages.fetch({ limit: 50, force: true });
+      const results: string[] = [];
+      
+      results.push(`=== Vote Channel Scan Results ===`);
+      results.push(`Channel: ${channel.name} (${channel.id})`);
+      results.push(`Total messages found: ${messages.size}`);
+      results.push(`\n`);
+
+      // Sort messages by creation time (oldest first)
+      const sortedMessages = Array.from(messages.values()).sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+
+      for (const message of sortedMessages) {
+        results.push(`--- Message ---`);
+        results.push(`ID: ${message.id}`);
+        results.push(`Author: ${message.author.tag} (ID: ${message.author.id})`);
+        results.push(`Is EasyPoll Bot: ${this.isEasyPollMessage(message)}`);
+        results.push(`Created: ${message.createdAt.toISOString()}`);
+        results.push(`Content: ${message.content ? message.content.substring(0, 500) : '(no content)'}`);
+        
+        if (message.embeds.length > 0) {
+          results.push(`Embeds: ${message.embeds.length}`);
+          message.embeds.forEach((embed, index) => {
+            results.push(`  Embed ${index + 1}:`);
+            results.push(`    Title: ${embed.title || '(no title)'}`);
+            results.push(`    Author: ${embed.author?.name || '(no author)'}`);
+            if (embed.description) {
+              results.push(`    Description: ${embed.description}`);
+            }
+            if (embed.fields.length > 0) {
+              results.push(`    Fields:`);
+              embed.fields.forEach(field => {
+                results.push(`      ${field.name}: ${field.value}`);
+              });
+            }
+            if (embed.footer) {
+              results.push(`    Footer: ${embed.footer.text}`);
+            }
+          });
+        }
+        
+        // Parse poll results if this is an EasyPoll message
+        if (this.isEasyPollMessage(message)) {
+          const pollData = await this.parsePollMessage(message);
+          if (pollData) {
+            results.push(`  Poll Results Parsed:`);
+            results.push(`    Question: ${pollData.question}`);
+            results.push(`    Yes votes: ${pollData.yesVotes}`);
+            results.push(`    No votes: ${pollData.noVotes}`);
+            results.push(`    Poll completed: Yes`);
+          } else {
+            results.push(`  Poll Results: Not yet completed or unable to parse`);
+          }
+        }
+        
+        results.push(`\n`);
+      }
+
+      return results.join('\n');
+    } catch (error) {
+      logger.error({ error, channelId: voteChannelId }, 'Failed to scan vote channel');
+      return `Error scanning vote channel: ${error instanceof Error ? error.message : 'Unknown error'}`;
+    }
   }
 }

@@ -58,7 +58,7 @@ export class ChannelManagementService {
         }
       }
 
-      const channel = await guild.channels.create(createOptions);
+      const channel = await guild.channels.create(createOptions) as TextChannel;
 
       // Update the nominee record with the channel ID
       await prisma.nominee.update({
@@ -143,7 +143,7 @@ export class ChannelManagementService {
         }
       }
 
-      const channel = await guild.channels.create(createOptions);
+      const channel = await guild.channels.create(createOptions) as TextChannel;
 
       // Update the nominee record with the vote channel ID
       await prisma.nominee.update({
@@ -379,6 +379,12 @@ export class ChannelManagementService {
       const moderatorRole = await this.getModeratorRole(channel.guild);
       const moderatorMention = moderatorRole ? `<@&${moderatorRole.id}>` : '@Moderator';
 
+      // Calculate actual quorum number
+      await channel.guild.members.fetch(); // Ensure all members are cached
+      const nonBotMembers = channel.guild.members.cache.filter(member => !member.user.bot);
+      const memberCount = nonBotMembers.size;
+      const requiredQuorum = Math.ceil(memberCount * NOMINATION_CONFIG.VOTE_QUORUM_THRESHOLD);
+
       const infoEmbed = {
         title: `🗳️ Vote: ${nominee.name}`,
         description: `Voting period has begun for nominee **${nominee.name}**.`,
@@ -390,7 +396,7 @@ export class ChannelManagementService {
           },
           {
             name: '📊 Quorum Required',
-            value: '40% of members',
+            value: `${requiredQuorum} vote minimum (40%)`,
             inline: true
           },
           {
