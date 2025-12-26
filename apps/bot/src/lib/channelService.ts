@@ -456,8 +456,14 @@ export class ChannelManagementService {
               }
             };
 
+            // Find moderators role specifically
+            const moderatorsRole = channel.guild.roles.cache.find(r => 
+              r.name.toLowerCase() === 'moderators'
+            );
+            const moderatorsMention = moderatorsRole ? `<@&${moderatorsRole.id}>` : '@moderators';
+            
             await modCommsChannel.send({
-              content: `${moderatorMention} **Vote poll needs to be created!**`,
+              content: `${moderatorsMention} **Vote poll needs to be created!**`,
               embeds: [modNotifyEmbed]
             });
           } else {
