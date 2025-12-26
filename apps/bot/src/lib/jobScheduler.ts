@@ -119,13 +119,29 @@ export class NominationJobScheduler implements JobScheduler {
   private async processStateTransitions(): Promise<void> {
     const guilds = this.client.guilds.cache;
     
+    logger.info({
+      guildsCount: guilds.size,
+      guildIds: Array.from(guilds.keys())
+    }, 'Starting state transition processing for all guilds');
+    
     for (const [guildId] of guilds) {
       try {
+        logger.info({ guildId }, 'Processing state transitions for guild');
         await this.processGuildTransitions(guildId);
+        logger.info({ guildId }, 'Successfully processed state transitions for guild');
       } catch (error) {
-        logger.error({ error, guildId }, 'Guild state transition processing failed');
+        logger.error({ 
+          error: error instanceof Error ? {
+            message: error.message,
+            stack: error.stack,
+            name: error.name
+          } : error,
+          guildId 
+        }, 'Guild state transition processing failed');
       }
     }
+    
+    logger.info('Completed state transition processing for all guilds');
   }
 
   /**
@@ -135,6 +151,20 @@ export class NominationJobScheduler implements JobScheduler {
     const activeNominees = await NomineeStateManager.getActiveNominees(guildId);
     const currentTime = new Date();
 
+    logger.info({
+      guildId,
+      currentTime: currentTime.toISOString(),
+      activeNomineesCount: activeNominees.length,
+      activeNominees: activeNominees.map(n => ({
+        id: n.id,
+        name: n.name,
+        state: n.state,
+        discussionStart: n.discussionStart?.toISOString(),
+        voteStart: n.voteStart?.toISOString(),
+        certifyStart: n.certifyStart?.toISOString()
+      }))
+    }, 'Processing guild state transitions');
+
     // Check for nominees ready to start discussion
     const readyForDiscussion = TimeCalculationService.getNomineeForStateAtTime(
       activeNominees,
@@ -142,7 +172,22 @@ export class NominationJobScheduler implements JobScheduler {
       currentTime
     );
 
+    logger.info({
+      guildId,
+      readyForDiscussion: readyForDiscussion ? {
+        id: readyForDiscussion.id,
+        name: readyForDiscussion.name,
+        state: readyForDiscussion.state,
+        discussionStart: readyForDiscussion.discussionStart?.toISOString()
+      } : null
+    }, 'Checked for nominees ready for discussion');
+
     if (readyForDiscussion) {
+      logger.info({
+        guildId,
+        nomineeId: readyForDiscussion.id,
+        nomineeName: readyForDiscussion.name
+      }, 'Transitioning nominee to discussion');
       await this.transitionToDiscussion(readyForDiscussion);
     }
 
@@ -153,29 +198,93 @@ export class NominationJobScheduler implements JobScheduler {
       currentTime
     );
 
+    logger.info({
+      guildId,
+      readyForVote: readyForVote ? {
+        id: readyForVote.id,
+        name: readyForVote.name,
+        state: readyForVote.state,
+        voteStart: readyForVote.voteStart?.toISOString()
+      } : null
+    }, 'Checked for nominees ready for vote');
+
     if (readyForVote) {
+      logger.info({
+        guildId,
+        nomineeId: readyForVote.id,
+        nomineeName: readyForVote.name
+      }, 'Transitioning nominee to vote');
       await this.transitionToVote(readyForVote);
     }
 
     // Check for nominees in VOTE state - either ready by time or poll completed
     const voteNominees = activeNominees.filter(n => n.state === NomineeState.VOTE);
+    logger.info({
+      guildId,
+      voteNomineesCount: voteNominees.length,
+      voteNominees: voteNominees.map(n => ({
+        id: n.id,
+        name: n.name,
+        certifyStart: n.certifyStart?.toISOString()
+      }))
+    }, 'Checked nominees in VOTE state');
+
     for (const nominee of voteNominees) {
       // Check if vote has completed (either by time or poll closure)
       const voteResults = await this.voteResultService.checkVoteCompletion(nominee);
       const readyByTime = nominee.certifyStart && nominee.certifyStart <= currentTime;
       
+      logger.info({
+        guildId,
+        nomineeId: nominee.id,
+        nomineeName: nominee.name,
+        voteResults: !!voteResults,
+        readyByTime,
+        certifyStart: nominee.certifyStart?.toISOString(),
+        currentTime: currentTime.toISOString()
+      }, 'Checked vote completion status');
+
       if (voteResults || readyByTime) {
+        logger.info({
+          guildId,
+          nomineeId: nominee.id,
+          nomineeName: nominee.name,
+          reason: voteResults ? 'poll completed' : 'time elapsed'
+        }, 'Transitioning nominee to certify');
         await this.transitionToCertify(nominee, voteResults);
       }
     }
 
     // Check for nominees that should transition to PAST
     const certifyNominees = activeNominees.filter(n => n.state === NomineeState.CERTIFY);
+    logger.info({
+      guildId,
+      certifyNomineesCount: certifyNominees.length
+    }, 'Checked nominees in CERTIFY state');
+
     for (const nominee of certifyNominees) {
-      if (TimeCalculationService.shouldTransitionToPast(nominee, currentTime)) {
+      const shouldTransition = TimeCalculationService.shouldTransitionToPast(nominee, currentTime);
+      logger.info({
+        guildId,
+        nomineeId: nominee.id,
+        nomineeName: nominee.name,
+        shouldTransition
+      }, 'Checked if nominee should transition to PAST');
+
+      if (shouldTransition) {
+        logger.info({
+          guildId,
+          nomineeId: nominee.id,
+          nomineeName: nominee.name
+        }, 'Transitioning nominee to PAST');
         await this.transitionToPast(nominee);
       }
     }
+
+    logger.info({
+      guildId,
+      processedAt: currentTime.toISOString()
+    }, 'Completed guild state transition processing');
   }
 
   /**
