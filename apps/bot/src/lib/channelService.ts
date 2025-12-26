@@ -331,13 +331,18 @@ export class ChannelManagementService {
         }
       };
 
+      // Send embed first
+      await channel.send({
+        embeds: [embed]
+      });
+
+      // Then send nominator ping as separate message
       const content = nominatorMember 
-        ? `${nominatorMention}, please kick us off with why you think ${nominee.name} should be invited.`
+        ? `${nominatorMention}, please kick us off and let us know why you nominated ${nominee.name}.`
         : `The discussion period for **${nominee.name}** has begun.`;
 
       await channel.send({
-        content,
-        embeds: [embed]
+        content
       });
 
     } catch (error) {

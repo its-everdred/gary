@@ -130,11 +130,14 @@ export class VoteResultService {
           contentMatches,
           embedMatches,
           messageContent: message.content,
-          embedData: message.embeds[0] ? {
-            title: message.embeds[0].title,
-            description: message.embeds[0].description,
-            fields: message.embeds[0].fields
-          } : null
+          embedCount: message.embeds.length,
+          allEmbedData: message.embeds.map(embed => ({
+            title: embed.title,
+            description: embed.description?.substring(0, 500), // First 500 chars
+            fields: embed.fields?.map(f => ({ name: f.name, value: f.value?.substring(0, 200) })),
+            footer: embed.footer?.text,
+            author: embed.author?.name
+          }))
         }, 'Checking if message matches nominee');
         
         if (!contentMatches && !embedMatches) continue;
