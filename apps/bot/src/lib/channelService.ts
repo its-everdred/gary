@@ -456,9 +456,22 @@ export class ChannelManagementService {
 
       // Also notify in mod comms channel if configured
       const modCommsChannelId = NOMINATION_CONFIG.CHANNELS.MOD_COMMS;
+      logger.info({
+        nomineeId: nominee.id,
+        modCommsChannelId,
+        hasModCommsId: !!modCommsChannelId
+      }, 'Checking mod comms channel configuration for vote notification');
+      
       if (modCommsChannelId) {
         try {
           const modCommsChannel = channel.guild.channels.cache.get(modCommsChannelId) as TextChannel;
+          logger.info({
+            nomineeId: nominee.id,
+            modCommsChannelId,
+            foundChannel: !!modCommsChannel,
+            isTextBased: modCommsChannel?.isTextBased()
+          }, 'Found mod comms channel for vote notification');
+          
           if (modCommsChannel?.isTextBased()) {
             const modNotifyEmbed = {
               title: '🚨 Poll Creation Required',
@@ -497,14 +510,29 @@ export class ChannelManagementService {
               modCommsChannelId,
               voteChannelId: channel.id
             }, 'Mod notification sent to mod comms channel');
+          } else {
+            logger.warn({
+              nomineeId: nominee.id,
+              modCommsChannelId,
+              channelExists: !!modCommsChannel,
+              isTextBased: modCommsChannel?.isTextBased()
+            }, 'Mod comms channel not found or not text-based');
           }
         } catch (error) {
           logger.error({
-            error,
+            error: error instanceof Error ? {
+              message: error.message,
+              stack: error.stack
+            } : error,
             nomineeId: nominee.id,
             modCommsChannelId
           }, 'Failed to send notification to mod comms channel');
         }
+      } else {
+        logger.warn({
+          nomineeId: nominee.id,
+          envValue: process.env.MOD_COMMS_CHANNEL_ID
+        }, 'MOD_COMMS_CHANNEL_ID not configured - no mod notification sent');
       }
 
       // Log the poll creation request

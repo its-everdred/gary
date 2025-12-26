@@ -35,26 +35,16 @@ export class AnnouncementService {
 
       const embed = {
         title: '🗳️ New Vote Started',
-        description: `Voting has begun for **${nominee.name}**'s nomination.`,
+        description: `Voting has begun for **${nominee.name}**'s nomination in ${voteChannelMention}.`,
         fields: [
           {
-            name: '📍 Vote Location',
-            value: `Please vote in ${voteChannelMention}`,
-            inline: false
-          },
-          {
             name: '⏱️ Duration',
-            value: '5 days',
+            value: NomineeDisplayUtils.formatDuration(NOMINATION_CONFIG.VOTE_DURATION_MINUTES),
             inline: true
           },
           {
             name: '📊 Requirements',
             value: '• 40% member participation (quorum)\n• 80% approval threshold',
-            inline: true
-          },
-          {
-            name: '🔒 Voting Type',
-            value: 'Anonymous (via EasyPoll)',
             inline: true
           }
         ],
@@ -66,7 +56,6 @@ export class AnnouncementService {
       };
 
       await governanceChannel.send({
-        content: '@everyone A new membership vote has started!',
         embeds: [embed]
       });
 
