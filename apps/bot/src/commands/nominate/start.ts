@@ -180,11 +180,6 @@ export async function handleStartCommand(interaction: ChatInputCommandInteractio
       await interaction.editReply({
         content: `⚠️ Discussion for "${targetName}"${autoSelectedNote} started, but channel creation failed.`
       });
-    } else {
-      // Success case - just acknowledge privately since the embed announcement handles public communication
-      await interaction.editReply({
-        content: '✅ Discussion started successfully.'
-      });
     }
 
   } catch (error) {
