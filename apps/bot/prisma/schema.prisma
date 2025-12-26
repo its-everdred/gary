@@ -32,6 +32,7 @@ model Nominee {
   discussionChannelId String?
   voteChannelId       String?
   votePollMessageId   String?
+  voteGovernanceAnnounced Boolean  @default(false)
   voteYesCount        Int          @default(0)
   voteNoCount         Int          @default(0)
   votePassed          Boolean?

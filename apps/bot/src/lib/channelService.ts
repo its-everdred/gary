@@ -112,11 +112,7 @@ export class ChannelManagementService {
       const memberCount = guild.memberCount || 1;
       const requiredQuorum = Math.ceil(memberCount * NOMINATION_CONFIG.VOTE_QUORUM_THRESHOLD);
       
-      logger.info({
-        guildId: guild.id,
-        memberCount,
-        requiredQuorum
-      }, 'Calculated quorum for vote');
+      // Quorum calculated
 
       const channelName = this.generateVoteChannelName(nominee.name);
       
@@ -164,13 +160,7 @@ export class ChannelManagementService {
       // Send initial vote message with calculated quorum
       await this.sendVoteStartMessage(channel, nominee, memberCount, requiredQuorum);
 
-      logger.info({
-        nomineeId: nominee.id,
-        nomineeName: nominee.name,
-        channelId: channel.id,
-        channelName: channel.name,
-        guildId: guild.id
-      }, 'Vote channel created successfully');
+      // Vote channel created successfully
 
       return {
         success: true,
@@ -385,9 +375,7 @@ export class ChannelManagementService {
       
       const pollCommand = `/timepoll question:Should we invite ${nominee.name} to GA? time:${voteDurationFormatted} type:Anonymous (Buttons) maxchoices:1 text:Start: <t:${startTime}:F>\\nEnd: <t:${endTime}:F> answer-1:✅:Yes, Accept answer-2:❌:No, Reject`;
 
-      // Get moderator role (this should be configured per guild)
-      const moderatorRole = await this.getModeratorRole(channel.guild);
-      const moderatorMention = moderatorRole ? `<@&${moderatorRole.id}>` : '@Moderator';
+      // Moderator role lookup removed - using direct moderators role in mod comms
 
       const infoEmbed = {
         title: `🗳️ Vote: ${nominee.name}`,

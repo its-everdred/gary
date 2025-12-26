@@ -174,6 +174,11 @@ export class NominationJobScheduler implements JobScheduler {
     const voteNominees = activeNominees.filter(n => n.state === NomineeState.VOTE);
 
     for (const nominee of voteNominees) {
+      // Check if governance announcement needs to be sent (poll posted but not announced yet)
+      if (!nominee.voteGovernanceAnnounced && nominee.voteChannelId) {
+        await this.checkAndAnnounceVoteToGovernance(nominee);
+      }
+      
       // Check if vote has completed (either by time or poll closure)
       const voteResults = await this.voteResultService.checkVoteCompletion(nominee);
       const readyByTime = nominee.certifyStart && nominee.certifyStart <= currentTime;
@@ -199,6 +204,65 @@ export class NominationJobScheduler implements JobScheduler {
       if (shouldTransition) {
         await this.transitionToPast(nominee);
       }
+    }
+  }
+
+  /**
+   * Checks if EasyPoll has been posted in vote channel and announces to governance if so
+   */
+  private async checkAndAnnounceVoteToGovernance(nominee: any): Promise<void> {
+    try {
+      if (!nominee.voteChannelId) {
+        return;
+      }
+
+      const guild = await this.client.guilds.fetch(nominee.guildId);
+      const voteChannel = guild.channels.cache.get(nominee.voteChannelId) as TextChannel;
+      
+      if (!voteChannel) {
+        logger.warn({
+          nomineeId: nominee.id,
+          voteChannelId: nominee.voteChannelId
+        }, 'Vote channel not found for governance announcement check');
+        return;
+      }
+
+      // Check for EasyPoll messages in the channel
+      const messages = await voteChannel.messages.fetch({ limit: 10, force: true });
+      const easyPollMessage = messages.find(msg => 
+        msg.author.id === '437618149505105920' && // EasyPoll bot ID
+        msg.embeds.length > 0
+      );
+
+      if (easyPollMessage) {
+        // EasyPoll found! Send governance announcement with link to poll
+        const announced = await this.announcementService.announceVoteStart(
+          nominee,
+          nominee.voteChannelId,
+          easyPollMessage.url
+        );
+
+        if (announced) {
+          // Mark as announced in database
+          await prisma.nominee.update({
+            where: { id: nominee.id },
+            data: { voteGovernanceAnnounced: true }
+          });
+
+          logger.info({
+            nomineeId: nominee.id,
+            nomineeName: nominee.name,
+            voteChannelId: nominee.voteChannelId,
+            pollMessageId: easyPollMessage.id
+          }, 'Governance announcement sent after EasyPoll detection');
+        }
+      }
+    } catch (error) {
+      logger.error({
+        error,
+        nomineeId: nominee.id,
+        nomineeName: nominee.name
+      }, 'Failed to check for EasyPoll and announce to governance');
     }
   }
 
@@ -276,11 +340,13 @@ export class NominationJobScheduler implements JobScheduler {
           error: channelResult.errorMessage
         }, 'Failed to create vote channel');
       } else {
-        // Send announcement to GA governance channel
-        await this.announcementService.announceVoteStart(
-          result.nominee, 
-          channelResult.channel!.id
-        );
+        // Note: Governance announcement will be sent automatically 
+        // once the moderator posts the EasyPoll in the vote channel
+        logger.info({
+          nomineeId: nominee.id,
+          name: nominee.name,
+          voteChannelId: channelResult.channel!.id
+        }, 'Vote channel created, waiting for moderator to post EasyPoll before governance announcement');
       }
     } else {
       logger.error({
@@ -314,32 +380,39 @@ export class NominationJobScheduler implements JobScheduler {
         } : undefined
       }, 'Nominee transitioned to CERTIFY state');
       
-      // Post detailed results to vote channel if we have vote results
+      // Post detailed results to both vote and governance channels if we have vote results
       if (voteResults) {
+        // Post to vote channel
         this.voteResultService.postDetailedVoteResults(nominee, voteResults).catch(error => {
-          logger.error({ error, nomineeId: nominee.id }, 'Failed to post detailed vote results');
+          logger.error({ error, nomineeId: nominee.id }, 'Failed to post detailed vote results to vote channel');
         });
-      }
-      
-      // Post results to governance channel only
-      if (voteResults) {
-        // We have actual poll results from EasyPoll - post to governance only
-        await this.announcementService.postResultsToGovernanceChannel(
-          result.nominee!,
-          voteResults.passed,
-          voteResults.yesVotes,
-          voteResults.noVotes,
-          voteResults.quorumMet
-        );
+
+        // Post same results to governance channel
+        this.voteResultService.postVoteResultsToGovernance(nominee, voteResults).catch(error => {
+          logger.error({ error, nomineeId: nominee.id }, 'Failed to post vote results to governance channel');
+        });
       } else {
-        // Vote period expired - post to governance only
-        await this.announcementService.postResultsToGovernanceChannel(
-          result.nominee!,
-          false,
-          0,
-          0,
-          false
-        );
+        // Vote period expired without results - create default failed results
+        const expiredResults: VoteResults = {
+          passed: false,
+          yesVotes: 0,
+          noVotes: 0,
+          totalVotes: 0,
+          quorumMet: false,
+          passThresholdMet: false,
+          memberCount: 0,
+          requiredQuorum: 0,
+          requiredPassVotes: 0
+        };
+        
+        // Post to both channels
+        this.voteResultService.postDetailedVoteResults(nominee, expiredResults).catch(error => {
+          logger.error({ error, nomineeId: nominee.id }, 'Failed to post expired vote results to vote channel');
+        });
+        
+        this.voteResultService.postVoteResultsToGovernance(nominee, expiredResults).catch(error => {
+          logger.error({ error, nomineeId: nominee.id }, 'Failed to post expired vote results to governance channel');
+        });
       }
     } else {
       logger.error({

@@ -17,7 +17,7 @@ export class AnnouncementService {
   /**
    * Posts vote announcement to #ga-governance channel
    */
-  async announceVoteStart(nominee: Nominee, voteChannelId: string): Promise<boolean> {
+  async announceVoteStart(nominee: Nominee, voteChannelId: string, pollUrl?: string): Promise<boolean> {
     try {
       const guild = await this.client.guilds.fetch(nominee.guildId);
       const governanceChannel = await this.findGovernanceChannel(guild);
@@ -33,9 +33,13 @@ export class AnnouncementService {
       const voteChannel = guild.channels.cache.get(voteChannelId);
       const voteChannelMention = voteChannel ? `<#${voteChannelId}>` : '#vote-channel';
 
+      const description = pollUrl 
+        ? `Voting has begun for **${nominee.name}**'s nomination in ${voteChannelMention}.\n\n[📊 Vote Now](${pollUrl})`
+        : `Voting has begun for **${nominee.name}**'s nomination in ${voteChannelMention}.`;
+
       const embed = {
         title: '🗳️ New Vote Started',
-        description: `Voting has begun for **${nominee.name}**'s nomination in ${voteChannelMention}.`,
+        description,
         fields: [
           {
             name: '⏱️ Duration',
@@ -59,12 +63,7 @@ export class AnnouncementService {
         embeds: [embed]
       });
 
-      logger.info({
-        nomineeId: nominee.id,
-        nomineeName: nominee.name,
-        governanceChannelId: governanceChannel.id,
-        voteChannelId
-      }, 'Vote announcement posted to governance channel');
+      // Vote announcement posted to governance channel
 
       return true;
     } catch (error) {

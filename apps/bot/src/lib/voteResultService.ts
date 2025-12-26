@@ -350,7 +350,33 @@ export class VoteResultService {
   }
 
   /**
-   * Posts the detailed vote results with EasyPoll scan to the vote channel
+   * Creates the vote results embed (shared between vote and governance channels)
+   */
+  private createVoteResultsEmbed(nominee: Nominee, voteResults: VoteResults): any {
+    return {
+      title: voteResults.passed ? `✅ Vote PASSED` : `❌ Vote FAILED`,
+      description: voteResults.passed 
+        ? `🗳️ ${nominee.name} will receive an invite within 24 hours.`
+        : `🗳️ ${nominee.name} will not proceed.`,
+      fields: [
+        {
+          name: '📊 Vote Breakdown',
+          value: `✅ Yes: ${voteResults.yesVotes}\n❌ No: ${voteResults.noVotes}\n\n📈 Total: ${voteResults.totalVotes}`,
+          inline: true
+        },
+        {
+          name: '📋 Requirements',
+          value: `Quorum: ${voteResults.quorumMet ? '✅' : '❌'} ${voteResults.totalVotes}/${voteResults.requiredQuorum} votes\nApproval: ${voteResults.passThresholdMet ? '✅' : '❌'} ${Math.round((voteResults.yesVotes / voteResults.totalVotes) * 100)}% (need 80%)`,
+          inline: true
+        }
+      ],
+      color: voteResults.passed ? 0x00ff00 : 0xff0000,
+      timestamp: new Date().toISOString()
+    };
+  }
+
+  /**
+   * Posts the vote results to the vote channel
    */
   async postDetailedVoteResults(nominee: Nominee, voteResults: VoteResults): Promise<void> {
     try {
@@ -365,47 +391,48 @@ export class VoteResultService {
         return;
       }
 
-      // Scan the channel for detailed results
-      const scanResults = await this.scanVoteChannel(nominee.voteChannelId);
-
-      // Split the results into chunks if too long for Discord
-      const chunks = this.splitIntoChunks(scanResults, 1900); // Discord limit is 2000, leaving some margin
-
-      // Post the scan results first
-      await channel.send('**📊 Vote Results - Detailed EasyPoll Data**');
-      
-      for (const chunk of chunks) {
-        await channel.send(`\`\`\`\n${chunk}\n\`\`\``);
-      }
-
-      // Then post the parsed vote results
-      const resultEmbed = {
-        title: `🗳️ Vote Results: ${nominee.name}`,
-        description: voteResults.passed 
-          ? `✅ **Vote PASSED** - ${nominee.name} will proceed to certification.`
-          : `❌ **Vote FAILED** - ${nominee.name} will not proceed.`,
-        fields: [
-          {
-            name: '📊 Vote Breakdown',
-            value: `✅ Yes: ${voteResults.yesVotes}\n❌ No: ${voteResults.noVotes}\n📈 Total: ${voteResults.totalVotes}`,
-            inline: true
-          },
-          {
-            name: '📋 Requirements',
-            value: `Quorum: ${voteResults.quorumMet ? '✅' : '❌'} ${voteResults.totalVotes}/${voteResults.requiredQuorum}\nPass Threshold: ${voteResults.passThresholdMet ? '✅' : '❌'} ${Math.round((voteResults.yesVotes / voteResults.totalVotes) * 100)}%/80%`,
-            inline: true
-          }
-        ],
-        color: voteResults.passed ? 0x00ff00 : 0xff0000,
-        timestamp: new Date().toISOString()
-      };
-
+      const resultEmbed = this.createVoteResultsEmbed(nominee, voteResults);
       await channel.send({ embeds: [resultEmbed] });
 
-      logger.info({ nomineeId: nominee.id, channelId: channel.id }, 'Posted detailed vote results to channel');
+      // Vote results posted successfully
     } catch (error) {
       logger.error({ error, nomineeId: nominee.id }, 'Failed to post detailed vote results');
     }
+  }
+
+  /**
+   * Posts the same vote results to the governance channel
+   */
+  async postVoteResultsToGovernance(nominee: Nominee, voteResults: VoteResults): Promise<void> {
+    try {
+      const guild = await this.client.guilds.fetch(nominee.guildId);
+      const governanceChannel = await this.findGovernanceChannel(guild);
+      
+      if (!governanceChannel) {
+        logger.warn({ guildId: nominee.guildId }, 'Governance channel not found for results posting');
+        return;
+      }
+
+      const resultEmbed = this.createVoteResultsEmbed(nominee, voteResults);
+      await governanceChannel.send({ embeds: [resultEmbed] });
+
+    } catch (error) {
+      logger.error({ error, nomineeId: nominee.id }, 'Failed to post vote results to governance');
+    }
+  }
+
+  /**
+   * Finds the governance channel in a guild
+   */
+  private async findGovernanceChannel(guild: any): Promise<any> {
+    const governanceChannelId = process.env.GOVERNANCE_CHANNEL_ID;
+    if (!governanceChannelId) {
+      logger.warn('GOVERNANCE_CHANNEL_ID not configured');
+      return null;
+    }
+
+    const channel = guild.channels.cache.get(governanceChannelId);
+    return channel?.isTextBased() ? channel : null;
   }
 
   /**
