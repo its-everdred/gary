@@ -94,15 +94,6 @@ export class TimeCalculationService {
         nominee,
         scheduledTimes
       });
-      
-      logger.info({
-        nomineeId: nominee.id,
-        name: nominee.name,
-        queuePosition,
-        discussionStart: scheduledTimes.discussionStart,
-        voteStart: scheduledTimes.voteStart,
-        certifyStart: scheduledTimes.certifyStart
-      }, 'Calculated schedule for nominee');
     });
     
     return results;
@@ -116,69 +107,30 @@ export class TimeCalculationService {
     targetState: NomineeState,
     currentTime: Date = new Date()
   ): Nominee | null {
-    logger.info({
-      targetState,
-      currentTime: currentTime.toISOString(),
-      nomineesCount: nominees.length,
-      nominees: nominees.map(n => ({
-        id: n.id,
-        name: n.name,
-        state: n.state,
-        discussionStart: n.discussionStart?.toISOString(),
-        voteStart: n.voteStart?.toISOString(),
-        certifyStart: n.certifyStart?.toISOString()
-      }))
-    }, 'Checking nominees for state transition');
-
     for (const nominee of nominees) {
       let shouldTransition = false;
-      let reason = '';
 
       switch (targetState) {
         case NomineeState.DISCUSSION:
           shouldTransition = nominee.discussionStart && nominee.discussionStart <= currentTime && 
               nominee.state === NomineeState.ACTIVE;
-          reason = `discussionStart: ${nominee.discussionStart?.toISOString()}, state: ${nominee.state}`;
           break;
           
         case NomineeState.VOTE:
           shouldTransition = nominee.voteStart && nominee.voteStart <= currentTime && 
               nominee.state === NomineeState.DISCUSSION;
-          reason = `voteStart: ${nominee.voteStart?.toISOString()}, state: ${nominee.state}`;
           break;
           
         case NomineeState.CERTIFY:
           shouldTransition = nominee.certifyStart && nominee.certifyStart <= currentTime && 
               nominee.state === NomineeState.VOTE;
-          reason = `certifyStart: ${nominee.certifyStart?.toISOString()}, state: ${nominee.state}`;
           break;
       }
 
-      logger.info({
-        nomineeId: nominee.id,
-        nomineeName: nominee.name,
-        targetState,
-        currentState: nominee.state,
-        shouldTransition,
-        reason,
-        currentTime: currentTime.toISOString()
-      }, 'Evaluated nominee for state transition');
-
       if (shouldTransition) {
-        logger.info({
-          nomineeId: nominee.id,
-          nomineeName: nominee.name,
-          targetState,
-          currentState: nominee.state
-        }, 'Found nominee ready for state transition');
         return nominee;
       }
     }
-    
-    logger.info({
-      targetState,
-      currentTime: currentTime.toISOString()
-    }, 'No nominees ready for state transition');
     
     return null;
   }

@@ -50,11 +50,6 @@ export class ChannelManagementService {
         const category = guild.channels.cache.get(nominationsCategoryId);
         if (category && category.type === DJSChannelType.GuildCategory) {
           createOptions.parent = nominationsCategoryId;
-          logger.info({
-            nomineeId: nominee.id,
-            categoryId: nominationsCategoryId,
-            categoryName: category.name
-          }, 'Creating discussion channel under nominations category');
         } else {
           logger.warn({
             nomineeId: nominee.id,
@@ -140,11 +135,6 @@ export class ChannelManagementService {
         const category = guild.channels.cache.get(nominationsCategoryId);
         if (category && category.type === DJSChannelType.GuildCategory) {
           createOptions.parent = nominationsCategoryId;
-          logger.info({
-            nomineeId: nominee.id,
-            categoryId: nominationsCategoryId,
-            categoryName: category.name
-          }, 'Creating vote channel under nominations category');
         } else {
           logger.warn({
             nomineeId: nominee.id,
@@ -162,19 +152,7 @@ export class ChannelManagementService {
       });
 
       // Send initial vote message
-      logger.info({
-        nomineeId: nominee.id,
-        nomineeName: nominee.name,
-        channelId: channel.id
-      }, 'About to call sendVoteStartMessage');
-      
       await this.sendVoteStartMessage(channel, nominee);
-      
-      logger.info({
-        nomineeId: nominee.id,
-        nomineeName: nominee.name,
-        channelId: channel.id
-      }, 'Completed sendVoteStartMessage');
 
       logger.info({
         nomineeId: nominee.id,
@@ -298,12 +276,6 @@ export class ChannelManagementService {
    */
   private async sendDiscussionStartMessage(channel: TextChannel, nominee: Nominee): Promise<void> {
     try {
-      logger.info({
-        nomineeId: nominee.id,
-        nomineeName: nominee.name,
-        nominator: nominee.nominator,
-        channelId: channel.id
-      }, 'Sending discussion start message');
 
       // Try to find the nominator by username to ping them (using cached members only)
       let nominatorMember = channel.guild.members.cache.find(member => 
@@ -314,10 +286,6 @@ export class ChannelManagementService {
       // If not found in cache, try a limited fetch with timeout
       if (!nominatorMember) {
         try {
-          logger.info({
-            nomineeId: nominee.id,
-            nominator: nominee.nominator
-          }, 'Attempting to fetch guild members to find nominator');
           
           // Use a Promise.race with timeout to prevent hanging
           await Promise.race([
@@ -333,8 +301,7 @@ export class ChannelManagementService {
         } catch (fetchError) {
           logger.warn({
             error: fetchError,
-            nomineeId: nominee.id,
-            nominator: nominee.nominator
+            nomineeId: nominee.id
           }, 'Failed to fetch guild members for nominator lookup, proceeding without ping');
         }
       }
@@ -368,26 +335,10 @@ export class ChannelManagementService {
         ? `${nominatorMention}, please kick us off with why you think ${nominee.name} should be invited.`
         : `The discussion period for **${nominee.name}** has begun.`;
 
-      logger.info({
-        nomineeId: nominee.id,
-        nomineeName: nominee.name,
-        channelId: channel.id,
-        nominatorFound: !!nominatorMember
-      }, 'About to send discussion start message to channel');
-
-      const message = await channel.send({
+      await channel.send({
         content,
         embeds: [embed]
       });
-
-      logger.info({
-        nomineeId: nominee.id,
-        nomineeName: nominee.name,
-        channelId: channel.id,
-        messageId: message.id,
-        nominatorFound: !!nominatorMember,
-        nominatorUserId: nominatorMember?.user.id
-      }, 'Discussion start message sent successfully');
 
     } catch (error) {
       logger.error({ 
@@ -405,19 +356,13 @@ export class ChannelManagementService {
    * Sends the initial message when voting starts
    */
   private async sendVoteStartMessage(channel: TextChannel, nominee: Nominee): Promise<void> {
-    logger.info({
-      nomineeId: nominee.id,
-      nomineeName: nominee.name,
-      channelId: channel.id
-    }, 'Starting sendVoteStartMessage');
-    
     try {
       // Calculate timestamps for poll
       const startTime = Math.floor(Date.now() / 1000);
       const endTime = startTime + (5 * 24 * 60 * 60); // 5 days in seconds
       
       // Generate the exact EasyPoll command
-      const pollCommand = `/poll question:Should we invite ${nominee.name} to GA? time:5d type:Anonymous (Buttons) maxchoices:1 text:Start: <t:${startTime}:F>\\nEnd: <t:${endTime}:F> answer-1:✅:Yes, Accept answer-2:❌:No, Reject`;
+      const pollCommand = `/timepoll question:Should we invite ${nominee.name} to GA? time:5d type:Anonymous (Buttons) maxchoices:1 text:Start: <t:${startTime}:F>\\nEnd: <t:${endTime}:F> answer-1:✅:Yes, Accept answer-2:❌:No, Reject`;
 
       // Get moderator role (this should be configured per guild)
       const moderatorRole = await this.getModeratorRole(channel.guild);
@@ -451,7 +396,7 @@ export class ChannelManagementService {
       };
 
       const commandEmbed = {
-        title: '🚨 MODERATOR ACTION REQUIRED',
+        title: 'Poll Creation Instructions',
         description: 'Please create the EasyPoll by copying and pasting this command **exactly**:',
         fields: [
           {
@@ -464,40 +409,23 @@ export class ChannelManagementService {
             inline: false
           }
         ],
-        color: 0xff6600,
+        color: 0x3498db,
         footer: {
-          text: 'This is a time-sensitive action - please create the poll immediately'
+          text: 'Poll creation required'
         }
       };
 
       // Send the message with moderator ping
       await channel.send({
-        content: `${moderatorMention} **Immediate action required to create the vote poll!**`,
         embeds: [infoEmbed, commandEmbed]
       });
 
       // Also notify in mod comms channel if configured
       const modCommsChannelId = NOMINATION_CONFIG.CHANNELS.MOD_COMMS;
-      logger.info({
-        nomineeId: nominee.id,
-        modCommsChannelId,
-        hasModCommsId: !!modCommsChannelId
-      }, 'Checking mod comms channel configuration for vote notification');
       
       if (modCommsChannelId) {
         try {
           const modCommsChannel = channel.guild.channels.cache.get(modCommsChannelId) as TextChannel;
-          const botMember = channel.guild.members.me;
-          const canSend = botMember && modCommsChannel?.permissionsFor(botMember)?.has(['ViewChannel', 'SendMessages']);
-          
-          logger.info({
-            nomineeId: nominee.id,
-            modCommsChannelId,
-            foundChannel: !!modCommsChannel,
-            isTextBased: modCommsChannel?.isTextBased(),
-            botHasPermissions: canSend,
-            botMemberExists: !!botMember
-          }, 'Found mod comms channel for vote notification');
           
           if (modCommsChannel?.isTextBased()) {
             const modNotifyEmbed = {
@@ -530,19 +458,10 @@ export class ChannelManagementService {
               content: `${moderatorMention} **Vote poll needs to be created!**`,
               embeds: [modNotifyEmbed]
             });
-
-            logger.info({
-              nomineeId: nominee.id,
-              nomineeName: nominee.name,
-              modCommsChannelId,
-              voteChannelId: channel.id
-            }, 'Mod notification sent to mod comms channel');
           } else {
             logger.warn({
               nomineeId: nominee.id,
-              modCommsChannelId,
-              channelExists: !!modCommsChannel,
-              isTextBased: modCommsChannel?.isTextBased()
+              modCommsChannelId
             }, 'Mod comms channel not found or not text-based');
           }
         } catch (error) {
@@ -551,26 +470,14 @@ export class ChannelManagementService {
               message: error.message,
               stack: error.stack
             } : error,
-            nomineeId: nominee.id,
-            modCommsChannelId
+            nomineeId: nominee.id
           }, 'Failed to send notification to mod comms channel');
         }
       } else {
         logger.warn({
-          nomineeId: nominee.id,
-          envValue: process.env.MOD_COMMS_CHANNEL_ID
+          nomineeId: nominee.id
         }, 'MOD_COMMS_CHANNEL_ID not configured - no mod notification sent');
       }
-
-      // Log the poll creation request
-      logger.info({
-        nomineeId: nominee.id,
-        nomineeName: nominee.name,
-        channelId: channel.id,
-        pollCommand,
-        startTimestamp: startTime,
-        endTimestamp: endTime
-      }, 'Vote poll creation requested');
 
     } catch (error) {
       logger.error({ 
