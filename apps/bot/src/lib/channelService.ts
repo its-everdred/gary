@@ -108,6 +108,31 @@ export class ChannelManagementService {
         };
       }
 
+      // Get member count first, before creating channel
+      let memberCount = 0;
+      let requiredQuorum = 0;
+      try {
+        await guild.members.fetch();
+        const nonBotMembers = guild.members.cache.filter(member => !member.user.bot);
+        memberCount = nonBotMembers.size;
+        requiredQuorum = Math.ceil(memberCount * NOMINATION_CONFIG.VOTE_QUORUM_THRESHOLD);
+        
+        logger.info({
+          guildId: guild.id,
+          memberCount,
+          requiredQuorum
+        }, 'Calculated quorum for vote');
+      } catch (fetchError) {
+        logger.error({
+          error: fetchError,
+          guildId: guild.id
+        }, 'Failed to fetch members for quorum calculation');
+        return {
+          success: false,
+          errorMessage: 'Failed to calculate quorum: Could not fetch guild members'
+        };
+      }
+
       const channelName = this.generateVoteChannelName(nominee.name);
       
       // Create the channel with restricted permissions
@@ -151,8 +176,8 @@ export class ChannelManagementService {
         data: { voteChannelId: channel.id }
       });
 
-      // Send initial vote message
-      await this.sendVoteStartMessage(channel, nominee);
+      // Send initial vote message with calculated quorum
+      await this.sendVoteStartMessage(channel, nominee, memberCount, requiredQuorum);
 
       logger.info({
         nomineeId: nominee.id,
@@ -360,7 +385,7 @@ export class ChannelManagementService {
   /**
    * Sends the initial message when voting starts
    */
-  private async sendVoteStartMessage(channel: TextChannel, nominee: Nominee): Promise<void> {
+  private async sendVoteStartMessage(channel: TextChannel, nominee: Nominee, memberCount: number, requiredQuorum: number): Promise<void> {
     try {
       // Calculate timestamps for poll
       const startTime = Math.floor(Date.now() / 1000);
@@ -378,12 +403,6 @@ export class ChannelManagementService {
       // Get moderator role (this should be configured per guild)
       const moderatorRole = await this.getModeratorRole(channel.guild);
       const moderatorMention = moderatorRole ? `<@&${moderatorRole.id}>` : '@Moderator';
-
-      // Calculate actual quorum number
-      await channel.guild.members.fetch(); // Ensure all members are cached
-      const nonBotMembers = channel.guild.members.cache.filter(member => !member.user.bot);
-      const memberCount = nonBotMembers.size;
-      const requiredQuorum = Math.ceil(memberCount * NOMINATION_CONFIG.VOTE_QUORUM_THRESHOLD);
 
       const infoEmbed = {
         title: `🗳️ Vote: ${nominee.name}`,
