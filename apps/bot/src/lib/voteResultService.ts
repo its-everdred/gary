@@ -89,29 +89,8 @@ export class VoteResultService {
    */
   private async findPollInChannel(channel: TextChannel, nomineeName: string): Promise<PollData | null> {
     try {
-      // Fetch recent messages to find the poll
-      const messages = await channel.messages.fetch({ limit: 50 });
-      
-      // Collect debug data for all messages
-      const allMessagesData = Array.from(messages.values()).map(msg => ({
-        id: msg.id,
-        authorId: msg.author.id,
-        authorUsername: msg.author.username,
-        content: msg.content,
-        embedCount: msg.embeds.length,
-        embeds: msg.embeds.map(embed => ({
-          title: embed.title,
-          description: embed.description,
-          fields: embed.fields?.map(f => ({ name: f.name, value: f.value })),
-          footer: embed.footer?.text
-        })),
-        timestamp: new Date(msg.createdTimestamp).toISOString()
-      }));
-      
-      // Send debug message to channel
-      await channel.send({
-        content: `**DEBUG: Vote Channel Messages (${allMessagesData.length} total)**\n\`\`\`json\n${JSON.stringify(allMessagesData, null, 2).substring(0, 1900)}\n\`\`\``
-      });
+      // Fetch recent messages to find the poll - force cache bypass
+      const messages = await channel.messages.fetch({ limit: 50, force: true });
       
       for (const message of messages.values()) {
         // Only check EasyPoll messages
@@ -121,9 +100,28 @@ export class VoteResultService {
         const isRecentPoll = message.createdTimestamp > (Date.now() - (2 * 60 * 60 * 1000));
         if (!isRecentPoll) continue;
 
-        // Parse poll data from the message
-        const pollData = await this.parsePollMessage(message);
+        // Force refetch the specific message to get latest embed data
+        const refreshedMessage = await channel.messages.fetch(message.id, { force: true });
+        
+        // Debug log the refreshed message
+        logger.info({
+          messageId: refreshedMessage.id,
+          hasEmbeds: refreshedMessage.embeds.length > 0,
+          embedCount: refreshedMessage.embeds.length,
+          firstEmbedDescription: refreshedMessage.embeds[0]?.description?.substring(0, 200),
+          content: refreshedMessage.content?.substring(0, 200)
+        }, 'Checking refreshed EasyPoll message');
+        
+        // Parse poll data from the refreshed message
+        const pollData = await this.parsePollMessage(refreshedMessage);
         if (pollData) {
+          // Log successful parse for debugging
+          logger.info({
+            nomineeId: nomineeName,
+            pollMessageId: message.id,
+            yesVotes: pollData.yesVotes,
+            noVotes: pollData.noVotes
+          }, 'Successfully parsed EasyPoll results');
           return pollData;
         }
       }
@@ -149,21 +147,28 @@ export class VoteResultService {
    */
   private async parsePollMessage(message: Message): Promise<PollData | null> {
     try {
+      // EasyPoll may put results in the message content or embed
+      const content = message.content;
       const embed = message.embeds[0];
-      if (!embed) return null;
-
-      // Extract question from embed
-      const question = embed.title || embed.description || '';
       
-      // Check if poll is closed/completed
-      const isClosed = this.isPollClosed(embed);
-      if (!isClosed) return null; // Poll is still active
+      // Check if poll has final results
+      const hasFinalResults = content.includes('Final Result') || 
+                             embed?.description?.includes('Final Result');
       
-      // Parse vote counts from embed fields or description
-      const yesVotes = this.extractVoteCount(embed, 'yes') || 0;
-      const noVotes = this.extractVoteCount(embed, 'no') || 0;
+      if (!hasFinalResults) return null;
       
-      // Extract voter IDs from reactions or embed data
+      // Extract from content if present, otherwise from embed
+      const textToParse = content || embed?.description || '';
+      
+      // Extract question - look for "Question" section
+      const questionMatch = textToParse.match(/Question\s*\n(.+?)(?:\n|$)/);
+      const question = questionMatch ? questionMatch[1].trim() : 'Unknown';
+      
+      // Parse vote counts from "Final Result" section
+      const yesVotes = this.extractVoteCountFromText(textToParse, 'yes');
+      const noVotes = this.extractVoteCountFromText(textToParse, 'no');
+      
+      // Extract voter IDs from reactions
       const voterIds = await this.extractVoterIds(message);
 
       return {
@@ -207,6 +212,26 @@ export class VoteResultService {
     
     for (const line of lines) {
       if (line.includes(emoji)) {
+        // Look for pattern: | percentage% (count)
+        const match = line.match(/\|\s*\d+\.?\d*%\s*\((\d+)\)/);
+        if (match) {
+          return parseInt(match[1], 10);
+        }
+      }
+    }
+    
+    return 0;
+  }
+
+  /**
+   * Extracts vote count from text content
+   */
+  private extractVoteCountFromText(text: string, option: 'yes' | 'no'): number {
+    const emoji = option === 'yes' ? '✅' : '❌';
+    const lines = text.split('\n');
+    
+    for (const line of lines) {
+      if (line.includes(emoji) && line.includes('|')) {
         // Look for pattern: | percentage% (count)
         const match = line.match(/\|\s*\d+\.?\d*%\s*\((\d+)\)/);
         if (match) {
