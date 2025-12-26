@@ -135,35 +135,31 @@ export class VoteResultService {
    */
   private async parsePollMessage(message: Message): Promise<PollData | null> {
     try {
-      // This is a simplified parser - actual implementation would need to
-      // parse EasyPoll's specific embed format and reaction data
-      
       const embed = message.embeds[0];
       if (!embed) return null;
 
       // Extract question from embed
       const question = embed.title || embed.description || '';
       
-      // For demonstration, we'll simulate poll results
-      // In reality, this would parse the actual poll data from EasyPoll's format
+      // Check if poll is closed/completed
+      if (!this.isPollClosed(embed)) {
+        return null; // Poll is still active
+      }
+      
+      // Parse vote counts from embed fields or description
       const yesVotes = this.extractVoteCount(embed, 'yes') || 0;
       const noVotes = this.extractVoteCount(embed, 'no') || 0;
       
-      // Extract voter IDs (this would require EasyPoll API or parsing reactions)
+      // Extract voter IDs from reactions or embed data
       const voterIds = await this.extractVoterIds(message);
 
-      // Only return data if poll appears to be completed
-      if (this.isPollCompleted(embed)) {
-        return {
-          question,
-          yesVotes,
-          noVotes,
-          voterIds,
-          pollMessageId: message.id
-        };
-      }
-
-      return null;
+      return {
+        question,
+        yesVotes,
+        noVotes,
+        voterIds,
+        pollMessageId: message.id
+      };
     } catch (error) {
       logger.error({ error, messageId: message.id }, 'Failed to parse poll message');
       return null;
@@ -171,55 +167,110 @@ export class VoteResultService {
   }
 
   /**
+   * Checks if poll is closed/completed based on embed content
+   */
+  private isPollClosed(embed: any): boolean {
+    const title = embed.title?.toLowerCase() || '';
+    const description = embed.description?.toLowerCase() || '';
+    const footer = embed.footer?.text?.toLowerCase() || '';
+    
+    // Look for indicators that poll is closed
+    return title.includes('closed') || 
+           title.includes('ended') || 
+           description.includes('closed') ||
+           description.includes('ended') ||
+           footer.includes('closed') ||
+           footer.includes('ended') ||
+           // EasyPoll specific indicators
+           title.includes('poll results') ||
+           description.includes('poll has ended');
+  }
+
+  /**
    * Extracts vote count for a specific option from embed
    */
   private extractVoteCount(embed: any, option: 'yes' | 'no'): number {
+    const searchTerms = option === 'yes' 
+      ? ['✅', 'yes', 'accept', 'approve']
+      : ['❌', 'no', 'reject', 'deny'];
+    
+    // Check embed fields
+    if (embed.fields) {
+      for (const field of embed.fields) {
+        const fieldName = field.name?.toLowerCase() || '';
+        const fieldValue = field.value?.toLowerCase() || '';
+        
+        for (const term of searchTerms) {
+          if (fieldName.includes(term) || fieldValue.includes(term)) {
+            // Extract number from field value
+            const match = field.value.match(/(\d+)/);
+            if (match) {
+              return parseInt(match[1], 10);
+            }
+          }
+        }
+      }
+    }
+    
+    // Check description
     const description = embed.description || '';
-    const fields = embed.fields || [];
+    const lines = description.split('\n');
     
-    // Look for vote counts in embed fields or description
-    // This is a simplified implementation
-    const regex = option === 'yes' 
-      ? /✅.*?(\d+)/i 
-      : /❌.*?(\d+)/i;
+    for (const line of lines) {
+      const lowerLine = line.toLowerCase();
+      for (const term of searchTerms) {
+        if (lowerLine.includes(term)) {
+          // Extract number from line
+          const match = line.match(/(\d+)/);
+          if (match) {
+            return parseInt(match[1], 10);
+          }
+        }
+      }
+    }
     
-    const match = description.match(regex) || 
-                  fields.find((f: any) => f.name.toLowerCase().includes(option))?.value?.match(/(\d+)/);
-    
-    return match ? parseInt(match[1], 10) : 0;
+    return 0;
   }
 
   /**
-   * Checks if poll is completed
-   */
-  private isPollCompleted(embed: any): boolean {
-    const description = embed.description || '';
-    const title = embed.title || '';
-    
-    // Look for completion indicators
-    return description.includes('closed') || 
-           description.includes('ended') ||
-           title.includes('Results') ||
-           embed.color === 0xff0000; // Red color often indicates closed poll
-  }
-
-  /**
-   * Extracts voter IDs from poll message (would need EasyPoll API)
+   * Extracts voter IDs from message reactions or embed data
    */
   private async extractVoterIds(message: Message): Promise<string[]> {
-    // This would require EasyPoll API or parsing reaction users
-    // For now, return empty array as placeholder
-    return [];
+    const voterIds: string[] = [];
+    
+    try {
+      // Try to get voter IDs from reactions
+      const reactions = message.reactions.cache;
+      
+      for (const [emoji, reaction] of reactions) {
+        if (emoji === '✅' || emoji === '❌') {
+          const users = await reaction.users.fetch();
+          users.forEach(user => {
+            if (!user.bot && !voterIds.includes(user.id)) {
+              voterIds.push(user.id);
+            }
+          });
+        }
+      }
+    } catch (error) {
+      logger.warn({ error, messageId: message.id }, 'Failed to extract voter IDs from reactions');
+    }
+    
+    return voterIds;
   }
 
   /**
    * Gets member count excluding bots
    */
   private async getNonBotMemberCount(guild: Guild): Promise<number> {
-    await guild.members.fetch(); // Ensure all members are cached
-    
-    const nonBotMembers = guild.members.cache.filter(member => !member.user.bot);
-    return nonBotMembers.size;
+    try {
+      await guild.members.fetch(); // Ensure all members are cached
+      const nonBotMembers = guild.members.cache.filter(member => !member.user.bot);
+      return nonBotMembers.size;
+    } catch (error) {
+      logger.error({ error, guildId: guild.id }, 'Failed to fetch guild members');
+      return 0;
+    }
   }
 
   /**
@@ -281,6 +332,7 @@ export class VoteResultService {
       logger.error({ error, nomineeId }, 'Failed to update nominee with results');
     }
   }
+
 
   /**
    * Manually calculate results for testing (when poll data isn't available)

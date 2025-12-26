@@ -401,29 +401,9 @@ export class ChannelManagementService {
         }
       };
 
-      const commandEmbed = {
-        title: 'Poll Creation Instructions',
-        description: 'Please create the EasyPoll by copying and pasting this command **exactly**:',
-        fields: [
-          {
-            name: 'EasyPoll Command',
-            value: `\`\`\`${pollCommand}\`\`\``
-          },
-          {
-            name: 'Instructions',
-            value: '1. Copy the command above\n2. Paste it in this channel\n3. Press Enter to create the poll\n4. The poll will run for 5 days automatically',
-            inline: false
-          }
-        ],
-        color: 0x3498db,
-        footer: {
-          text: 'Poll creation required'
-        }
-      };
-
       // Send the message with moderator ping
       await channel.send({
-        embeds: [infoEmbed, commandEmbed]
+        embeds: [infoEmbed]
       });
 
       // Also notify in mod comms channel if configured

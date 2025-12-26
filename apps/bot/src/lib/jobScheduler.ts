@@ -177,6 +177,15 @@ export class NominationJobScheduler implements JobScheduler {
       // Check if vote has completed (either by time or poll closure)
       const voteResults = await this.voteResultService.checkVoteCompletion(nominee);
       const readyByTime = nominee.certifyStart && nominee.certifyStart <= currentTime;
+      
+      logger.info({
+        nomineeId: nominee.id,
+        nomineeName: nominee.name,
+        certifyStart: nominee.certifyStart?.toISOString(),
+        currentTime: currentTime.toISOString(),
+        readyByTime,
+        hasVoteResults: !!voteResults
+      }, 'Checking vote completion for nominee');
 
       if (voteResults || readyByTime) {
         await this.transitionToCertify(nominee, voteResults);
@@ -307,8 +316,9 @@ export class NominationJobScheduler implements JobScheduler {
         } : undefined
       }, 'Nominee transitioned to CERTIFY state');
       
-      // Post results to #general if we have vote results
+      // Post results to #general
       if (voteResults) {
+        // We have actual poll results from EasyPoll
         await this.announcementService.announceResults(
           result.nominee!,
           voteResults.passed,
@@ -316,6 +326,9 @@ export class NominationJobScheduler implements JobScheduler {
           voteResults.noVotes,
           voteResults.quorumMet
         );
+      } else {
+        // Vote period expired - post time expiration notice
+        await this.announcementService.announceVoteTimeExpired(result.nominee!);
       }
     } else {
       logger.error({

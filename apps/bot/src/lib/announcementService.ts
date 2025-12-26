@@ -308,6 +308,64 @@ export class AnnouncementService {
   }
 
   /**
+   * Announces that vote time expired without poll completion
+   */
+  async announceVoteTimeExpired(nominee: Nominee): Promise<boolean> {
+    try {
+      const guild = await this.client.guilds.fetch(nominee.guildId);
+      const generalChannel = await this.findGeneralChannel(guild);
+      
+      if (!generalChannel) {
+        logger.warn({
+          guildId: nominee.guildId,
+          nomineeName: nominee.name
+        }, 'General channel not found for vote expiration announcement');
+        return false;
+      }
+
+      const embed = {
+        title: '⏰ Vote Period Expired',
+        description: `The voting period for **${nominee.name}**'s nomination has ended.`,
+        fields: [
+          {
+            name: '📊 Status',
+            value: 'Vote period expired - please check poll results manually',
+            inline: false
+          }
+        ],
+        color: 0xff9500,
+        timestamp: new Date().toISOString(),
+        footer: {
+          text: 'Governance • Vote Expired'
+        }
+      };
+
+      await generalChannel.send({
+        content: `The vote period for ${nominee.name} has ended.`,
+        embeds: [embed]
+      });
+
+      // Also post to governance channel with next nominee info
+      await this.postResultsToGovernanceChannel(nominee, false, 0, 0, false);
+
+      logger.info({
+        nomineeId: nominee.id,
+        nomineeName: nominee.name,
+        generalChannelId: generalChannel.id
+      }, 'Vote expiration announced in general channel');
+
+      return true;
+    } catch (error) {
+      logger.error({
+        error,
+        nomineeId: nominee.id,
+        nomineeName: nominee.name
+      }, 'Failed to post vote expiration announcement');
+      return false;
+    }
+  }
+
+  /**
    * Finds the #general channel in a guild
    */
   private async findGeneralChannel(guild: Guild): Promise<TextChannel | null> {
