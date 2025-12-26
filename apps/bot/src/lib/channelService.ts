@@ -126,6 +126,10 @@ export class ChannelManagementService {
             id: guild.roles.everyone.id,
             deny: [PermissionFlagsBits.SendMessages],
             allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.ReadMessageHistory]
+          },
+          {
+            id: this.client.user!.id,
+            allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory]
           }
         ]
       } as any;
@@ -483,11 +487,16 @@ export class ChannelManagementService {
       if (modCommsChannelId) {
         try {
           const modCommsChannel = channel.guild.channels.cache.get(modCommsChannelId) as TextChannel;
+          const botMember = channel.guild.members.me;
+          const canSend = botMember && modCommsChannel?.permissionsFor(botMember)?.has(['ViewChannel', 'SendMessages']);
+          
           logger.info({
             nomineeId: nominee.id,
             modCommsChannelId,
             foundChannel: !!modCommsChannel,
-            isTextBased: modCommsChannel?.isTextBased()
+            isTextBased: modCommsChannel?.isTextBased(),
+            botHasPermissions: canSend,
+            botMemberExists: !!botMember
           }, 'Found mod comms channel for vote notification');
           
           if (modCommsChannel?.isTextBased()) {
@@ -564,7 +573,16 @@ export class ChannelManagementService {
       }, 'Vote poll creation requested');
 
     } catch (error) {
-      logger.error({ error, channelId: channel.id }, 'Failed to send vote start message');
+      logger.error({ 
+        error: error instanceof Error ? {
+          message: error.message,
+          stack: error.stack,
+          name: error.name
+        } : error,
+        channelId: channel.id,
+        nomineeId: nominee.id,
+        nomineeName: nominee.name
+      }, 'Failed to send vote start message');
     }
   }
 
