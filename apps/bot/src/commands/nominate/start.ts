@@ -172,16 +172,20 @@ export async function handleStartCommand(interaction: ChatInputCommandInteractio
       specifiedName: !!nomineeName
     }, 'Nominee discussion started manually by moderator');
 
-    const targetName = nomineeName || nominee.name;
-    const autoSelectedNote = nomineeName ? '' : ' (next in queue)';
-    
-    const successMessage = channelResult.success 
-      ? `✅ Discussion for "${targetName}"${autoSelectedNote} started successfully.\n📁 Channel: ${channelResult.channel?.toString()}\n📢 Announced in governance channel.`
-      : `⚠️ Discussion for "${targetName}"${autoSelectedNote} started, but channel creation failed.`;
-    
-    await interaction.editReply({
-      content: successMessage
-    });
+    // Only send a response if there was an error with channel creation
+    if (!channelResult.success) {
+      const targetName = nomineeName || nominee.name;
+      const autoSelectedNote = nomineeName ? '' : ' (next in queue)';
+      
+      await interaction.editReply({
+        content: `⚠️ Discussion for "${targetName}"${autoSelectedNote} started, but channel creation failed.`
+      });
+    } else {
+      // Success case - just acknowledge silently since the embed announcement handles communication
+      await interaction.editReply({
+        content: '✅ Discussion started successfully.'
+      });
+    }
 
   } catch (error) {
     logger.error({

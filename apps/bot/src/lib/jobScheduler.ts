@@ -8,6 +8,7 @@ import { AnnouncementService } from './announcementService.js';
 import { VoteResultService } from './voteResultService.js';
 import { NomineeState } from '@prisma/client';
 import { prisma } from './db.js';
+import { NOMINATION_CONFIG } from './constants.js';
 
 const logger = pino();
 
@@ -46,6 +47,14 @@ export class NominationJobScheduler implements JobScheduler {
       return;
     }
 
+    logger.info({
+      discussionDurationMinutes: NOMINATION_CONFIG.DISCUSSION_DURATION_MINUTES,
+      voteDurationMinutes: NOMINATION_CONFIG.VOTE_DURATION_MINUTES,
+      certifyDurationMinutes: NOMINATION_CONFIG.CERTIFY_DURATION_MINUTES,
+      envDiscussionPeriod: process.env.NOMINATE_DISCUSSION_PERIOD_MINUTES,
+      envVotePeriod: process.env.NOMINATE_VOTE_PERIOD_MINUTES
+    }, 'Starting job scheduler with configuration');
+
     this.scheduleStateTransitionJob();
     this.scheduleScheduleRecalculationJob();
     this._isRunning = true;
@@ -76,9 +85,24 @@ export class NominationJobScheduler implements JobScheduler {
   private scheduleStateTransitionJob(): void {
     const job = cron.schedule('* * * * *', async () => {
       try {
+        logger.info({
+          timestamp: new Date().toISOString(),
+          isRunning: this._isRunning
+        }, 'State transition cron job executing');
+        
         await this.processStateTransitions();
+        
+        logger.info({
+          timestamp: new Date().toISOString()
+        }, 'State transition cron job completed');
       } catch (error) {
-        logger.error({ error }, 'State transition job failed');
+        logger.error({ 
+          error: error instanceof Error ? {
+            message: error.message,
+            stack: error.stack
+          } : error,
+          timestamp: new Date().toISOString()
+        }, 'State transition job failed');
       }
     }, {
       scheduled: false,
@@ -88,7 +112,13 @@ export class NominationJobScheduler implements JobScheduler {
     job.start();
     this.jobs.set('state-transitions', job);
     
-    logger.info('State transition job scheduled (every minute)');
+    logger.info({
+      cronPattern: '* * * * *',
+      timezone: 'UTC',
+      currentTime: new Date().toISOString(),
+      isJobRunning: job.running,
+      jobDestroyed: job.destroyed
+    }, 'State transition job scheduled (every minute)');
   }
 
   /**
