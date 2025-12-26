@@ -16,16 +16,16 @@ export const modCommand = new SlashCommandBuilder()
         subcommand
           .setName('add')
           .setDescription('Nominate someone on behalf of another member')
-          .addUserOption(option =>
-            option
-              .setName('nominator')
-              .setDescription('The member who is nominating')
-              .setRequired(true)
-          )
           .addStringOption(option =>
             option
               .setName('name')
               .setDescription('The name of the person to nominate')
+              .setRequired(true)
+          )
+          .addUserOption(option =>
+            option
+              .setName('nominator')
+              .setDescription('The member who is nominating')
               .setRequired(true)
           )
       )

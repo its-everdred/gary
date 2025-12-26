@@ -115,15 +115,13 @@ export class NomineeDisplayUtils {
     };
 
     if (nominees.length > 0) {
-      // Create table-like format for queue
+      // Create simple one-line format for queue
       const queueTable = nominees.map((nominee, index) => {
         const position = index + 1;
-        const state = this.getStateDisplay(nominee);
-        const timing = this.getTimingDisplay(nominee);
+        const status = this.getStatusDisplay(nominee);
         
-        // Use code block for aligned table
-        return `\`${position.toString().padEnd(2)}\` **${nominee.name}**\n    └ *by ${nominee.nominator}* • ${state} ${timing}`;
-      }).join('\n\n');
+        return `\`${position.toString().padEnd(2)}\` **${nominee.name}** *by ${nominee.nominator}* • ${status}`;
+      }).join('\n');
 
       embed.fields.push({
         name: '📊 Current Queue',
@@ -136,35 +134,19 @@ export class NomineeDisplayUtils {
   }
 
   /**
-   * Gets state display text for a nominee
+   * Gets complete status display for a nominee
    */
-  private static getStateDisplay(nominee: Nominee): string {
-    switch (nominee.state) {
-      case NomineeState.VOTE:
-        return '🗳️ Voting';
-      case NomineeState.DISCUSSION:
-        return '💬 Discussion';
-      case NomineeState.CERTIFY:
-        return '⏳ Results pending';
-      case NomineeState.ACTIVE:
-        return '📅 Scheduled';
-      default:
-        return nominee.state.toLowerCase();
-    }
-  }
-
-  /**
-   * Gets timing display for a nominee
-   */
-  private static getTimingDisplay(nominee: Nominee): string {
+  private static getStatusDisplay(nominee: Nominee): string {
     if (nominee.state === NomineeState.VOTE && nominee.certifyStart) {
-      return `ends ${this.formatDiscordTimestamp(nominee.certifyStart)}`;
+      return `Vote active ${this.formatDiscordTimestamp(nominee.certifyStart)} 🗳️`;
     } else if (nominee.state === NomineeState.DISCUSSION && nominee.voteStart) {
-      return `vote ${this.formatDiscordTimestamp(nominee.voteStart)}`;
+      return `Currently in discussion ${this.formatDiscordTimestamp(nominee.voteStart)} 🗣️`;
+    } else if (nominee.state === NomineeState.CERTIFY) {
+      return `Results pending ⏳`;
     } else if (nominee.state === NomineeState.ACTIVE && nominee.discussionStart) {
-      return `starts ${this.formatDiscordTimestamp(nominee.discussionStart)}`;
+      return `Scheduled for discussion ${this.formatDiscordTimestamp(nominee.discussionStart)} 📅`;
     } else {
-      return '';
+      return `Pending schedule ⏳`;
     }
   }
 }
