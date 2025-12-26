@@ -163,10 +163,26 @@ export class VoteResultService {
    * Checks if message is from EasyPoll bot
    */
   private isEasyPollMessage(message: Message): boolean {
-    // EasyPoll bot ID: 437618149505105920
-    return message.author.id === '437618149505105920' || 
-           message.author.username?.toLowerCase().includes('easypoll') ||
-           false;
+    const authorId = message.author.id;
+    const username = message.author.username?.toLowerCase() || '';
+    
+    // Known EasyPoll bot IDs and patterns
+    const easyPollIds = ['437618149505105920'];
+    const usernamePatterns = ['easypoll', 'easy poll', 'poll'];
+    
+    const matchesId = easyPollIds.includes(authorId);
+    const matchesUsername = usernamePatterns.some(pattern => username.includes(pattern));
+    
+    logger.info({
+      messageId: message.id,
+      authorId,
+      username: message.author.username,
+      matchesId,
+      matchesUsername,
+      isEasyPoll: matchesId || matchesUsername
+    }, 'EasyPoll bot detection check');
+    
+    return matchesId || matchesUsername;
   }
 
   /**
@@ -255,60 +271,57 @@ export class VoteResultService {
     const description = embed.description?.toLowerCase() || '';
     const footer = embed.footer?.text?.toLowerCase() || '';
     
-    // Look for indicators that poll is closed
-    return title.includes('closed') || 
-           title.includes('ended') || 
-           description.includes('closed') ||
-           description.includes('ended') ||
+    // Look for EasyPoll specific completion indicators
+    return description.includes('final result') ||
+           description.includes('poll already ended') ||
+           description.includes('poll has ended') ||
+           title.includes('closed') || 
+           title.includes('ended') ||
            footer.includes('closed') ||
-           footer.includes('ended') ||
-           // EasyPoll specific indicators
-           title.includes('poll results') ||
-           description.includes('poll has ended');
+           footer.includes('ended');
   }
 
   /**
    * Extracts vote count for a specific option from embed
    */
   private extractVoteCount(embed: any, option: 'yes' | 'no'): number {
-    const searchTerms = option === 'yes' 
-      ? ['✅', 'yes', 'accept', 'approve']
-      : ['❌', 'no', 'reject', 'deny'];
-    
-    // Check embed fields
-    if (embed.fields) {
-      for (const field of embed.fields) {
-        const fieldName = field.name?.toLowerCase() || '';
-        const fieldValue = field.value?.toLowerCase() || '';
-        
-        for (const term of searchTerms) {
-          if (fieldName.includes(term) || fieldValue.includes(term)) {
-            // Extract number from field value
-            const match = field.value.match(/(\d+)/);
-            if (match) {
-              return parseInt(match[1], 10);
-            }
-          }
-        }
-      }
-    }
-    
-    // Check description
     const description = embed.description || '';
+    
+    // Look for EasyPoll "Final Result" section
+    // Format: ✅ ▓▓▓▓▓▓▓▓▓▓ | 100.0% (1)
+    // or:     ❌ ░░░░░░░░░░ | 0.0% (0)
+    
+    const emoji = option === 'yes' ? '✅' : '❌';
     const lines = description.split('\n');
     
+    logger.info({
+      option,
+      emoji,
+      descriptionLines: lines,
+      searchingFor: `${emoji} pattern with vote count`
+    }, 'Extracting vote count from EasyPoll format');
+    
     for (const line of lines) {
-      const lowerLine = line.toLowerCase();
-      for (const term of searchTerms) {
-        if (lowerLine.includes(term)) {
-          // Extract number from line
-          const match = line.match(/(\d+)/);
-          if (match) {
-            return parseInt(match[1], 10);
-          }
+      if (line.includes(emoji)) {
+        // Look for pattern: | percentage% (count)
+        const match = line.match(/\|\s*\d+\.?\d*%\s*\((\d+)\)/);
+        if (match) {
+          const count = parseInt(match[1], 10);
+          logger.info({
+            option,
+            line,
+            extractedCount: count
+          }, 'Successfully extracted vote count');
+          return count;
         }
       }
     }
+    
+    logger.warn({
+      option,
+      emoji,
+      description
+    }, 'Could not extract vote count from EasyPoll format');
     
     return 0;
   }
