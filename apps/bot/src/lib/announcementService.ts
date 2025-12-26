@@ -35,7 +35,7 @@ export class AnnouncementService {
 
       const embed = {
         title: '🗳️ New Vote Started',
-        description: `Voting has begun for **${nominee.name}**'s nomination to membership.`,
+        description: `Voting has begun for **${nominee.name}**'s nomination.`,
         fields: [
           {
             name: '📍 Vote Location',
@@ -109,7 +109,7 @@ export class AnnouncementService {
 
       const embed = {
         title: '💬 New Discussion Started',
-        description: `Discussion period has begun for **${nominee.name}**'s nomination to membership.`,
+        description: `Discussion period has begun for **${nominee.name}**'s nomination.`,
         fields: [
           {
             name: '📍 Discussion Location',

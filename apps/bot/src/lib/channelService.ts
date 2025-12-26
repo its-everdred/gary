@@ -340,11 +340,6 @@ export class ChannelManagementService {
             value: NomineeDisplayUtils.formatDuration(NOMINATION_CONFIG.DISCUSSION_DURATION_MINUTES),
             inline: true
           },
-          {
-            name: '📝 Purpose',
-            value: 'Use this channel to discuss the nominee\'s qualifications, contributions, and suitability.',
-            inline: false
-          }
         ],
         color: 0x3498db,
         timestamp: new Date().toISOString(),

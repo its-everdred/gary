@@ -21,11 +21,9 @@ export async function handleListCommand(interaction: ChatInputCommandInteraction
       }
     });
 
-    const formattedList = NomineeDisplayUtils.formatNomineeList(nominees, {
-      headerText: '**Current Nominations:**'
-    });
+    const queueEmbed = NomineeDisplayUtils.createQueueEmbed(nominees);
     await interaction.reply({
-      content: formattedList,
+      embeds: [queueEmbed],
       flags: 64 // EPHEMERAL
     });
 

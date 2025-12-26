@@ -98,14 +98,30 @@ export class NomineeDisplayUtils {
   }
 
   /**
+   * Creates the formatted queue display for embeds
+   */
+  static formatQueueForEmbed(nominees: Nominee[]): string {
+    if (nominees.length === 0) {
+      return 'No nominees in queue';
+    }
+
+    return nominees.map((nominee, index) => {
+      const position = index + 1;
+      const status = this.getStatusDisplay(nominee);
+      
+      return `\`${position.toString().padEnd(2)}\` **${nominee.name}** *by ${nominee.nominator}* • ${status}`;
+    }).join('\n');
+  }
+
+  /**
    * Creates an embed for nomination announcements with queue
    */
   static createNominationEmbed(nomineeName: string, nominatorName: string, moderatorName: string | null, nominees: Nominee[]): any {
     const embed = {
       title: '📋 New Nomination',
       description: moderatorName 
-        ? `**${nomineeName}** has been nominated for membership by ${nominatorName} (via ${moderatorName}).`
-        : `**${nomineeName}** has been nominated for membership by ${nominatorName}.`,
+        ? `**${nomineeName}** has been nominated by ${nominatorName} (via ${moderatorName}).`
+        : `**${nomineeName}** has been nominated by ${nominatorName}.`,
       color: 0x3498db,
       fields: [],
       timestamp: new Date().toISOString(),
@@ -115,20 +131,35 @@ export class NomineeDisplayUtils {
     };
 
     if (nominees.length > 0) {
-      // Create simple one-line format for queue
-      const queueTable = nominees.map((nominee, index) => {
-        const position = index + 1;
-        const status = this.getStatusDisplay(nominee);
-        
-        return `\`${position.toString().padEnd(2)}\` **${nominee.name}** *by ${nominee.nominator}* • ${status}`;
-      }).join('\n');
-
       embed.fields.push({
         name: '📊 Current Queue',
-        value: queueTable || 'No nominees in queue',
+        value: this.formatQueueForEmbed(nominees),
         inline: false
       });
     }
+
+    return embed;
+  }
+
+  /**
+   * Creates an embed for displaying the current nomination queue
+   */
+  static createQueueEmbed(nominees: Nominee[]): any {
+    const embed = {
+      title: '📊 Current Nominations',
+      color: 0x3498db,
+      fields: [],
+      timestamp: new Date().toISOString(),
+      footer: {
+        text: 'Governance • Nomination Queue'
+      }
+    };
+
+    embed.fields.push({
+      name: nominees.length === 0 ? 'Queue Status' : `Queue (${nominees.length} nominee${nominees.length === 1 ? '' : 's'})`,
+      value: this.formatQueueForEmbed(nominees),
+      inline: false
+    });
 
     return embed;
   }
