@@ -253,17 +253,12 @@ export class VoteResultService {
   }
 
   /**
-   * Gets member count excluding bots
+   * Gets member count (uses total member count, same as warn feature)
    */
   private async getNonBotMemberCount(guild: Guild): Promise<number> {
-    try {
-      await guild.members.fetch(); // Ensure all members are cached
-      const nonBotMembers = guild.members.cache.filter(member => !member.user.bot);
-      return nonBotMembers.size;
-    } catch (error) {
-      logger.error({ error, guildId: guild.id }, 'Failed to fetch guild members');
-      return 0;
-    }
+    // Use guild.memberCount which doesn't require GuildMembers intent
+    // This includes bots but is consistent with how the warn feature works
+    return guild.memberCount || 1;
   }
 
   /**

@@ -108,30 +108,15 @@ export class ChannelManagementService {
         };
       }
 
-      // Get member count first, before creating channel
-      let memberCount = 0;
-      let requiredQuorum = 0;
-      try {
-        await guild.members.fetch();
-        const nonBotMembers = guild.members.cache.filter(member => !member.user.bot);
-        memberCount = nonBotMembers.size;
-        requiredQuorum = Math.ceil(memberCount * NOMINATION_CONFIG.VOTE_QUORUM_THRESHOLD);
-        
-        logger.info({
-          guildId: guild.id,
-          memberCount,
-          requiredQuorum
-        }, 'Calculated quorum for vote');
-      } catch (fetchError) {
-        logger.error({
-          error: fetchError,
-          guildId: guild.id
-        }, 'Failed to fetch members for quorum calculation');
-        return {
-          success: false,
-          errorMessage: 'Failed to calculate quorum: Could not fetch guild members'
-        };
-      }
+      // Get member count using guild.memberCount (doesn't require GuildMembers intent)
+      const memberCount = guild.memberCount || 1;
+      const requiredQuorum = Math.ceil(memberCount * NOMINATION_CONFIG.VOTE_QUORUM_THRESHOLD);
+      
+      logger.info({
+        guildId: guild.id,
+        memberCount,
+        requiredQuorum
+      }, 'Calculated quorum for vote');
 
       const channelName = this.generateVoteChannelName(nominee.name);
       
