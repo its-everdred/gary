@@ -158,7 +158,19 @@ export class ChannelManagementService {
       });
 
       // Send initial vote message
+      logger.info({
+        nomineeId: nominee.id,
+        nomineeName: nominee.name,
+        channelId: channel.id
+      }, 'About to call sendVoteStartMessage');
+      
       await this.sendVoteStartMessage(channel, nominee);
+      
+      logger.info({
+        nomineeId: nominee.id,
+        nomineeName: nominee.name,
+        channelId: channel.id
+      }, 'Completed sendVoteStartMessage');
 
       logger.info({
         nomineeId: nominee.id,
@@ -389,6 +401,12 @@ export class ChannelManagementService {
    * Sends the initial message when voting starts
    */
   private async sendVoteStartMessage(channel: TextChannel, nominee: Nominee): Promise<void> {
+    logger.info({
+      nomineeId: nominee.id,
+      nomineeName: nominee.name,
+      channelId: channel.id
+    }, 'Starting sendVoteStartMessage');
+    
     try {
       // Calculate timestamps for poll
       const startTime = Math.floor(Date.now() / 1000);
