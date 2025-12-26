@@ -359,10 +359,16 @@ export class ChannelManagementService {
     try {
       // Calculate timestamps for poll
       const startTime = Math.floor(Date.now() / 1000);
-      const endTime = startTime + (5 * 24 * 60 * 60); // 5 days in seconds
+      const endTime = startTime + (NOMINATION_CONFIG.VOTE_DURATION_MINUTES * 60); // Convert minutes to seconds
       
       // Generate the exact EasyPoll command
-      const pollCommand = `/timepoll question:Should we invite ${nominee.name} to GA? time:5d type:Anonymous (Buttons) maxchoices:1 text:Start: <t:${startTime}:F>\\nEnd: <t:${endTime}:F> answer-1:✅:Yes, Accept answer-2:❌:No, Reject`;
+      const voteDurationFormatted = NOMINATION_CONFIG.VOTE_DURATION_MINUTES >= 1440 
+        ? `${Math.round(NOMINATION_CONFIG.VOTE_DURATION_MINUTES / 1440)}d`
+        : NOMINATION_CONFIG.VOTE_DURATION_MINUTES >= 60
+        ? `${Math.round(NOMINATION_CONFIG.VOTE_DURATION_MINUTES / 60)}h`
+        : `${NOMINATION_CONFIG.VOTE_DURATION_MINUTES}m`;
+      
+      const pollCommand = `/timepoll question:Should we invite ${nominee.name} to GA? time:${voteDurationFormatted} type:Anonymous (Buttons) maxchoices:1 text:Start: <t:${startTime}:F>\\nEnd: <t:${endTime}:F> answer-1:✅:Yes, Accept answer-2:❌:No, Reject`;
 
       // Get moderator role (this should be configured per guild)
       const moderatorRole = await this.getModeratorRole(channel.guild);
