@@ -22,15 +22,8 @@ export async function handleRemoveCommand(interaction: ChatInputCommandInteracti
       return;
     }
 
-    // Find the nominee
-    const nominee = await prisma.nominee.findUnique({
-      where: {
-        guildId_name: {
-          guildId,
-          name
-        }
-      }
-    });
+    // Find the nominee (case-insensitive)
+    const nominee = await NomineeStateManager.findNomineeByName(guildId, name);
 
     if (!nominee) {
       await interaction.reply({
@@ -42,7 +35,7 @@ export async function handleRemoveCommand(interaction: ChatInputCommandInteracti
 
     if (nominee.state === NomineeState.PAST) {
       await interaction.reply({
-        content: `${name} is already in past state and cannot be removed.`,
+        content: `${nominee.name} is already in past state and cannot be removed.`,
         flags: 64
       });
       return;
@@ -55,27 +48,25 @@ export async function handleRemoveCommand(interaction: ChatInputCommandInteracti
     // Remove the nominee
     await prisma.nominee.delete({
       where: {
-        guildId_name: {
-          guildId,
-          name
-        }
+        id: nominee.id
       }
     });
 
     // Recalculate schedules for all remaining active nominees
-    await recalculateRemainingNominees(guildId, name);
+    await recalculateRemainingNominees(guildId, nominee.name);
 
     // Send announcement to governance channel
-    await announceNomineeRemoval(interaction.client, guildId, name, nominee.state, username);
+    await announceNomineeRemoval(interaction.client, guildId, nominee.name, nominee.state, username);
 
     await interaction.reply({
-      content: `${name} has been removed from the nominations list. Schedules updated for remaining nominees.`,
+      content: `${nominee.name} has been removed from the nominations list. Schedules updated for remaining nominees.`,
       flags: 64
     });
 
     logger.info({
       nomineeId: nominee.id,
-      name,
+      name: nominee.name,
+      inputName: name,
       previousState: nominee.state,
       moderator: username,
       user: userId,

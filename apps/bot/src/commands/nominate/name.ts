@@ -120,19 +120,12 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
       return;
     }
 
-    // Check if nominee already exists
-    const existingNominee = await prisma.nominee.findUnique({
-      where: {
-        guildId_name: {
-          guildId,
-          name
-        }
-      }
-    });
+    // Check if nominee already exists (case-insensitive)
+    const existingNominee = await NomineeStateManager.findNomineeByName(guildId, name);
 
     if (existingNominee && existingNominee.state !== NomineeState.PAST) {
       await interaction.reply({
-        content: `${name} is already nominated and in ${existingNominee.state.toLowerCase()} state.`,
+        content: `${existingNominee.name} is already nominated and in ${existingNominee.state.toLowerCase()} state.`,
         flags: 64
       });
       return;

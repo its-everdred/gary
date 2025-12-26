@@ -252,14 +252,15 @@ export class NomineeStateManager {
   }
 
   /**
-   * Finds a nominee by name in a guild
+   * Finds a nominee by name in a guild (case-insensitive)
    */
   static async findNomineeByName(guildId: string, name: string): Promise<Nominee | null> {
-    return await prisma.nominee.findUnique({
+    return await prisma.nominee.findFirst({
       where: {
-        guildId_name: {
-          guildId,
-          name
+        guildId,
+        name: {
+          equals: name,
+          mode: 'insensitive'
         }
       }
     });
