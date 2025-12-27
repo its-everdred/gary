@@ -350,14 +350,14 @@ export class VoteResultService {
   /**
    * Gets the appropriate description text based on vote results
    */
-  private getVoteResultDescription(nomineeName: string, voteResults: VoteResults): string {
+  private getVoteResultDescription(nominee: Nominee, voteResults: VoteResults): string {
     if (voteResults.passed) {
-      return `🗳️ ${nomineeName} met quorum and succeeded! They will receive an invite within ${NOMINATION_CONFIG.CERTIFY_PERIOD_TEXT}.`;
+      return `🗳️ ${nominee.name} met quorum and succeeded! ${nominee.nominator} will receive an invite to send them in ${NOMINATION_CONFIG.CERTIFY_PERIOD_TEXT}.`;
     }
     
     // Failed - determine the reason
     if (!voteResults.quorumMet) {
-      return `🗳️ ${nomineeName} failed to meet quorum.`;
+      return `🗳️ ${nominee.name} failed to meet quorum.`;
     }
     
     // Met quorum but didn't get enough yes votes
@@ -365,7 +365,7 @@ export class VoteResultService {
       ? Math.round((voteResults.yesVotes / voteResults.totalVotes) * 100) 
       : 0;
     
-    return `🗳️ ${nomineeName} met quorum but only received ${yesPercentage}% yes votes.`;
+    return `🗳️ ${nominee.name} met quorum but only received ${yesPercentage}% yes votes.`;
   }
 
   /**
@@ -374,7 +374,7 @@ export class VoteResultService {
   private createVoteResultsEmbed(nominee: Nominee, voteResults: VoteResults): DiscordEmbed {
     return {
       title: voteResults.passed ? '✅ Vote PASSED' : '❌ Vote FAILED',
-      description: this.getVoteResultDescription(nominee.name, voteResults),
+      description: this.getVoteResultDescription(nominee, voteResults),
       fields: [
         {
           name: '📊 Vote Breakdown',
