@@ -364,7 +364,7 @@ export class VoteResultService {
       fields: [
         {
           name: '📊 Vote Breakdown',
-          value: `✅ Yes: ${voteResults.yesVotes}\n❌ No: ${voteResults.noVotes}\n\n📈 Total: ${voteResults.totalVotes}`,
+          value: `✅ Yes: ${voteResults.yesVotes}\n❌ No: ${voteResults.noVotes}\n📈 Total: ${voteResults.totalVotes}\n`,
           inline: true
         },
         {
