@@ -36,6 +36,7 @@ model Nominee {
   voteYesCount        Int          @default(0)
   voteNoCount         Int          @default(0)
   votePassed          Boolean?
+  botMessageIds       String?      // Stores comma-separated message IDs for cleanup
 
   @@index([guildId, state])
   @@index([guildId, discussionStart])

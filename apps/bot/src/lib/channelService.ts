@@ -391,20 +391,35 @@ export class ChannelManagementService {
             );
             const moderatorsMention = moderatorsRole ? `<@&${moderatorsRole.id}>` : '@moderators';
             
-            // Send main notification
-            await modCommsChannel.send(`${moderatorsMention} **🚨 Poll Creation Required**\n\nA vote has started for **${nominee.name}** and requires immediate moderator action.\n\n**1️⃣ Copy/Paste Command** in <#${channel.id}>:`);
+            // Send main notification and store message IDs for later deletion
+            const modCommMessages: string[] = [];
+            
+            const msg1 = await modCommsChannel.send(`${moderatorsMention} **🚨 Poll Creation Required**\n\nA vote has started for **${nominee.name}** and requires immediate moderator action.\n\n**1️⃣ Copy/Paste Command** in <#${channel.id}>:`);
+            modCommMessages.push(msg1.id);
             
             // Send command in its own message for easy copying
-            await modCommsChannel.send(pollCommand);
+            const msg2 = await modCommsChannel.send(pollCommand);
+            modCommMessages.push(msg2.id);
             
             // Send reaction instruction
-            await modCommsChannel.send('**2️⃣ Copy/Paste Emoji React:**');
+            const msg3 = await modCommsChannel.send('**2️⃣ Copy/Paste Emoji React:**');
+            modCommMessages.push(msg3.id);
             
             // Send the actual text to copy
-            await modCommsChannel.send('Optionally, react to this message with :PepeVoted: so we can estimate quorum.');
+            const msg4 = await modCommsChannel.send('Optionally, react to this message with :PepeVoted: so we can estimate quorum.');
+            modCommMessages.push(msg4.id);
             
             // Send final instruction
-            await modCommsChannel.send('**3️⃣ Delete this** Once posted, delete this message to remove the ping from other mods.');
+            const msg5 = await modCommsChannel.send('**3️⃣ Delete this** Once posted, delete this message to remove the ping from other mods.');
+            modCommMessages.push(msg5.id);
+            
+            // Store message IDs in database for later deletion
+            await prisma.nominee.update({
+              where: { id: nominee.id },
+              data: { 
+                botMessageIds: modCommMessages.join(',')
+              }
+            });
           }
         } catch (error) {
           logger.error({

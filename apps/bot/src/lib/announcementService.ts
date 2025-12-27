@@ -59,7 +59,21 @@ export class AnnouncementService {
         embeds: [embed]
       });
 
-      // Vote announcement posted to governance channel
+      // Also announce vote start in general channel
+      try {
+        const generalChannel = await this.findGeneralChannel(guild);
+        if (generalChannel) {
+          await generalChannel.send({
+            embeds: [embed]
+          });
+        }
+      } catch (error) {
+        // Don't fail if general channel announcement fails
+        logger.error({
+          error,
+          nomineeId: nominee.id
+        }, 'Failed to post vote announcement to general channel');
+      }
 
       return true;
     } catch (error) {
@@ -107,7 +121,6 @@ export class AnnouncementService {
       await governanceChannel.send({
         embeds: [embed]
       });
-
 
       return true;
     } catch (error) {
@@ -292,6 +305,23 @@ export class AnnouncementService {
   }
 
   /**
+   * Finds the general channel in a guild
+   */
+  private async findGeneralChannel(guild: Guild): Promise<TextChannel | null> {
+    const generalChannelId = NOMINATION_CONFIG.CHANNELS.GENERAL;
+    if (!generalChannelId) {
+      return null;
+    }
+
+    const channel = guild.channels.cache.get(generalChannelId) as TextChannel;
+    if (!channel?.isTextBased()) {
+      return null;
+    }
+
+    return channel;
+  }
+
+  /**
    * Announces that vote time expired without poll completion
    */
   async announceVoteTimeExpired(nominee: Nominee): Promise<boolean> {
@@ -340,32 +370,4 @@ export class AnnouncementService {
     }
   }
 
-  /**
-   * Finds the #general channel in a guild
-   */
-  private async findGeneralChannel(guild: Guild): Promise<TextChannel | null> {
-    // Try exact match first
-    let channel = guild.channels.cache.find(ch => 
-      ch.isTextBased() && 
-      ch.name === 'general'
-    ) as TextChannel | undefined;
-
-    // If not found, try system channel
-    if (!channel && guild.systemChannelId) {
-      const systemChannel = guild.channels.cache.get(guild.systemChannelId);
-      if (systemChannel?.isTextBased()) {
-        channel = systemChannel as TextChannel;
-      }
-    }
-
-    // If still not found, get first available text channel
-    if (!channel) {
-      channel = guild.channels.cache.find(ch => 
-        ch.isTextBased() && 
-        ch.permissionsFor(guild.members.me!)?.has('SendMessages')
-      ) as TextChannel | undefined;
-    }
-
-    return channel || null;
-  }
 }

@@ -238,6 +238,33 @@ export class NominationJobScheduler implements JobScheduler {
             data: { voteGovernanceAnnounced: true }
           });
 
+          // Delete bot tracking messages (mod-comm instructions)
+          if (nominee.botMessageIds) {
+            try {
+              const modCommsChannelId = process.env.MOD_COMMS_CHANNEL_ID;
+              if (modCommsChannelId) {
+                const modCommsChannel = guild.channels.cache.get(modCommsChannelId) as TextChannel;
+                if (modCommsChannel?.isTextBased()) {
+                  const messageIds = nominee.botMessageIds.split(',');
+                  for (const messageId of messageIds) {
+                    try {
+                      const message = await modCommsChannel.messages.fetch(messageId);
+                      await message.delete();
+                    } catch {
+                      // Message already deleted or not found, continue
+                    }
+                  }
+                }
+              }
+            } catch (error) {
+              // Log but don't fail the whole process
+              logger.error({
+                error,
+                nomineeId: nominee.id,
+                botMessageIds: nominee.botMessageIds
+              }, 'Failed to delete bot messages');
+            }
+          }
         }
       }
     } catch (error) {
