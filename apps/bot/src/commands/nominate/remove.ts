@@ -20,8 +20,22 @@ export async function handleRemoveCommand(interaction: ChatInputCommandInteracti
       return;
     }
 
-    // Find the nominee (case-insensitive)
-    const nominee = await NomineeStateManager.findNomineeByName(guildId, name);
+    // Find the nominee (case-insensitive) - prioritize active nominees over past ones
+    const nominee = await prisma.nominee.findFirst({
+      where: {
+        guildId,
+        name: {
+          equals: name,
+          mode: 'insensitive'
+        },
+        state: {
+          not: NomineeState.PAST
+        }
+      },
+      orderBy: {
+        createdAt: 'desc' // Get most recent if multiple
+      }
+    });
 
     if (!nominee) {
       await interaction.reply({
@@ -31,13 +45,6 @@ export async function handleRemoveCommand(interaction: ChatInputCommandInteracti
       return;
     }
 
-    if (nominee.state === NomineeState.PAST) {
-      await interaction.reply({
-        content: `${nominee.name} is already in past state and cannot be removed.`,
-        flags: 64
-      });
-      return;
-    }
 
 
     // Remove the nominee

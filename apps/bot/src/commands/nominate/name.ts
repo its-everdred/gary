@@ -20,8 +20,20 @@ async function calculateNomineeSchedule(guildId: string): Promise<{ discussionSt
 }
 
 async function validateNomineeNotDuplicate(guildId: string, name: string): Promise<string | null> {
-  const existingNominee = await NomineeStateManager.findNomineeByName(guildId, name);
-  if (existingNominee && existingNominee.state !== NomineeState.PAST) {
+  const existingNominee = await prisma.nominee.findFirst({
+    where: {
+      guildId,
+      name: {
+        equals: name,
+        mode: 'insensitive'
+      },
+      state: {
+        not: NomineeState.PAST
+      }
+    }
+  });
+  
+  if (existingNominee) {
     return `❌ **${name}** is already nominated and is currently in ${existingNominee.state.toLowerCase()} state.`;
   }
   return null;

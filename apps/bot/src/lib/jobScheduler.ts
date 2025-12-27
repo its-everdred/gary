@@ -366,14 +366,9 @@ export class NominationJobScheduler implements JobScheduler {
       
       // Post detailed results to both vote and governance channels if we have vote results
       if (voteResults) {
-        // Post to vote channel
-        this.voteResultService.postDetailedVoteResults(nominee, voteResults).catch(error => {
-          logger.error({ error, nomineeId: nominee.id }, 'Failed to post detailed vote results to vote channel');
-        });
-
-        // Post same results to governance channel
-        this.voteResultService.postVoteResultsToGovernance(nominee, voteResults).catch(error => {
-          logger.error({ error, nomineeId: nominee.id }, 'Failed to post vote results to governance channel');
+        // Post results to all channels (vote, governance, general, mod-comms)
+        this.voteResultService.postVoteResults(nominee, voteResults).catch(error => {
+          logger.error({ error, nomineeId: nominee.id }, 'Failed to post vote results');
         });
       } else {
         // Vote period expired without results - create default failed results
@@ -389,13 +384,9 @@ export class NominationJobScheduler implements JobScheduler {
           requiredPassVotes: 0
         };
         
-        // Post to both channels
-        this.voteResultService.postDetailedVoteResults(nominee, expiredResults).catch(error => {
-          logger.error({ error, nomineeId: nominee.id }, 'Failed to post expired vote results to vote channel');
-        });
-        
-        this.voteResultService.postVoteResultsToGovernance(nominee, expiredResults).catch(error => {
-          logger.error({ error, nomineeId: nominee.id }, 'Failed to post expired vote results to governance channel');
+        // Post expired results to all channels
+        this.voteResultService.postVoteResults(nominee, expiredResults).catch(error => {
+          logger.error({ error, nomineeId: nominee.id }, 'Failed to post expired vote results');
         });
       }
     } else {
