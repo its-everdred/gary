@@ -12,8 +12,10 @@ const mockPrisma = {
   }
 };
 
+// Mock the database before importing the service
 mock.module('../lib/db.js', () => ({ prisma: mockPrisma }));
 
+// Import the service after mocking
 const { NomineeStateManager } = await import('../lib/nomineeService.js');
 
 function createMockNominee(overrides: Partial<Nominee> = {}): Nominee {
@@ -29,6 +31,13 @@ function createMockNominee(overrides: Partial<Nominee> = {}): Nominee {
     createdAt: new Date(),
     discussionChannelId: null,
     voteChannelId: null,
+    votePollMessageId: null,
+    voteGovernanceAnnounced: false,
+    voteYesCount: 0,
+    voteNoCount: 0,
+    votePassed: null,
+    botMessageIds: null,
+    announcementMessageIds: null,
     ...overrides
   };
 }
@@ -40,6 +49,12 @@ describe('NomineeStateManager', () => {
     mockPrisma.nominee.findMany.mockReset();
     mockPrisma.nominee.count.mockReset();
     mockPrisma.nominee.update.mockReset();
+  });
+
+  test('NomineeStateManager should be imported correctly', () => {
+    expect(NomineeStateManager).toBeDefined();
+    expect(typeof NomineeStateManager.validateStateTransition).toBe('function');
+    expect(typeof NomineeStateManager.transitionNominee).toBe('function');
   });
 
   describe('validateStateTransition', () => {
