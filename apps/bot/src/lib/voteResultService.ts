@@ -6,6 +6,7 @@ import { NOMINATION_CONFIG } from './constants.js';
 import { ChannelFinderService } from './channelFinderService.js';
 import { DISCORD_CONSTANTS } from './discordConstants.js';
 import { ConfigService } from './configService.js';
+import { NomineeDisplayUtils } from './nomineeDisplayUtils.js';
 
 const logger = pino();
 
@@ -388,8 +389,18 @@ export class VoteResultService {
         }
       ],
       color: voteResults.passed ? 0x00ff00 : 0xff0000,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      footer: {
+        text: `Nominee channels will be removed in ${this.formatCertifyDuration()}`
+      }
     };
+  }
+
+  /**
+   * Formats the certify duration for display
+   */
+  private formatCertifyDuration(): string {
+    return NomineeDisplayUtils.formatDuration(NOMINATION_CONFIG.CERTIFY_DURATION_MINUTES);
   }
 
   /**
