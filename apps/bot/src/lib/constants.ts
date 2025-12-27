@@ -21,6 +21,20 @@ export const NOMINATION_CONFIG = {
     return Math.round(this.VOTE_PASS_THRESHOLD * 100);
   },
 
+  // Helper to get certify period as human readable string
+  get CERTIFY_PERIOD_TEXT(): string {
+    const minutes = this.CERTIFY_DURATION_MINUTES;
+    if (minutes >= 1440) {
+      const days = Math.round(minutes / 1440);
+      return days === 1 ? '24 hours' : `${days} days`;
+    } else if (minutes >= 60) {
+      const hours = Math.round(minutes / 60);
+      return hours === 1 ? '1 hour' : `${hours} hours`;
+    } else {
+      return `${minutes} minutes`;
+    }
+  },
+
   CHANNEL_PREFIXES: {
     DISCUSSION: 'discussion-',
     VOTE: 'vote-',
@@ -92,3 +106,7 @@ export const ERROR_MESSAGES = {
   INVALID_STATE_TRANSITION:
     'Cannot perform this action in the current nomination state.',
 } as const;
+
+export const createPassedMessage = (name: string, yesVotes: number, noVotes: number, nominator: string): string => {
+  return `The vote to invite ${name} PASSED with ${yesVotes} Yes votes, ${noVotes} No votes. An invite link will be sent to ${nominator} in ${NOMINATION_CONFIG.CERTIFY_PERIOD_TEXT}.`;
+};

@@ -338,7 +338,7 @@ export class VoteResultService {
    */
   private getVoteResultDescription(nomineeName: string, voteResults: VoteResults): string {
     if (voteResults.passed) {
-      return `🗳️ ${nomineeName} met quorum and succeeded! They will receive an invite within 24 hours.`;
+      return `🗳️ ${nomineeName} met quorum and succeeded! They will receive an invite within ${NOMINATION_CONFIG.CERTIFY_PERIOD_TEXT}.`;
     }
     
     // Failed - determine the reason
