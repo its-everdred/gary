@@ -592,6 +592,11 @@ export class NominationJobScheduler implements JobScheduler {
               name: '2️⃣ Send the invite link',
               value: `Send invite link to **${nominee.nominator}**\n• Invite to Server → Edit invite link → Max number of uses → 1 use`,
               inline: false
+            },
+            {
+              name: '3️⃣ Delete this message',
+              value: 'Delete this message to indicate that the invite link was sent',
+              inline: false
             }
           ],
           color: 0xff6600,
