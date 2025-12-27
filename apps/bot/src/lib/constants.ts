@@ -15,7 +15,6 @@ export const NOMINATION_CONFIG = {
   DISCUSSION_START_HOUR: 9, // 9 AM
   DISCUSSION_START_TIMEZONE: 'America/New_York', // ET
 
-  VOTE_QUORUM_THRESHOLD: 0.4, // 40% of members must vote
   VOTE_PASS_THRESHOLD: 0.8, // 80% yes votes to pass
   
   // Helper to get vote pass percentage as integer

@@ -5,6 +5,7 @@ import type { Nominee } from '@prisma/client';
 import { NOMINATION_CONFIG } from './constants.js';
 import { ChannelFinderService } from './channelFinderService.js';
 import { DISCORD_CONSTANTS } from './discordConstants.js';
+import { ConfigService } from './configService.js';
 
 const logger = pino();
 
@@ -277,8 +278,8 @@ export class VoteResultService {
     const { yesVotes, noVotes } = pollData;
     const totalVotes = yesVotes + noVotes;
     
-    // Calculate quorum requirement (40% of members)
-    const requiredQuorum = Math.ceil(memberCount * NOMINATION_CONFIG.VOTE_QUORUM_THRESHOLD);
+    // Calculate quorum requirement using configurable percentage
+    const requiredQuorum = Math.ceil(memberCount * ConfigService.getVoteQuorumPercent());
     const quorumMet = totalVotes >= requiredQuorum;
     
     // Calculate pass threshold (80% of votes must be yes)

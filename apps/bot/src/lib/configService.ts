@@ -66,6 +66,10 @@ export class ConfigService {
     return parseInt(process.env.KICK_QUORUM_PERCENT || '40') / 100;
   }
 
+  static getVoteQuorumPercent(): number {
+    return parseInt(process.env.VOTE_QUORUM_PERCENT || '40') / 100;
+  }
+
   static getLogLevel(): string {
     return process.env.LOG_LEVEL || 'info';
   }
