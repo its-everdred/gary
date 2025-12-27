@@ -385,43 +385,26 @@ export class ChannelManagementService {
           const modCommsChannel = channel.guild.channels.cache.get(modCommsChannelId) as TextChannel;
           
           if (modCommsChannel?.isTextBased()) {
-            const modNotifyEmbed = {
-              title: '🚨 Poll Creation Required',
-              description: `A vote has started for **${nominee.name}** and requires immediate moderator action.`,
-              fields: [
-                {
-                  name: '1️⃣ Copy/Paste Command',
-                  value: `\`\`\`${pollCommand}\`\`\`in <#${channel.id}>`,
-                  inline: false
-                },
-                {
-                  name: '2️⃣ Copy/Paste Emoji React',
-                  value: '```Optionally, react to this message with :PepeVoted: so we can estimate quorum.```Then react to your own message with :PepeVoted:',
-                  inline: false
-                },
-                {
-                  name: '3️⃣ Delete this',
-                  value: 'Once posted, delete this message to remove the ping from other mods.',
-                  inline: false
-                }
-              ],
-              color: 0xff6600,
-              timestamp: new Date().toISOString(),
-              footer: {
-                text: 'Nomination System • Action Required'
-              }
-            };
-
             // Find moderators role specifically
             const moderatorsRole = channel.guild.roles.cache.find(r => 
               r.name.toLowerCase() === 'moderators'
             );
             const moderatorsMention = moderatorsRole ? `<@&${moderatorsRole.id}>` : '@moderators';
             
-            await modCommsChannel.send({
-              content: `${moderatorsMention} **Vote poll needs to be created!**`,
-              embeds: [modNotifyEmbed]
-            });
+            // Send main notification
+            await modCommsChannel.send(`${moderatorsMention} **🚨 Poll Creation Required**\n\nA vote has started for **${nominee.name}** and requires immediate moderator action.\n\n**1️⃣ Copy/Paste Command** in <#${channel.id}>:`);
+            
+            // Send command in its own message for easy copying
+            await modCommsChannel.send(pollCommand);
+            
+            // Send reaction instruction
+            await modCommsChannel.send('**2️⃣ Copy/Paste Emoji React:**');
+            
+            // Send the actual text to copy
+            await modCommsChannel.send('Optionally, react to this message with :PepeVoted: so we can estimate quorum.');
+            
+            // Send final instruction
+            await modCommsChannel.send('**3️⃣ Delete this** Once posted, delete this message to remove the ping from other mods.');
           }
         } catch (error) {
           logger.error({
