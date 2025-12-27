@@ -378,46 +378,47 @@ export class VoteResultService {
   }
 
   /**
-   * Posts the vote results to the vote channel
+   * Posts vote results to the specified channels (governance and general)
    */
-  async postDetailedVoteResults(nominee: Nominee, voteResults: VoteResults): Promise<void> {
+  async postVoteResults(nominee: Nominee, voteResults: VoteResults): Promise<void> {
+    const guild = await this.client.guilds.fetch(nominee.guildId);
+    const resultEmbed = this.createVoteResultsEmbed(nominee, voteResults);
+    
+    // Post to governance channel
     try {
-      if (!nominee.voteChannelId) {
-        return;
+      const governanceChannel = await this.findGovernanceChannel(guild);
+      if (governanceChannel) {
+        await governanceChannel.send({ embeds: [resultEmbed] });
       }
-
-      const channel = await this.client.channels.fetch(nominee.voteChannelId) as TextChannel;
-      if (!channel) {
-        return;
-      }
-
-      const resultEmbed = this.createVoteResultsEmbed(nominee, voteResults);
-      await channel.send({ embeds: [resultEmbed] });
-
-      // Vote results posted successfully
     } catch (error) {
-      logger.error({ error, nomineeId: nominee.id }, 'Failed to post detailed vote results');
+      logger.error({ error, nomineeId: nominee.id }, 'Failed to post vote results to governance');
+    }
+    
+    // Post to general channel
+    try {
+      const generalChannel = await this.findGeneralChannel(guild);
+      if (generalChannel) {
+        await generalChannel.send({ embeds: [resultEmbed] });
+      }
+    } catch (error) {
+      logger.error({ error, nomineeId: nominee.id }, 'Failed to post vote results to general');
     }
   }
 
   /**
-   * Posts the same vote results to the governance channel
+   * Legacy method for backwards compatibility - redirects to postVoteResults
+   * @deprecated Use postVoteResults instead
    */
-  async postVoteResultsToGovernance(nominee: Nominee, voteResults: VoteResults): Promise<void> {
-    try {
-      const guild = await this.client.guilds.fetch(nominee.guildId);
-      const governanceChannel = await this.findGovernanceChannel(guild);
-      
-      if (!governanceChannel) {
-        return;
-      }
+  async postDetailedVoteResults(nominee: Nominee, voteResults: VoteResults): Promise<void> {
+    await this.postVoteResults(nominee, voteResults);
+  }
 
-      const resultEmbed = this.createVoteResultsEmbed(nominee, voteResults);
-      await governanceChannel.send({ embeds: [resultEmbed] });
-
-    } catch (error) {
-      logger.error({ error, nomineeId: nominee.id }, 'Failed to post vote results to governance');
-    }
+  /**
+   * Legacy method for backwards compatibility - redirects to postVoteResults
+   * @deprecated Use postVoteResults instead
+   */
+  async postVoteResultsToGovernance(): Promise<void> {
+    // This method is now handled by postVoteResults
   }
 
   /**
@@ -430,6 +431,19 @@ export class VoteResultService {
     }
 
     const channel = guild.channels.cache.get(governanceChannelId);
+    return channel?.isTextBased() ? channel : null;
+  }
+
+  /**
+   * Finds the general channel in a guild
+   */
+  private async findGeneralChannel(guild: any): Promise<any> {
+    const generalChannelId = process.env.GENERAL_CHANNEL_ID;
+    if (!generalChannelId) {
+      return null;
+    }
+
+    const channel = guild.channels.cache.get(generalChannelId);
     return channel?.isTextBased() ? channel : null;
   }
 
