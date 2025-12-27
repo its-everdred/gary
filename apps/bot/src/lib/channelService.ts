@@ -410,10 +410,6 @@ export class ChannelManagementService {
             const msg4 = await modCommsChannel.send('Optionally, react to this message with :PepeVoted: so we can estimate quorum.');
             modCommMessages.push(msg4.id);
             
-            // Send final instruction
-            const msg5 = await modCommsChannel.send('**3️⃣ Delete this** Once posted, delete this message to remove the ping from other mods.');
-            modCommMessages.push(msg5.id);
-            
             // Store message IDs in database for later deletion
             await prisma.nominee.update({
               where: { id: nominee.id },

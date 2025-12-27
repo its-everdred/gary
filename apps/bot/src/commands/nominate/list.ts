@@ -1,6 +1,4 @@
 import type { ChatInputCommandInteraction } from 'discord.js';
-import { prisma } from '../../lib/db.js';
-import { NomineeState } from '@prisma/client';
 import { NomineeDisplayUtils } from '../../lib/nomineeDisplayUtils.js';
 import { CommandUtils } from '../../lib/commandUtils.js';
 import { ConfigService } from '../../lib/configService.js';
@@ -10,17 +8,7 @@ export async function handleListCommand(interaction: ChatInputCommandInteraction
   try {
     const guildId = ConfigService.getGuildId();
     
-    const nominees = await prisma.nominee.findMany({
-      where: {
-        guildId,
-        state: {
-          not: NomineeState.PAST
-        }
-      },
-      orderBy: {
-        createdAt: 'asc'
-      }
-    });
+    const nominees = await NomineeDisplayUtils.getNomineesInQueueOrder(guildId);
 
     const queueEmbed = NomineeDisplayUtils.createQueueEmbed(nominees);
     await interaction.reply({

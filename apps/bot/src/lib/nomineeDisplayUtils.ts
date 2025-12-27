@@ -1,6 +1,7 @@
 import type { Nominee } from '@prisma/client';
 import { NomineeState } from '@prisma/client';
 import type { DiscordEmbed } from './voteResultService.js';
+import { prisma } from './db.js';
 
 export interface NomineeDisplayOptions {
   showHeader?: boolean;
@@ -9,6 +10,56 @@ export interface NomineeDisplayOptions {
 }
 
 export class NomineeDisplayUtils {
+  /**
+   * Gets all non-PAST nominees sorted by queue priority
+   */
+  static async getNomineesInQueueOrder(guildId: string): Promise<Nominee[]> {
+    const nominees = await prisma.nominee.findMany({
+      where: {
+        guildId,
+        state: {
+          not: NomineeState.PAST
+        }
+      },
+      orderBy: {
+        createdAt: 'asc'
+      }
+    });
+
+    // Sort nominees by correct queue priority
+    nominees.sort((a, b) => {
+      // Define state priority order
+      const statePriority = {
+        [NomineeState.DISCUSSION]: 1,
+        [NomineeState.VOTE]: 2,
+        [NomineeState.CERTIFY]: 3,
+        [NomineeState.ACTIVE]: 4
+      };
+
+      // First, sort by state priority
+      const aPriority = statePriority[a.state];
+      const bPriority = statePriority[b.state];
+      
+      if (aPriority !== bPriority) {
+        return aPriority - bPriority;
+      }
+
+      // For ACTIVE nominees, sort by discussionStart time
+      if (a.state === NomineeState.ACTIVE && b.state === NomineeState.ACTIVE) {
+        if (a.discussionStart && b.discussionStart) {
+          return a.discussionStart.getTime() - b.discussionStart.getTime();
+        }
+        if (a.discussionStart && !b.discussionStart) return -1;
+        if (!a.discussionStart && b.discussionStart) return 1;
+      }
+
+      // Fall back to creation time
+      return a.createdAt.getTime() - b.createdAt.getTime();
+    });
+
+    return nominees;
+  }
+
   /**
    * Formats a Discord timestamp for display
    */

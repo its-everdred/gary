@@ -105,17 +105,7 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
       });
 
       // Get all nominees for the queue display
-      const nominees = await prisma.nominee.findMany({
-        where: {
-          guildId,
-          state: {
-            not: 'PAST'
-          }
-        },
-        orderBy: {
-          createdAt: 'asc'
-        }
-      });
+      const nominees = await NomineeDisplayUtils.getNomineesInQueueOrder(guildId);
 
       // Create embed for governance channel
       const nominationEmbed = NomineeDisplayUtils.createNominationEmbed(
@@ -176,17 +166,7 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
     });
 
     // Get all nominees for the queue display
-    const allNominees = await prisma.nominee.findMany({
-      where: {
-        guildId,
-        state: {
-          not: 'PAST'
-        }
-      },
-      orderBy: {
-        createdAt: 'asc'
-      }
-    });
+    const allNominees = await NomineeDisplayUtils.getNomineesInQueueOrder(guildId);
 
     // Create embed for governance channel
     const nominationEmbed = NomineeDisplayUtils.createNominationEmbed(
