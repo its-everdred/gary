@@ -37,7 +37,6 @@ model Nominee {
   voteNoCount         Int          @default(0)
   votePassed          Boolean?
 
-  @@unique([guildId, name])
   @@index([guildId, state])
   @@index([guildId, discussionStart])
   @@index([guildId, voteStart])

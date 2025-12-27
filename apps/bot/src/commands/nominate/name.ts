@@ -120,16 +120,7 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
       return;
     }
 
-    // Check if nominee already exists (case-insensitive)
-    const existingNominee = await NomineeStateManager.findNomineeByName(guildId, name);
-
-    if (existingNominee && existingNominee.state !== NomineeState.PAST) {
-      await interaction.reply({
-        content: `${existingNominee.name} is already nominated and in ${existingNominee.state.toLowerCase()} state.`,
-        flags: 64
-      });
-      return;
-    }
+    // No need to check for duplicates - names don't need to be unique
 
     // Calculate schedule for new nominee
     const schedule = await calculateNomineeSchedule(guildId);
