@@ -3,6 +3,7 @@ import pino from 'pino';
 import { prisma } from './db.js';
 import type { Nominee } from '@prisma/client';
 import { NOMINATION_CONFIG } from './constants.js';
+import { ChannelFinderService } from './channelFinderService.js';
 
 const logger = pino();
 
@@ -386,9 +387,9 @@ export class VoteResultService {
     
     // Define channels to post to
     const channelConfigs = [
-      { name: 'governance', finder: () => this.findGovernanceChannel(guild) },
-      { name: 'general', finder: () => this.findGeneralChannel(guild) },
-      { name: 'mod-comms', finder: () => this.findModCommsChannel(guild) }
+      { name: 'governance', finder: () => ChannelFinderService.findGovernanceChannel(guild) },
+      { name: 'general', finder: () => ChannelFinderService.findGeneralChannel(guild) },
+      { name: 'mod-comms', finder: () => ChannelFinderService.findModCommsChannel(guild) }
     ];
     
     // Post to all configured channels
@@ -424,44 +425,6 @@ export class VoteResultService {
     // This method is now handled by postVoteResults
   }
 
-  /**
-   * Finds the governance channel in a guild
-   */
-  private async findGovernanceChannel(guild: any): Promise<any> {
-    const governanceChannelId = process.env.GOVERNANCE_CHANNEL_ID;
-    if (!governanceChannelId) {
-      return null;
-    }
-
-    const channel = guild.channels.cache.get(governanceChannelId);
-    return channel?.isTextBased() ? channel : null;
-  }
-
-  /**
-   * Finds the general channel in a guild
-   */
-  private async findGeneralChannel(guild: any): Promise<any> {
-    const generalChannelId = process.env.GENERAL_CHANNEL_ID;
-    if (!generalChannelId) {
-      return null;
-    }
-
-    const channel = guild.channels.cache.get(generalChannelId);
-    return channel?.isTextBased() ? channel : null;
-  }
-
-  /**
-   * Finds the mod-comms channel in a guild
-   */
-  private async findModCommsChannel(guild: any): Promise<any> {
-    const modCommsChannelId = process.env.MOD_COMMS_CHANNEL_ID;
-    if (!modCommsChannelId) {
-      return null;
-    }
-
-    const channel = guild.channels.cache.get(modCommsChannelId);
-    return channel?.isTextBased() ? channel : null;
-  }
 
 
 }

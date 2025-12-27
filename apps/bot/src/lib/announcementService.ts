@@ -1,9 +1,10 @@
-import type { Client, TextChannel, Guild } from 'discord.js';
+import type { Client } from 'discord.js';
 import pino from 'pino';
 import type { Nominee } from '@prisma/client';
 import { NOMINATION_CONFIG } from './constants.js';
 import { NomineeStateManager } from './nomineeService.js';
 import { NomineeDisplayUtils } from './nomineeDisplayUtils.js';
+import { ChannelFinderService } from './channelFinderService.js';
 
 const logger = pino();
 
@@ -20,7 +21,7 @@ export class AnnouncementService {
   async announceVoteStart(nominee: Nominee, voteChannelId: string, pollUrl?: string): Promise<boolean> {
     try {
       const guild = await this.client.guilds.fetch(nominee.guildId);
-      const governanceChannel = await this.findGovernanceChannel(guild);
+      const governanceChannel = await ChannelFinderService.findGovernanceChannel(guild);
       
       if (!governanceChannel) {
         return false;
@@ -61,7 +62,7 @@ export class AnnouncementService {
 
       // Also announce vote start in general channel
       try {
-        const generalChannel = await this.findGeneralChannel(guild);
+        const generalChannel = await ChannelFinderService.findGeneralChannel(guild);
         if (generalChannel) {
           await generalChannel.send({
             embeds: [embed]
@@ -92,7 +93,7 @@ export class AnnouncementService {
   async announceDiscussionStart(nominee: Nominee, discussionChannelId: string): Promise<boolean> {
     try {
       const guild = await this.client.guilds.fetch(nominee.guildId);
-      const governanceChannel = await this.findGovernanceChannel(guild);
+      const governanceChannel = await ChannelFinderService.findGovernanceChannel(guild);
       
       if (!governanceChannel) {
         return false;
@@ -145,7 +146,7 @@ export class AnnouncementService {
   ): Promise<boolean> {
     try {
       const guild = await this.client.guilds.fetch(nominee.guildId);
-      const generalChannel = await this.findGeneralChannel(guild);
+      const generalChannel = await ChannelFinderService.findGeneralChannel(guild);
       
       if (!generalChannel) {
         return false;
@@ -231,7 +232,7 @@ export class AnnouncementService {
   ): Promise<void> {
     try {
       const guild = await this.client.guilds.fetch(nominee.guildId);
-      const governanceChannel = await this.findGovernanceChannel(guild);
+      const governanceChannel = await ChannelFinderService.findGovernanceChannel(guild);
       
       if (!governanceChannel) {
         return;
@@ -287,39 +288,6 @@ export class AnnouncementService {
     }
   }
 
-  /**
-   * Finds the governance channel in a guild
-   */
-  private async findGovernanceChannel(guild: Guild): Promise<TextChannel | null> {
-    const governanceChannelId = NOMINATION_CONFIG.CHANNELS.GA_GOVERNANCE;
-    if (!governanceChannelId) {
-      return null;
-    }
-
-    const channel = guild.channels.cache.get(governanceChannelId) as TextChannel;
-    if (!channel?.isTextBased()) {
-      return null;
-    }
-
-    return channel;
-  }
-
-  /**
-   * Finds the general channel in a guild
-   */
-  private async findGeneralChannel(guild: Guild): Promise<TextChannel | null> {
-    const generalChannelId = NOMINATION_CONFIG.CHANNELS.GENERAL;
-    if (!generalChannelId) {
-      return null;
-    }
-
-    const channel = guild.channels.cache.get(generalChannelId) as TextChannel;
-    if (!channel?.isTextBased()) {
-      return null;
-    }
-
-    return channel;
-  }
 
   /**
    * Announces that vote time expired without poll completion
@@ -327,7 +295,7 @@ export class AnnouncementService {
   async announceVoteTimeExpired(nominee: Nominee): Promise<boolean> {
     try {
       const guild = await this.client.guilds.fetch(nominee.guildId);
-      const generalChannel = await this.findGeneralChannel(guild);
+      const generalChannel = await ChannelFinderService.findGeneralChannel(guild);
       
       if (!generalChannel) {
         return false;

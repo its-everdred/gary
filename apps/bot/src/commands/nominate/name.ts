@@ -6,7 +6,7 @@ import { NomineeStateManager } from '../../lib/nomineeService.js';
 import { TimeCalculationService } from '../../lib/timeCalculation.js';
 import { NomineeDisplayUtils } from '../../lib/nomineeDisplayUtils.js';
 import { CommandUtils } from '../../lib/commandUtils.js';
-import { AnnouncementUtils } from '../../lib/announcementUtils.js';
+import { NOMINATION_CONFIG } from '../../lib/constants.js';
 
 async function calculateNomineeSchedule(guildId: string): Promise<{ discussionStart: Date; voteStart: Date; certifyStart: Date }> {
   // Get all active nominees to determine queue position
@@ -99,7 +99,7 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
       );
       
       // Send private acknowledgment to mod
-      const channelRef = AnnouncementUtils.getGovernanceChannelReference();
+      const channelRef = NOMINATION_CONFIG.CHANNELS.GA_GOVERNANCE ? `<#${NOMINATION_CONFIG.CHANNELS.GA_GOVERNANCE}>` : 'governance channel';
       await interaction.reply({
         content: `Successfully nominated ${name} on behalf of ${nominator.username} and announced in ${channelRef}.`,
         flags: 64

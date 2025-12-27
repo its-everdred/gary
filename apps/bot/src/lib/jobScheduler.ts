@@ -9,6 +9,7 @@ import { VoteResultService } from './voteResultService.js';
 import { NomineeState } from '@prisma/client';
 import { prisma } from './db.js';
 import { NOMINATION_CONFIG } from './constants.js';
+import { ChannelFinderService } from './channelFinderService.js';
 
 const logger = pino();
 
@@ -241,18 +242,15 @@ export class NominationJobScheduler implements JobScheduler {
           // Delete bot tracking messages (mod-comm instructions)
           if (nominee.botMessageIds) {
             try {
-              const modCommsChannelId = process.env.MOD_COMMS_CHANNEL_ID;
-              if (modCommsChannelId) {
-                const modCommsChannel = guild.channels.cache.get(modCommsChannelId) as TextChannel;
-                if (modCommsChannel?.isTextBased()) {
-                  const messageIds = nominee.botMessageIds.split(',');
-                  for (const messageId of messageIds) {
-                    try {
-                      const message = await modCommsChannel.messages.fetch(messageId);
-                      await message.delete();
-                    } catch {
-                      // Message already deleted or not found, continue
-                    }
+              const modCommsChannel = await ChannelFinderService.findModCommsChannel(guild);
+              if (modCommsChannel) {
+                const messageIds = nominee.botMessageIds.split(',');
+                for (const messageId of messageIds) {
+                  try {
+                    const message = await modCommsChannel.messages.fetch(messageId);
+                    await message.delete();
+                  } catch {
+                    // Message already deleted or not found, continue
                   }
                 }
               }
@@ -507,13 +505,10 @@ export class NominationJobScheduler implements JobScheduler {
    */
   private async sendCleanupInstructions(nominee: any): Promise<void> {
     try {
-      const modCommsChannelId = process.env.MOD_COMMS_CHANNEL_ID;
-      if (!modCommsChannelId) return;
-      
       const guild = await this.client.guilds.fetch(nominee.guildId);
-      const modCommsChannel = guild.channels.cache.get(modCommsChannelId) as TextChannel;
+      const modCommsChannel = await ChannelFinderService.findModCommsChannel(guild);
       
-      if (!modCommsChannel?.isTextBased()) return;
+      if (!modCommsChannel) return;
       
       // Find moderators role
       const moderatorsRole = guild.roles.cache.find(r => 
