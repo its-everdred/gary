@@ -595,7 +595,7 @@ export class NominationJobScheduler implements JobScheduler {
             },
             {
               name: '3️⃣ Delete this message',
-              value: 'Delete this message to indicate that the invite link was sent',
+              value: 'Delete this message to indicate to other mods that the invite link was sent',
               inline: false
             }
           ],

@@ -53,12 +53,10 @@ export class AnnouncementService {
         return false;
       }
 
-      const voteChannel = guild.channels.cache.get(voteChannelId);
-      const voteChannelMention = voteChannel ? `<#${voteChannelId}>` : '#vote-channel';
 
       const description = pollUrl 
-        ? `Voting has begun for **${nominee.name}**'s nomination in ${voteChannelMention}.\n\n[📊 Vote Now](${pollUrl})`
-        : `Voting has begun for **${nominee.name}**'s nomination in ${voteChannelMention}.`;
+        ? `Voting has begun for **${nominee.name}**'s nomination: [Vote Now](${pollUrl})`
+        : `Voting has begun for **${nominee.name}**'s nomination.`;
 
       const embed = {
         title: '🗳️ New Vote Started',
