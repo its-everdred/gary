@@ -428,7 +428,7 @@ export class ChannelManagementService {
                 },
                 {
                   name: '2️⃣ Copy/Paste Emoji React',
-                  value: `\`\`\`Optionally, react to this message with :PepeVoted: so we can estimate quorum.\`\`\`Then react to your own message with :PepeVoted:`,
+                  value: '```Optionally, react to this message with :PepeVoted: so we can estimate quorum.```Then react to your own message with :PepeVoted:',
                   inline: false
                 },
                 {

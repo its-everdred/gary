@@ -1,6 +1,5 @@
 import type { Nominee } from '@prisma/client';
 import { NomineeState } from '@prisma/client';
-import type { EmbedBuilder } from 'discord.js';
 
 export interface NomineeDisplayOptions {
   showHeader?: boolean;
@@ -173,11 +172,11 @@ export class NomineeDisplayUtils {
     } else if (nominee.state === NomineeState.DISCUSSION && nominee.voteStart) {
       return `Currently in discussion ${this.formatDiscordTimestamp(nominee.voteStart)} 🗣️`;
     } else if (nominee.state === NomineeState.CERTIFY) {
-      return `Results pending ⏳`;
+      return 'Results pending ⏳';
     } else if (nominee.state === NomineeState.ACTIVE && nominee.discussionStart) {
       return `Scheduled for discussion ${this.formatDiscordTimestamp(nominee.discussionStart)} 📅`;
     } else {
-      return `Pending schedule ⏳`;
+      return 'Pending schedule ⏳';
     }
   }
 }

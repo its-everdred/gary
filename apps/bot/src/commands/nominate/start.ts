@@ -1,5 +1,4 @@
 import type { ChatInputCommandInteraction, SlashCommandSubcommandBuilder } from 'discord.js';
-import { SlashCommandBuilder } from 'discord.js';
 import pino from 'pino';
 import { validateModeratorPermission } from '../../lib/permissions.js';
 import { NomineeStateManager } from '../../lib/nomineeService.js';
@@ -90,7 +89,7 @@ export async function handleStartCommand(interaction: ChatInputCommandInteractio
       
       if (!nominee) {
         await interaction.reply({
-          content: `❌ **No Nominees Available**\n\nThere are no active nominees ready to start discussion.`,
+          content: '❌ **No Nominees Available**\n\nThere are no active nominees ready to start discussion.',
           ephemeral: true
         });
         return;

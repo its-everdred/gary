@@ -5,7 +5,6 @@ import { NomineeState } from '@prisma/client';
 import { CommandUtils } from '../../lib/commandUtils.js';
 import { TimeCalculationService } from '../../lib/timeCalculation.js';
 import { NomineeStateManager } from '../../lib/nomineeService.js';
-import { AnnouncementUtils } from '../../lib/announcementUtils.js';
 
 const logger = pino();
 

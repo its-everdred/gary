@@ -181,7 +181,6 @@ export class NominationJobScheduler implements JobScheduler {
       
       // Check if vote has completed (either by time or poll closure)
       const voteResults = await this.voteResultService.checkVoteCompletion(nominee);
-      const readyByTime = nominee.certifyStart && nominee.certifyStart <= currentTime;
       
       // Add 1-minute buffer after vote expiration to allow EasyPoll to finalize results
       const bufferTime = new Date(currentTime);

@@ -1,9 +1,6 @@
 import { NOMINATION_CONFIG } from './constants.js';
 import { NomineeState } from '@prisma/client';
 import type { Nominee } from '@prisma/client';
-import pino from 'pino';
-
-const logger = pino();
 
 export interface ScheduledTimes {
   discussionStart: Date;

@@ -55,7 +55,7 @@ export class VoteResultService {
       }
 
       // Find EasyPoll message in the channel
-      const pollData = await this.findPollInChannel(voteChannel, nominee.name);
+      const pollData = await this.findPollInChannel(voteChannel);
       if (!pollData) {
         // No completed poll found yet
         return null;
@@ -84,7 +84,7 @@ export class VoteResultService {
   /**
    * Finds and parses EasyPoll message in channel
    */
-  private async findPollInChannel(channel: TextChannel, nomineeName: string): Promise<PollData | null> {
+  private async findPollInChannel(channel: TextChannel): Promise<PollData | null> {
     try {
       // Fetch recent messages to find the poll - force cache bypass
       const messages = await channel.messages.fetch({ limit: 50, force: true });
@@ -132,7 +132,6 @@ export class VoteResultService {
   private async parsePollMessage(message: Message): Promise<PollData | null> {
     try {
       // EasyPoll puts results in the embed description
-      const content = message.content;
       const embed = message.embeds[0];
       
       // Check if poll has final results in embed
@@ -375,7 +374,7 @@ export class VoteResultService {
    */
   private createVoteResultsEmbed(nominee: Nominee, voteResults: VoteResults): any {
     return {
-      title: voteResults.passed ? `✅ Vote PASSED` : `❌ Vote FAILED`,
+      title: voteResults.passed ? '✅ Vote PASSED' : '❌ Vote FAILED',
       description: this.getVoteResultDescription(nominee.name, voteResults),
       fields: [
         {
@@ -492,16 +491,16 @@ export class VoteResultService {
       const messages = await channel.messages.fetch({ limit: 50, force: true });
       const results: string[] = [];
       
-      results.push(`=== Vote Channel Scan Results ===`);
+      results.push('=== Vote Channel Scan Results ===');
       results.push(`Channel: ${channel.name} (${channel.id})`);
       results.push(`Total messages found: ${messages.size}`);
-      results.push(`\n`);
+      results.push('\n');
 
       // Sort messages by creation time (oldest first)
       const sortedMessages = Array.from(messages.values()).sort((a, b) => a.createdTimestamp - b.createdTimestamp);
 
       for (const message of sortedMessages) {
-        results.push(`--- Message ---`);
+        results.push('--- Message ---');
         results.push(`ID: ${message.id}`);
         results.push(`Author: ${message.author.tag} (ID: ${message.author.id})`);
         results.push(`Is EasyPoll Bot: ${this.isEasyPollMessage(message)}`);
@@ -518,7 +517,7 @@ export class VoteResultService {
               results.push(`    Description: ${embed.description}`);
             }
             if (embed.fields.length > 0) {
-              results.push(`    Fields:`);
+              results.push('    Fields:');
               embed.fields.forEach(field => {
                 results.push(`      ${field.name}: ${field.value}`);
               });
@@ -533,17 +532,17 @@ export class VoteResultService {
         if (this.isEasyPollMessage(message)) {
           const pollData = await this.parsePollMessage(message);
           if (pollData) {
-            results.push(`  Poll Results Parsed:`);
+            results.push('  Poll Results Parsed:');
             results.push(`    Question: ${pollData.question}`);
             results.push(`    Yes votes: ${pollData.yesVotes}`);
             results.push(`    No votes: ${pollData.noVotes}`);
-            results.push(`    Poll completed: Yes`);
+            results.push('    Poll completed: Yes');
           } else {
-            results.push(`  Poll Results: Not yet completed or unable to parse`);
+            results.push('  Poll Results: Not yet completed or unable to parse');
           }
         }
         
-        results.push(`\n`);
+        results.push('\n');
       }
 
       return results.join('\n');
