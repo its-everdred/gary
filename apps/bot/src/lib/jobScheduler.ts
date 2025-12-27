@@ -398,9 +398,9 @@ export class NominationJobScheduler implements JobScheduler {
   }
 
   /**
-   * Transitions a nominee from CERTIFY to PAST
+   * Performs post-certify cleanup: transitions to PAST, deletes channels, sends instructions
    */
-  private async transitionToPast(nominee: Nominee): Promise<void> {
+  async performPostCertifyCleanup(nominee: Nominee): Promise<{ success: boolean; errorMessage?: string }> {
     const result = await NomineeStateManager.transitionNominee(
       nominee.id,
       NomineeState.PAST
@@ -428,16 +428,26 @@ export class NominationJobScheduler implements JobScheduler {
           error,
           nomineeId: nominee.id
         }, 'Failed to delete nomination channels');
+        return { success: false, errorMessage: 'Failed to cleanup channels' };
       }
       
       // Start next nominee in queue if available
       await this.startNextNomineeIfReady(nominee.guildId);
+      return { success: true };
     } else {
       logger.error({
         nomineeId: nominee.id,
         error: result.errorMessage
       }, 'Failed to transition nominee to PAST');
+      return { success: false, errorMessage: result.errorMessage };
     }
+  }
+
+  /**
+   * Transitions a nominee from CERTIFY to PAST
+   */
+  private async transitionToPast(nominee: Nominee): Promise<void> {
+    await this.performPostCertifyCleanup(nominee);
   }
 
   /**
@@ -511,35 +521,34 @@ export class NominationJobScheduler implements JobScheduler {
       // Determine if the nominee passed or failed
       const passed = nominee.votePassed === true;
       
-      const embed = {
-        title: '🧹 Nomination Cleanup Required',
-        description: `${moderatorsMention}, nomination channels have been deleted for **${nominee.name}**.`,
-        fields: [
-          {
-            name: '1️⃣ Clean up remaining discussion',
-            value: `Manually search for '${nominee.name}' and delete any discussion that occurred in other channels.`,
-            inline: false
-          }
-        ],
-        color: 0xff6600,
-        timestamp: new Date().toISOString(),
-        footer: {
-          text: 'Nomination System • Manual Action Required'
-        }
-      };
-      
-      // Only add invite instruction if the nominee passed
+      // Only post cleanup instructions if the nominee passed
       if (passed) {
-        embed.fields.push({
-          name: '2️⃣ Send the invite link',
-          value: `Send invite link to **${nominee.nominator}**\n• Invite to Server → Edit invite link → Max number of uses → 1 use`,
-          inline: false
+        const embed = {
+          title: '🧹 Nomination Cleanup Required',
+          description: `${moderatorsMention}, nomination channels have been deleted for **${nominee.name}**.`,
+          fields: [
+            {
+              name: '1️⃣ Clean up remaining discussion',
+              value: `Manually search for '${nominee.name}' and delete any discussion that occurred in other channels.`,
+              inline: false
+            },
+            {
+              name: '2️⃣ Send the invite link',
+              value: `Send invite link to **${nominee.nominator}**\n• Invite to Server → Edit invite link → Max number of uses → 1 use`,
+              inline: false
+            }
+          ],
+          color: 0xff6600,
+          timestamp: new Date().toISOString(),
+          footer: {
+            text: 'Nomination System • Manual Action Required'
+          }
+        };
+        
+        await modCommsChannel.send({
+          embeds: [embed]
         });
       }
-      
-      await modCommsChannel.send({
-        embeds: [embed]
-      });
       
     } catch (error) {
       logger.error({

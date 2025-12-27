@@ -3,6 +3,7 @@ import type { ChatInputCommandInteraction } from 'discord.js';
 import { handleNameCommand } from './nominate/name.js';
 import { handleRemoveCommand } from './nominate/remove.js';
 import { handleStartCommand } from './nominate/start.js';
+import { handleCleanupCommand } from './nominate/cleanup.js';
 
 export const modCommand = new SlashCommandBuilder()
   .setName('mod')
@@ -51,6 +52,11 @@ export const modCommand = new SlashCommandBuilder()
               .setRequired(false)
           )
       )
+      .addSubcommand(subcommand =>
+        subcommand
+          .setName('cleanup')
+          .setDescription('Complete certification early and cleanup channels for nominee in CERTIFY state')
+      )
   )
   .toJSON();
 
@@ -68,6 +74,9 @@ export async function modHandler(interaction: ChatInputCommandInteraction): Prom
         break;
       case 'start':
         await handleStartCommand(interaction);
+        break;
+      case 'cleanup':
+        await handleCleanupCommand(interaction);
         break;
       default:
         await interaction.reply({
