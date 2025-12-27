@@ -1,3 +1,5 @@
+import { ConfigService } from './configService.js';
+
 export const NOMINATION_CONFIG = {
   DISCUSSION_DURATION_MINUTES: parseInt(
     process.env.NOMINATE_DISCUSSION_PERIOD_MINUTES || '2880'
@@ -41,13 +43,13 @@ export const NOMINATION_CONFIG = {
   },
 
   CHANNELS: {
-    GA_GOVERNANCE: process.env.GOVERNANCE_CHANNEL_ID || '',
-    GENERAL: process.env.GENERAL_CHANNEL_ID || '',
-    MOD_WARN: process.env.MOD_WARN_CHANNEL_ID || '',
-    MOD_COMMS: process.env.MOD_COMMS_CHANNEL_ID || '',
+    GA_GOVERNANCE: ConfigService.getGovernanceChannelId() || '',
+    GENERAL: ConfigService.getGeneralChannelId() || '',
+    MOD_WARN: ConfigService.getModWarnChannelId() || '',
+    MOD_COMMS: ConfigService.getModCommsChannelId() || '',
   },
   CATEGORIES: {
-    NOMINATIONS: process.env.NOMINATIONS_CHANNEL_CATEGORY_ID || '',
+    NOMINATIONS: ConfigService.getNominationsCategoryId() || '',
   },
 } as const;
 

@@ -7,6 +7,7 @@ import { TimeCalculationService } from '../../lib/timeCalculation.js';
 import { NomineeDisplayUtils } from '../../lib/nomineeDisplayUtils.js';
 import { CommandUtils } from '../../lib/commandUtils.js';
 import { NOMINATION_CONFIG } from '../../lib/constants.js';
+import { ConfigService } from '../../lib/configService.js';
 
 async function calculateNomineeSchedule(guildId: string): Promise<{ discussionStart: Date; voteStart: Date; certifyStart: Date }> {
   // Get all active nominees to determine queue position
@@ -20,7 +21,7 @@ async function calculateNomineeSchedule(guildId: string): Promise<{ discussionSt
 
 export async function handleNameCommand(interaction: ChatInputCommandInteraction): Promise<void> {
   try {
-    const guildId = process.env.GUILD_ID!;
+    const guildId = ConfigService.getGuildId();
     const name = interaction.options.getString('name', true).trim();
     const nominator = interaction.options.getUser('nominator');
     const username = interaction.user.username;
