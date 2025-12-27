@@ -430,6 +430,9 @@ export class NominationJobScheduler implements JobScheduler {
         if (nominee.voteChannelId) {
           await channelService.deleteChannel(nominee.voteChannelId, 'Nomination completed');
         }
+        
+        // Send cleanup instructions to mod-comms
+        await this.sendCleanupInstructions(nominee);
       } catch (error) {
         logger.error({
           error,
@@ -497,6 +500,66 @@ export class NominationJobScheduler implements JobScheduler {
     }
     
     // Schedule results processed
+  }
+
+  /**
+   * Sends cleanup instructions to mod-comms after channels are deleted
+   */
+  private async sendCleanupInstructions(nominee: any): Promise<void> {
+    try {
+      const modCommsChannelId = process.env.MOD_COMMS_CHANNEL_ID;
+      if (!modCommsChannelId) return;
+      
+      const guild = await this.client.guilds.fetch(nominee.guildId);
+      const modCommsChannel = guild.channels.cache.get(modCommsChannelId) as TextChannel;
+      
+      if (!modCommsChannel?.isTextBased()) return;
+      
+      // Find moderators role
+      const moderatorsRole = guild.roles.cache.find(r => 
+        r.name.toLowerCase() === 'moderators'
+      );
+      const moderatorsMention = moderatorsRole ? `<@&${moderatorsRole.id}>` : '@moderators';
+      
+      // Determine if the nominee passed or failed
+      const passed = nominee.votePassed === true;
+      
+      const embed = {
+        title: '🧹 Nomination Cleanup Required',
+        description: `${moderatorsMention}, nomination channels have been deleted for **${nominee.name}**.`,
+        fields: [
+          {
+            name: '1️⃣ Clean up remaining discussion',
+            value: `Manually search for '${nominee.name}' and delete any discussion that occurred in other channels.`,
+            inline: false
+          }
+        ],
+        color: 0xff6600,
+        timestamp: new Date().toISOString(),
+        footer: {
+          text: 'Nomination System • Manual Action Required'
+        }
+      };
+      
+      // Only add invite instruction if the nominee passed
+      if (passed) {
+        embed.fields.push({
+          name: '2️⃣ Send the invite link',
+          value: `Send invite link to **${nominee.nominator}**\n• Invite to Server → Edit invite link → Max number of uses → 1 use`,
+          inline: false
+        });
+      }
+      
+      await modCommsChannel.send({
+        embeds: [embed]
+      });
+      
+    } catch (error) {
+      logger.error({
+        error,
+        nomineeId: nominee.id
+      }, 'Failed to send cleanup instructions to mod-comms');
+    }
   }
 
   /**
