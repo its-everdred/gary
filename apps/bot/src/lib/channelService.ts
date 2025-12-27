@@ -5,6 +5,7 @@ import { prisma } from './db.js';
 import type { Nominee } from '@prisma/client';
 import { NOMINATION_CONFIG } from './constants.js';
 import { NomineeDisplayUtils } from './nomineeDisplayUtils.js';
+import { DISCORD_CONSTANTS } from './discordConstants.js';
 
 const logger = pino();
 
@@ -260,8 +261,8 @@ export class ChannelManagementService {
           
           // Use a Promise.race with timeout to prevent hanging
           await Promise.race([
-            channel.guild.members.fetch({ limit: 100 }), // Only fetch recent 100 members
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Member fetch timeout')), 5000)) // 5 second timeout
+            channel.guild.members.fetch({ limit: DISCORD_CONSTANTS.LIMITS.MEMBER_FETCH_LIMIT }),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Member fetch timeout')), DISCORD_CONSTANTS.TIMEOUTS.MEMBER_FETCH))
           ]);
           
           // Try to find the nominator again after fetch

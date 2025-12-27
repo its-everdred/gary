@@ -61,4 +61,12 @@ export class ConfigService {
     }
     return salt;
   }
+
+  static getKickQuorumPercent(): number {
+    return parseInt(process.env.KICK_QUORUM_PERCENT || '40') / 100;
+  }
+
+  static getLogLevel(): string {
+    return process.env.LOG_LEVEL || 'info';
+  }
 }

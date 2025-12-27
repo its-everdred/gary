@@ -5,11 +5,12 @@ import { NomineeStateManager } from './nomineeService.js';
 import { TimeCalculationService } from './timeCalculation.js';
 import { ChannelManagementService } from './channelService.js';
 import { AnnouncementService } from './announcementService.js';
-import { VoteResultService } from './voteResultService.js';
+import { VoteResultService, type VoteResults } from './voteResultService.js';
 import { NomineeState } from '@prisma/client';
 import { prisma } from './db.js';
 import { NOMINATION_CONFIG } from './constants.js';
 import { ChannelFinderService } from './channelFinderService.js';
+import { DISCORD_CONSTANTS } from './discordConstants.js';
 
 const logger = pino();
 
@@ -204,7 +205,7 @@ export class NominationJobScheduler implements JobScheduler {
   /**
    * Checks if EasyPoll has been posted in vote channel and announces to governance if so
    */
-  private async checkAndAnnounceVoteToGovernance(nominee: any): Promise<void> {
+  private async checkAndAnnounceVoteToGovernance(nominee: Nominee): Promise<void> {
     try {
       if (!nominee.voteChannelId) {
         return;
@@ -220,7 +221,7 @@ export class NominationJobScheduler implements JobScheduler {
       // Check for EasyPoll messages in the channel
       const messages = await voteChannel.messages.fetch({ limit: 10, force: true });
       const easyPollMessage = messages.find(msg => 
-        msg.author.id === '437618149505105920' && // EasyPoll bot ID
+        msg.author.id === DISCORD_CONSTANTS.BOT_IDS.EASYPOLL &&
         msg.embeds.length > 0
       );
 
@@ -277,7 +278,7 @@ export class NominationJobScheduler implements JobScheduler {
   /**
    * Transitions a nominee from ACTIVE to DISCUSSION
    */
-  private async transitionToDiscussion(nominee: any): Promise<void> {
+  private async transitionToDiscussion(nominee: Nominee): Promise<void> {
     const result = await NomineeStateManager.transitionNominee(
       nominee.id,
       NomineeState.DISCUSSION,
@@ -313,7 +314,7 @@ export class NominationJobScheduler implements JobScheduler {
   /**
    * Transitions a nominee from DISCUSSION to VOTE
    */
-  private async transitionToVote(nominee: any): Promise<void> {
+  private async transitionToVote(nominee: Nominee): Promise<void> {
     // Calculate new certify time based on current time
     const now = new Date();
     const certifyStart = new Date(now);
@@ -352,7 +353,7 @@ export class NominationJobScheduler implements JobScheduler {
   /**
    * Transitions a nominee from VOTE to CERTIFY
    */
-  private async transitionToCertify(nominee: any, voteResults?: any): Promise<void> {
+  private async transitionToCertify(nominee: Nominee, voteResults?: VoteResults): Promise<void> {
     const result = await NomineeStateManager.transitionNominee(
       nominee.id,
       NomineeState.CERTIFY,
@@ -408,7 +409,7 @@ export class NominationJobScheduler implements JobScheduler {
   /**
    * Transitions a nominee from CERTIFY to PAST
    */
-  private async transitionToPast(nominee: any): Promise<void> {
+  private async transitionToPast(nominee: Nominee): Promise<void> {
     const result = await NomineeStateManager.transitionNominee(
       nominee.id,
       NomineeState.PAST
@@ -503,7 +504,7 @@ export class NominationJobScheduler implements JobScheduler {
   /**
    * Sends cleanup instructions to mod-comms after channels are deleted
    */
-  private async sendCleanupInstructions(nominee: any): Promise<void> {
+  private async sendCleanupInstructions(nominee: Nominee): Promise<void> {
     try {
       const guild = await this.client.guilds.fetch(nominee.guildId);
       const modCommsChannel = await ChannelFinderService.findModCommsChannel(guild);

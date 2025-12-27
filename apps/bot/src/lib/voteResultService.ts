@@ -4,6 +4,7 @@ import { prisma } from './db.js';
 import type { Nominee } from '@prisma/client';
 import { NOMINATION_CONFIG } from './constants.js';
 import { ChannelFinderService } from './channelFinderService.js';
+import { DISCORD_CONSTANTS } from './discordConstants.js';
 
 const logger = pino();
 
@@ -25,6 +26,21 @@ export interface PollData {
   noVotes: number;
   voterIds: string[];
   pollMessageId: string;
+}
+
+export interface DiscordEmbed {
+  title?: string;
+  description?: string;
+  fields?: Array<{
+    name: string;
+    value: string;
+    inline?: boolean;
+  }>;
+  color?: number;
+  timestamp?: string;
+  footer?: {
+    text: string;
+  };
 }
 
 export class VoteResultService {
@@ -83,7 +99,7 @@ export class VoteResultService {
   private async findPollInChannel(channel: TextChannel): Promise<PollData | null> {
     try {
       // Fetch recent messages to find the poll - force cache bypass
-      const messages = await channel.messages.fetch({ limit: 50, force: true });
+      const messages = await channel.messages.fetch({ limit: DISCORD_CONSTANTS.LIMITS.MESSAGE_FETCH_LIMIT, force: true });
       
       for (const message of messages.values()) {
         // Only check EasyPoll messages
@@ -96,10 +112,9 @@ export class VoteResultService {
         // Force refetch the specific message to get latest embed data
         const refreshedMessage = await channel.messages.fetch(message.id, { force: true });
         
-        // Check the refreshed message
-        
         // Parse poll data from the refreshed message
         const pollData = await this.parsePollMessage(refreshedMessage);
+        
         if (pollData) {
           // Successfully parsed EasyPoll results
           return pollData;
@@ -117,9 +132,7 @@ export class VoteResultService {
    * Checks if message is from EasyPoll bot
    */
   private isEasyPollMessage(message: Message): boolean {
-    const authorId = message.author.id;
-    const easyPollIds = ['437618149505105920'];
-    return easyPollIds.includes(authorId);
+    return message.author.id === DISCORD_CONSTANTS.BOT_IDS.EASYPOLL;
   }
 
   /**
@@ -128,7 +141,7 @@ export class VoteResultService {
   private async parsePollMessage(message: Message): Promise<PollData | null> {
     try {
       // EasyPoll puts results in the embed description
-      const embed = message.embeds[0];
+      const embed = message.embeds?.[0];
       
       // Check if poll has final results in embed
       const hasFinalResults = embed?.description?.includes('Final Result');
@@ -165,7 +178,7 @@ export class VoteResultService {
   /**
    * Checks if poll is closed/completed based on embed content
    */
-  private isPollClosed(embed: any): boolean {
+  private isPollClosed(embed: DiscordEmbed): boolean {
     const title = embed.title?.toLowerCase() || '';
     const description = embed.description?.toLowerCase() || '';
     const footer = embed.footer?.text?.toLowerCase() || '';
@@ -183,7 +196,7 @@ export class VoteResultService {
   /**
    * Extracts vote count for a specific option from embed
    */
-  private extractVoteCount(embed: any, option: 'yes' | 'no'): number {
+  private extractVoteCount(embed: DiscordEmbed, option: 'yes' | 'no'): number {
     const description = embed.description || '';
     const emoji = option === 'yes' ? '✅' : '❌';
     const lines = description.split('\n');
@@ -357,7 +370,7 @@ export class VoteResultService {
   /**
    * Creates the vote results embed (shared between vote and governance channels)
    */
-  private createVoteResultsEmbed(nominee: Nominee, voteResults: VoteResults): any {
+  private createVoteResultsEmbed(nominee: Nominee, voteResults: VoteResults): DiscordEmbed {
     return {
       title: voteResults.passed ? '✅ Vote PASSED' : '❌ Vote FAILED',
       description: this.getVoteResultDescription(nominee.name, voteResults),
@@ -409,21 +422,6 @@ export class VoteResultService {
     }
   }
 
-  /**
-   * Legacy method for backwards compatibility - redirects to postVoteResults
-   * @deprecated Use postVoteResults instead
-   */
-  async postDetailedVoteResults(nominee: Nominee, voteResults: VoteResults): Promise<void> {
-    await this.postVoteResults(nominee, voteResults);
-  }
-
-  /**
-   * Legacy method for backwards compatibility - redirects to postVoteResults
-   * @deprecated Use postVoteResults instead
-   */
-  async postVoteResultsToGovernance(): Promise<void> {
-    // This method is now handled by postVoteResults
-  }
 
 
 

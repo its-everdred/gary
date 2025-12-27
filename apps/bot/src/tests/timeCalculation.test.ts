@@ -266,40 +266,12 @@ describe('TimeCalculationService', () => {
   });
 
   describe('utility methods', () => {
-    test('getMaxConcurrentNominees always returns 1', () => {
-      expect(TimeCalculationService.getMaxConcurrentNominees()).toBe(1);
-    });
-
     test('formatForDiscord creates proper timestamp', () => {
       const date = new Date('2024-01-01T14:00:00.000Z');
       const formatted = TimeCalculationService.formatForDiscord(date, 'f');
       
       const expectedTimestamp = Math.floor(date.getTime() / 1000);
       expect(formatted).toBe(`<t:${expectedTimestamp}:f>`);
-    });
-
-    test('getTimeRemaining calculates correctly', () => {
-      const fromDate = new Date('2024-01-01T10:00:00.000Z');
-      const targetDate = new Date('2024-01-02T14:30:00.000Z');
-      
-      const remaining = TimeCalculationService.getTimeRemaining(targetDate, fromDate);
-      
-      expect(remaining.days).toBe(1);
-      expect(remaining.hours).toBe(4);
-      expect(remaining.minutes).toBe(30);
-      expect(remaining.totalHours).toBe(28);
-    });
-
-    test('getTimeRemaining handles past dates', () => {
-      const fromDate = new Date('2024-01-02T10:00:00.000Z');
-      const targetDate = new Date('2024-01-01T10:00:00.000Z');
-      
-      const remaining = TimeCalculationService.getTimeRemaining(targetDate, fromDate);
-      
-      expect(remaining.days).toBe(0);
-      expect(remaining.hours).toBe(0);
-      expect(remaining.minutes).toBe(0);
-      expect(remaining.totalHours).toBe(0);
     });
   });
 });

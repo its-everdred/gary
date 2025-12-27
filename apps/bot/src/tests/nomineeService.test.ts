@@ -268,23 +268,24 @@ describe('NomineeStateManager', () => {
 
     test('findNomineeByName returns nominee when found', async () => {
       const nominee = createMockNominee({ name: 'John Doe' });
-      mockPrisma.nominee.findUnique.mockReturnValue(Promise.resolve(nominee));
+      mockPrisma.nominee.findFirst.mockReturnValue(Promise.resolve(nominee));
 
       const result = await NomineeStateManager.findNomineeByName('test-guild', 'John Doe');
 
       expect(result).toBe(nominee);
-      expect(mockPrisma.nominee.findUnique).toHaveBeenCalledWith({
+      expect(mockPrisma.nominee.findFirst).toHaveBeenCalledWith({
         where: {
-          guildId_name: {
-            guildId: 'test-guild',
-            name: 'John Doe'
+          guildId: 'test-guild',
+          name: {
+            equals: 'John Doe',
+            mode: 'insensitive'
           }
         }
       });
     });
 
     test('findNomineeByName returns null when not found', async () => {
-      mockPrisma.nominee.findUnique.mockReturnValue(Promise.resolve(null));
+      mockPrisma.nominee.findFirst.mockReturnValue(Promise.resolve(null));
 
       const result = await NomineeStateManager.findNomineeByName('test-guild', 'Nonexistent');
 

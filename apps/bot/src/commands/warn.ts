@@ -1,5 +1,5 @@
 import { SlashCommandBuilder } from 'discord.js';
-import type { ChatInputCommandInteraction } from 'discord.js';
+import type { ChatInputCommandInteraction, Client } from 'discord.js';
 import pino from 'pino';
 import {
   hmac,
@@ -11,6 +11,7 @@ import {
   createWarning,
   countWarnings
 } from '../lib/utils.js';
+import { ConfigService } from '../lib/configService.js';
 
 export const warnCommand = new SlashCommandBuilder()
   .setName('warn')
@@ -37,7 +38,7 @@ function buildWarningMessage(
   totalWarningsCount: number,
   eligibleCount: number
 ): string {
-  const kickQuorumPercent = parseInt(process.env.KICK_QUORUM_PERCENT || '40') / 100;
+  const kickQuorumPercent = ConfigService.getKickQuorumPercent();
   const kickThreshold = Math.ceil(eligibleCount * kickQuorumPercent);
   const warningsUntilKick = kickThreshold - totalWarningsCount;
 
@@ -60,7 +61,7 @@ function buildWarningMessage(
 }
 
 async function processWarningAsync(
-  client: any,
+  client: Client,
   guildId: string,
   targetId: string,
   voterHash: string,
@@ -87,7 +88,7 @@ export async function warnHandler(interaction: ChatInputCommandInteraction) {
   const targetId = target.id;
   const message = interaction.options.getString('message', true);
   const voterId = interaction.user.id;
-  const guildId = process.env.GUILD_ID!;
+  const guildId = ConfigService.getGuildId();
 
   try {
     // Validate voter
@@ -106,7 +107,7 @@ export async function warnHandler(interaction: ChatInputCommandInteraction) {
     }
 
     // Check for existing warning
-    const voterHash = hmac(voterId, process.env.GUILD_SALT!);
+    const voterHash = hmac(voterId, ConfigService.getGuildSalt());
     const hasExistingWarning = await checkExistingWarning(guildId, targetId, voterHash);
     
     if (hasExistingWarning) {

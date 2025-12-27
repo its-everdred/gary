@@ -8,6 +8,7 @@ import { NomineeDisplayUtils } from '../../lib/nomineeDisplayUtils.js';
 import { CommandUtils } from '../../lib/commandUtils.js';
 import { NOMINATION_CONFIG } from '../../lib/constants.js';
 import { ConfigService } from '../../lib/configService.js';
+import { DISCORD_CONSTANTS } from '../../lib/discordConstants.js';
 
 async function calculateNomineeSchedule(guildId: string): Promise<{ discussionStart: Date; voteStart: Date; certifyStart: Date }> {
   // Get all active nominees to determine queue position
@@ -27,10 +28,10 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
     const username = interaction.user.username;
 
     // Basic name validation
-    if (name.length < 2 || name.length > 100) {
+    if (name.length < DISCORD_CONSTANTS.LIMITS.NOMINEE_NAME_MIN || name.length > DISCORD_CONSTANTS.LIMITS.NOMINEE_NAME_MAX) {
       await interaction.reply({
-        content: 'Nominee name must be between 2 and 100 characters.',
-        flags: 64
+        content: `Nominee name must be between ${DISCORD_CONSTANTS.LIMITS.NOMINEE_NAME_MIN} and ${DISCORD_CONSTANTS.LIMITS.NOMINEE_NAME_MAX} characters.`,
+        flags: DISCORD_CONSTANTS.MESSAGE_FLAGS.EPHEMERAL
       });
       return;
     }
@@ -51,7 +52,7 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
       if (!nominatorValidation.isValid) {
         await interaction.reply({
           content: nominatorValidation.errorMessage!,
-          flags: 64
+          flags: DISCORD_CONSTANTS.MESSAGE_FLAGS.EPHEMERAL
         });
         return;
       }
@@ -103,7 +104,7 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
       const channelRef = NOMINATION_CONFIG.CHANNELS.GA_GOVERNANCE ? `<#${NOMINATION_CONFIG.CHANNELS.GA_GOVERNANCE}>` : 'governance channel';
       await interaction.reply({
         content: `Successfully nominated ${name} on behalf of ${nominator.username} and announced in ${channelRef}.`,
-        flags: 64
+        flags: DISCORD_CONSTANTS.MESSAGE_FLAGS.EPHEMERAL
       });
 
       

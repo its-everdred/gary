@@ -5,12 +5,13 @@ import { NomineeState } from '@prisma/client';
 import { CommandUtils } from '../../lib/commandUtils.js';
 import { TimeCalculationService } from '../../lib/timeCalculation.js';
 import { NomineeStateManager } from '../../lib/nomineeService.js';
+import { ConfigService } from '../../lib/configService.js';
 
 const logger = pino();
 
 export async function handleRemoveCommand(interaction: ChatInputCommandInteraction): Promise<void> {
   try {
-    const guildId = process.env.GUILD_ID!;
+    const guildId = ConfigService.getGuildId();
     const name = interaction.options.getString('name', true).trim();
 
     // Validate moderator permissions

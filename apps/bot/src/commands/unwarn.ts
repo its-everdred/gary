@@ -8,6 +8,7 @@ import {
   validateTargetMember,
   sendToModChannel,
 } from '../lib/utils.js';
+import { ConfigService } from '../lib/configService.js';
 
 export const unwarnCommand = new SlashCommandBuilder()
   .setName('unwarn')
@@ -28,7 +29,7 @@ export async function unwarnHandler(interaction: ChatInputCommandInteraction) {
   const target = interaction.options.getUser('target', true);
   const targetId = target.id;
   const voterId = interaction.user.id;
-  const guildId = process.env.GUILD_ID!;
+  const guildId = ConfigService.getGuildId();
 
   try {
     // Validate voter
@@ -51,7 +52,7 @@ export async function unwarnHandler(interaction: ChatInputCommandInteraction) {
     }
 
     // Check if warning exists
-    const voterHash = hmac(voterId, process.env.GUILD_SALT!);
+    const voterHash = hmac(voterId, ConfigService.getGuildSalt());
     const existingWarning = await prisma.warn.findUnique({
       where: {
         guildId_targetUserId_voterHash: {

@@ -1,5 +1,6 @@
 import type { Nominee } from '@prisma/client';
 import { NomineeState } from '@prisma/client';
+import type { DiscordEmbed } from './voteResultService.js';
 
 export interface NomineeDisplayOptions {
   showHeader?: boolean;
@@ -115,7 +116,7 @@ export class NomineeDisplayUtils {
   /**
    * Creates an embed for nomination announcements with queue
    */
-  static createNominationEmbed(nomineeName: string, nominatorName: string, moderatorName: string | null, nominees: Nominee[]): any {
+  static createNominationEmbed(nomineeName: string, nominatorName: string, moderatorName: string | null, nominees: Nominee[]): DiscordEmbed {
     const embed = {
       title: '📋 New Nomination',
       description: moderatorName 
@@ -143,7 +144,7 @@ export class NomineeDisplayUtils {
   /**
    * Creates an embed for displaying the current nomination queue
    */
-  static createQueueEmbed(nominees: Nominee[]): any {
+  static createQueueEmbed(nominees: Nominee[]): DiscordEmbed {
     const embed = {
       title: '📊 Current Nominations',
       color: 0x3498db,
