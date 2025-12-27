@@ -369,7 +369,7 @@ export class VoteResultService {
         },
         {
           name: '📋 Requirements',
-          value: `Quorum: ${voteResults.quorumMet ? '✅' : '❌'} ${voteResults.totalVotes}/${voteResults.requiredQuorum} votes\nApproval: ${voteResults.passThresholdMet ? '✅' : '❌'} ${Math.round((voteResults.yesVotes / voteResults.totalVotes) * 100)}% (need 80%)`,
+          value: `Quorum: ${voteResults.quorumMet ? '✅' : '❌'} ${voteResults.totalVotes}/${voteResults.requiredQuorum} votes\nApproval: ${voteResults.passThresholdMet ? '✅' : '❌'} ${Math.round((voteResults.yesVotes / voteResults.totalVotes) * 100)}% (need ${NOMINATION_CONFIG.VOTE_PASS_PERCENT}%)`,
           inline: true
         }
       ],

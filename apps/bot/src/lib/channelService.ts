@@ -361,7 +361,7 @@ export class ChannelManagementService {
           },
           {
             name: '✅ Pass Threshold',
-            value: '80% yes votes',
+            value: `${NOMINATION_CONFIG.VOTE_PASS_PERCENT}% yes votes`,
             inline: true
           }
         ],

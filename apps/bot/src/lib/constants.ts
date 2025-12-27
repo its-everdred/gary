@@ -15,6 +15,11 @@ export const NOMINATION_CONFIG = {
 
   VOTE_QUORUM_THRESHOLD: 0.4, // 40% of members must vote
   VOTE_PASS_THRESHOLD: 0.8, // 80% yes votes to pass
+  
+  // Helper to get vote pass percentage as integer
+  get VOTE_PASS_PERCENT(): number {
+    return Math.round(this.VOTE_PASS_THRESHOLD * 100);
+  },
 
   CHANNEL_PREFIXES: {
     DISCUSSION: 'discussion-',

@@ -45,7 +45,7 @@ export class AnnouncementService {
           },
           {
             name: '📊 Requirements',
-            value: '• 40% member participation (quorum)\n• 80% approval threshold',
+            value: `• 40% member participation (quorum)\n• ${NOMINATION_CONFIG.VOTE_PASS_PERCENT}% approval threshold`,
             inline: true
           }
         ],
@@ -185,7 +185,7 @@ export class AnnouncementService {
           },
           {
             name: '📋 Requirements Met',
-            value: `Quorum (40%): ${quorumMet ? '✅' : '❌'}\nApproval (80%): ${yesPercentage >= 80 ? '✅' : '❌'}`,
+            value: `Quorum (40%): ${quorumMet ? '✅' : '❌'}\nApproval (${NOMINATION_CONFIG.VOTE_PASS_PERCENT}%): ${yesPercentage >= NOMINATION_CONFIG.VOTE_PASS_PERCENT ? '✅' : '❌'}`,
             inline: false
           }
         ],
