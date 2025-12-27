@@ -5,6 +5,7 @@ import { NOMINATION_CONFIG } from './constants.js';
 import { NomineeStateManager } from './nomineeService.js';
 import { NomineeDisplayUtils } from './nomineeDisplayUtils.js';
 import { ChannelFinderService } from './channelFinderService.js';
+import { prisma } from './db.js';
 
 const logger = pino();
 
@@ -13,6 +14,31 @@ export class AnnouncementService {
 
   constructor(client: Client) {
     this.client = client;
+  }
+
+  /**
+   * Adds message IDs to the nominee's announcement tracking field
+   */
+  private async addAnnouncementMessageIds(nomineeId: string, messageIds: string[]): Promise<void> {
+    try {
+      const nominee = await prisma.nominee.findUnique({
+        where: { id: nomineeId }
+      });
+
+      if (!nominee) return;
+
+      const existingIds = nominee.announcementMessageIds ? nominee.announcementMessageIds.split(',') : [];
+      const allIds = [...existingIds, ...messageIds].filter(Boolean);
+
+      await prisma.nominee.update({
+        where: { id: nomineeId },
+        data: {
+          announcementMessageIds: allIds.join(',')
+        }
+      });
+    } catch (error) {
+      logger.error({ error, nomineeId, messageIds }, 'Failed to store announcement message IDs');
+    }
   }
 
   /**
@@ -56,17 +82,20 @@ export class AnnouncementService {
         }
       };
 
-      await governanceChannel.send({
+      const governanceMessage = await governanceChannel.send({
         embeds: [embed]
       });
+
+      const messageIds = [governanceMessage.id];
 
       // Also announce vote start in general channel
       try {
         const generalChannel = await ChannelFinderService.findGeneralChannel(guild);
         if (generalChannel) {
-          await generalChannel.send({
+          const generalMessage = await generalChannel.send({
             embeds: [embed]
           });
+          messageIds.push(generalMessage.id);
         }
       } catch (error) {
         // Don't fail if general channel announcement fails
@@ -75,6 +104,9 @@ export class AnnouncementService {
           nomineeId: nominee.id
         }, 'Failed to post vote announcement to general channel');
       }
+
+      // Store message IDs for cleanup
+      await this.addAnnouncementMessageIds(nominee.id, messageIds);
 
       return true;
     } catch (error) {
@@ -119,9 +151,12 @@ export class AnnouncementService {
         }
       };
 
-      await governanceChannel.send({
+      const governanceMessage = await governanceChannel.send({
         embeds: [embed]
       });
+
+      // Store message ID for cleanup
+      await this.addAnnouncementMessageIds(nominee.id, [governanceMessage.id]);
 
       return true;
     } catch (error) {

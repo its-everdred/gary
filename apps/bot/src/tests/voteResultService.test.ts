@@ -41,6 +41,9 @@ function createMockNominee(overrides: Partial<Nominee> = {}): Nominee {
     voteYesCount: 0,
     voteNoCount: 0,
     votePassed: null,
+    botMessageIds: null,
+    voteGovernanceAnnounced: false,
+    announcementMessageIds: null,
     ...overrides
   };
 }
@@ -215,6 +218,99 @@ describe('VoteResultService', () => {
 
       expect(result.requiredQuorum).toBe(10); // ceil(25 * 0.4) = 10
       expect(result.quorumMet).toBe(true);
+    });
+  });
+
+  describe('postVoteResults', () => {
+    test('stores announcement message IDs for cleanup', async () => {
+      const nominee = createMockNominee({ announcementMessageIds: 'existing-id' });
+      
+      const voteResults = {
+        passed: true,
+        yesVotes: 12,
+        noVotes: 3,
+        totalVotes: 15,
+        quorumMet: true,
+        passThresholdMet: true,
+        memberCount: 25,
+        requiredQuorum: 10,
+        requiredPassVotes: 12
+      };
+
+      // Mock channels and messages
+      const mockGovernanceMessage = { id: 'governance-result-id' };
+      const mockGeneralMessage = { id: 'general-result-id' };
+      
+      const mockGovernanceChannel = {
+        send: mock(() => Promise.resolve(mockGovernanceMessage))
+      };
+      const mockGeneralChannel = {
+        send: mock(() => Promise.resolve(mockGeneralMessage))
+      };
+      const mockModCommsChannel = {
+        send: mock(() => Promise.resolve({ id: 'mod-comms-id' }))
+      };
+
+      // Mock ChannelFinderService
+      mock.module('../lib/channelFinderService.js', () => ({
+        ChannelFinderService: {
+          findGovernanceChannel: mock(() => Promise.resolve(mockGovernanceChannel)),
+          findGeneralChannel: mock(() => Promise.resolve(mockGeneralChannel)),
+          findModCommsChannel: mock(() => Promise.resolve(mockModCommsChannel)),
+        }
+      }));
+
+      await voteResultService.postVoteResults(nominee, voteResults);
+
+      // Should store governance and general message IDs (not mod-comms)
+      expect(mockPrisma.nominee.update).toHaveBeenCalledWith({
+        where: { id: nominee.id },
+        data: {
+          announcementMessageIds: 'existing-id,governance-result-id,general-result-id'
+        }
+      });
+    });
+
+    test('handles no existing announcement IDs', async () => {
+      const nominee = createMockNominee({ announcementMessageIds: null });
+      
+      const voteResults = {
+        passed: false,
+        yesVotes: 5,
+        noVotes: 10,
+        totalVotes: 15,
+        quorumMet: true,
+        passThresholdMet: false,
+        memberCount: 25,
+        requiredQuorum: 10,
+        requiredPassVotes: 12
+      };
+
+      // Mock channels and messages
+      const mockGovernanceMessage = { id: 'governance-result-id' };
+      
+      const mockGovernanceChannel = {
+        send: mock(() => Promise.resolve(mockGovernanceMessage))
+      };
+
+      // Mock ChannelFinderService
+      mock.module('../lib/channelFinderService.js', () => ({
+        ChannelFinderService: {
+          findGovernanceChannel: mock(() => Promise.resolve(mockGovernanceChannel)),
+          findGeneralChannel: mock(() => Promise.resolve(null)), // No general channel
+          findModCommsChannel: mock(() => Promise.resolve(null)), // No mod comms channel
+        }
+      }));
+
+      await voteResultService.postVoteResults(nominee, voteResults);
+
+      // Should store only governance message ID
+      expect(mockPrisma.nominee.update).toHaveBeenCalledWith({
+        where: { id: nominee.id },
+        data: {
+          announcementMessageIds: 'governance-result-id'
+        }
+      });
     });
   });
 });

@@ -398,6 +398,7 @@ export class VoteResultService {
   async postVoteResults(nominee: Nominee, voteResults: VoteResults): Promise<void> {
     const guild = await this.client.guilds.fetch(nominee.guildId);
     const resultEmbed = this.createVoteResultsEmbed(nominee, voteResults);
+    const messageIds: string[] = [];
     
     // Define channels to post to
     const channelConfigs = [
@@ -411,7 +412,10 @@ export class VoteResultService {
       try {
         const channel = await config.finder();
         if (channel) {
-          await channel.send({ embeds: [resultEmbed] });
+          const message = await channel.send({ embeds: [resultEmbed] });
+          if (config.name === 'governance' || config.name === 'general') {
+            messageIds.push(message.id);
+          }
         }
       } catch (error) {
         logger.error({ 
@@ -419,6 +423,23 @@ export class VoteResultService {
           nomineeId: nominee.id, 
           channelType: config.name 
         }, `Failed to post vote results to ${config.name}`);
+      }
+    }
+
+    // Store message IDs for cleanup (only governance and general, not mod-comms)
+    if (messageIds.length > 0) {
+      try {
+        const existingIds = nominee.announcementMessageIds ? nominee.announcementMessageIds.split(',') : [];
+        const allIds = [...existingIds, ...messageIds].filter(Boolean);
+
+        await prisma.nominee.update({
+          where: { id: nominee.id },
+          data: {
+            announcementMessageIds: allIds.join(',')
+          }
+        });
+      } catch (error) {
+        logger.error({ error, nomineeId: nominee.id, messageIds }, 'Failed to store vote result message IDs');
       }
     }
   }

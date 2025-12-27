@@ -420,6 +420,9 @@ export class NominationJobScheduler implements JobScheduler {
         if (nominee.voteChannelId) {
           await channelService.deleteChannel(nominee.voteChannelId, 'Nomination completed');
         }
+
+        // Delete announcement messages from governance and general channels
+        await this.deleteAnnouncementMessages(nominee);
         
         // Send cleanup instructions to mod-comms
         await this.sendCleanupInstructions(nominee);
@@ -500,6 +503,59 @@ export class NominationJobScheduler implements JobScheduler {
     }
     
     // Schedule results processed
+  }
+
+  /**
+   * Deletes announcement messages from governance and general channels
+   */
+  private async deleteAnnouncementMessages(nominee: Nominee): Promise<void> {
+    try {
+      if (!nominee.announcementMessageIds) return;
+
+      const guild = await this.client.guilds.fetch(nominee.guildId);
+      const governanceChannel = await ChannelFinderService.findGovernanceChannel(guild);
+      const generalChannel = await ChannelFinderService.findGeneralChannel(guild);
+
+      const messageIds = nominee.announcementMessageIds.split(',').filter(Boolean);
+
+      for (const messageId of messageIds) {
+        try {
+          // Try governance channel first
+          if (governanceChannel) {
+            try {
+              const message = await governanceChannel.messages.fetch(messageId);
+              await message.delete();
+              continue;
+            } catch {
+              // Message not in governance channel, try general
+            }
+          }
+
+          // Try general channel
+          if (generalChannel) {
+            try {
+              const message = await generalChannel.messages.fetch(messageId);
+              await message.delete();
+            } catch {
+              // Message not found or already deleted
+            }
+          }
+        } catch (error) {
+          logger.error({
+            error,
+            nomineeId: nominee.id,
+            messageId
+          }, 'Failed to delete announcement message');
+        }
+      }
+
+    } catch (error) {
+      logger.error({
+        error,
+        nomineeId: nominee.id,
+        announcementMessageIds: nominee.announcementMessageIds
+      }, 'Failed to delete announcement messages');
+    }
   }
 
   /**
