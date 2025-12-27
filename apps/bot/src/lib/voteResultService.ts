@@ -378,30 +378,33 @@ export class VoteResultService {
   }
 
   /**
-   * Posts vote results to the specified channels (governance and general)
+   * Posts vote results to the specified channels (governance, general, and mod-comms)
    */
   async postVoteResults(nominee: Nominee, voteResults: VoteResults): Promise<void> {
     const guild = await this.client.guilds.fetch(nominee.guildId);
     const resultEmbed = this.createVoteResultsEmbed(nominee, voteResults);
     
-    // Post to governance channel
-    try {
-      const governanceChannel = await this.findGovernanceChannel(guild);
-      if (governanceChannel) {
-        await governanceChannel.send({ embeds: [resultEmbed] });
-      }
-    } catch (error) {
-      logger.error({ error, nomineeId: nominee.id }, 'Failed to post vote results to governance');
-    }
+    // Define channels to post to
+    const channelConfigs = [
+      { name: 'governance', finder: () => this.findGovernanceChannel(guild) },
+      { name: 'general', finder: () => this.findGeneralChannel(guild) },
+      { name: 'mod-comms', finder: () => this.findModCommsChannel(guild) }
+    ];
     
-    // Post to general channel
-    try {
-      const generalChannel = await this.findGeneralChannel(guild);
-      if (generalChannel) {
-        await generalChannel.send({ embeds: [resultEmbed] });
+    // Post to all configured channels
+    for (const config of channelConfigs) {
+      try {
+        const channel = await config.finder();
+        if (channel) {
+          await channel.send({ embeds: [resultEmbed] });
+        }
+      } catch (error) {
+        logger.error({ 
+          error, 
+          nomineeId: nominee.id, 
+          channelType: config.name 
+        }, `Failed to post vote results to ${config.name}`);
       }
-    } catch (error) {
-      logger.error({ error, nomineeId: nominee.id }, 'Failed to post vote results to general');
     }
   }
 
@@ -444,6 +447,19 @@ export class VoteResultService {
     }
 
     const channel = guild.channels.cache.get(generalChannelId);
+    return channel?.isTextBased() ? channel : null;
+  }
+
+  /**
+   * Finds the mod-comms channel in a guild
+   */
+  private async findModCommsChannel(guild: any): Promise<any> {
+    const modCommsChannelId = process.env.MOD_COMMS_CHANNEL_ID;
+    if (!modCommsChannelId) {
+      return null;
+    }
+
+    const channel = guild.channels.cache.get(modCommsChannelId);
     return channel?.isTextBased() ? channel : null;
   }
 

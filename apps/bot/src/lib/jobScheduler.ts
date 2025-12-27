@@ -417,6 +417,25 @@ export class NominationJobScheduler implements JobScheduler {
     );
 
     if (result.success) {
+      // Cleanup: Delete discussion and vote channels
+      try {
+        const channelService = new ChannelManagementService(this.client);
+        
+        // Delete discussion channel
+        if (nominee.discussionChannelId) {
+          await channelService.deleteChannel(nominee.discussionChannelId, 'Nomination completed');
+        }
+        
+        // Delete vote channel
+        if (nominee.voteChannelId) {
+          await channelService.deleteChannel(nominee.voteChannelId, 'Nomination completed');
+        }
+      } catch (error) {
+        logger.error({
+          error,
+          nomineeId: nominee.id
+        }, 'Failed to delete nomination channels');
+      }
       
       // Start next nominee in queue if available
       await this.startNextNomineeIfReady(nominee.guildId);
