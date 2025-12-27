@@ -379,12 +379,12 @@ export class VoteResultService {
       fields: [
         {
           name: '📊 Vote Breakdown',
-          value: `✅ Yes: ${voteResults.yesVotes}\n❌ No: ${voteResults.noVotes}\n📈 Total: ${voteResults.totalVotes}\n`,
+          value: `✅ Yes:    ${voteResults.yesVotes}\n❌ No:     ${voteResults.noVotes}\n📈 Total:  ${voteResults.totalVotes}\n`,
           inline: true
         },
         {
           name: '📋 Requirements',
-          value: `Quorum: ${voteResults.quorumMet ? '✅' : '❌'} ${voteResults.totalVotes}/${voteResults.requiredQuorum} votes\nApproval: ${voteResults.passThresholdMet ? '✅' : '❌'} ${Math.round((voteResults.yesVotes / voteResults.totalVotes) * 100)}% (need ${NOMINATION_CONFIG.VOTE_PASS_PERCENT}%)`,
+          value: `${voteResults.quorumMet ? '✅' : '❌'} Quorum:   ${voteResults.totalVotes}/${voteResults.requiredQuorum} votes\n${voteResults.passThresholdMet ? '✅' : '❌'} Approval: ${Math.round((voteResults.yesVotes / voteResults.totalVotes) * 100)}% (need ${NOMINATION_CONFIG.VOTE_PASS_PERCENT}%)`,
           inline: true
         }
       ],
