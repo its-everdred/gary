@@ -149,41 +149,10 @@ export class TimeCalculationService {
   }
 
   /**
-   * Calculates how many nominees can be processed in parallel
-   * (Always 1 based on the requirement that only one nominee can be in progress)
-   */
-  static getMaxConcurrentNominees(): number {
-    return 1;
-  }
-
-  /**
    * Formats a date for Discord timestamp display
    */
   static formatForDiscord(date: Date, format: 'f' | 'F' | 'R' | 't' | 'T' | 'd' | 'D' = 'f'): string {
     const timestamp = Math.floor(date.getTime() / 1000);
     return `<t:${timestamp}:${format}>`;
-  }
-
-  /**
-   * Gets time remaining until a specific date
-   */
-  static getTimeRemaining(targetDate: Date, fromDate: Date = new Date()): {
-    days: number;
-    hours: number;
-    minutes: number;
-    totalHours: number;
-  } {
-    const diffMs = targetDate.getTime() - fromDate.getTime();
-    
-    if (diffMs <= 0) {
-      return { days: 0, hours: 0, minutes: 0, totalHours: 0 };
-    }
-    
-    const totalHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const days = Math.floor(totalHours / 24);
-    const hours = totalHours % 24;
-    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-    
-    return { days, hours, minutes, totalHours };
   }
 }

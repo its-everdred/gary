@@ -49,11 +49,6 @@ export async function validateModeratorPermission(
       return { isValid: true };
     }
 
-    // TODO: Add role-based checking if specific mod roles are configured
-    // const modRoleId = process.env.MOD_ROLE_ID;
-    // if (modRoleId && member.roles.cache.has(modRoleId)) {
-    //   return { isValid: true };
-    // }
 
     return {
       isValid: false,

@@ -1,4 +1,4 @@
-import type { Client, Guild, TextChannel, Role } from 'discord.js';
+import type { Client, TextChannel } from 'discord.js';
 import { ChannelType as DJSChannelType, PermissionFlagsBits } from 'discord.js';
 import pino from 'pino';
 import { prisma } from './db.js';
@@ -448,27 +448,4 @@ export class ChannelManagementService {
     }
   }
 
-  /**
-   * Gets the moderator role for a guild
-   */
-  private async getModeratorRole(guild: Guild): Promise<Role | null> {
-    // Check common moderator role names
-    const moderatorRoleNames = ['moderator', 'mod', 'admin', 'administrator', 'staff'];
-    
-    for (const roleName of moderatorRoleNames) {
-      const role = guild.roles.cache.find(r => 
-        r.name.toLowerCase() === roleName || 
-        r.name.toLowerCase().includes(roleName)
-      );
-      if (role) return role;
-    }
-
-    // If no role found, check for roles with moderate members permission
-    const modRole = guild.roles.cache.find(r => 
-      r.permissions.has(PermissionFlagsBits.ModerateMembers) ||
-      r.permissions.has(PermissionFlagsBits.Administrator)
-    );
-
-    return modRole || null;
-  }
 }

@@ -1,4 +1,4 @@
-import type { ChatInputCommandInteraction, SlashCommandSubcommandBuilder } from 'discord.js';
+import type { ChatInputCommandInteraction } from 'discord.js';
 import pino from 'pino';
 import { validateModeratorPermission } from '../../lib/permissions.js';
 import { NomineeStateManager } from '../../lib/nomineeService.js';
@@ -9,17 +9,6 @@ import { NOMINATION_CONFIG } from '../../lib/constants.js';
 
 const logger = pino();
 
-export const startSubcommand = (subcommand: SlashCommandSubcommandBuilder) =>
-  subcommand
-    .setName('start')
-    .setDescription('Start discussion for a nominee or the next in queue (moderator only)')
-    .addStringOption(option =>
-      option
-        .setName('name')
-        .setDescription('Name of the nominee to start (optional - if not provided, starts next in queue)')
-        .setRequired(false)
-        .setMaxLength(100)
-    );
 
 export async function handleStartCommand(interaction: ChatInputCommandInteraction): Promise<void> {
   const guildId = interaction.guildId;
