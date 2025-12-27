@@ -6,6 +6,7 @@ import { NomineeStateManager } from '../../lib/nomineeService.js';
 import { TimeCalculationService } from '../../lib/timeCalculation.js';
 import { NomineeDisplayUtils } from '../../lib/nomineeDisplayUtils.js';
 import { CommandUtils } from '../../lib/commandUtils.js';
+import { ChannelFinderService } from '../../lib/channelFinderService.js';
 import { NOMINATION_CONFIG } from '../../lib/constants.js';
 import { ConfigService } from '../../lib/configService.js';
 import { DISCORD_CONSTANTS } from '../../lib/discordConstants.js';
@@ -16,6 +17,14 @@ async function calculateNomineeSchedule(guildId: string): Promise<{ discussionSt
   const queuePosition = activeNominees.length + 1; // New nominee goes to end of queue
   
   return TimeCalculationService.calculateScheduledTimes(queuePosition);
+}
+
+async function validateNomineeNotDuplicate(guildId: string, name: string): Promise<string | null> {
+  const existingNominee = await NomineeStateManager.findNomineeByName(guildId, name);
+  if (existingNominee && existingNominee.state !== NomineeState.PAST) {
+    return `❌ **${name}** is already nominated and is currently in ${existingNominee.state.toLowerCase()} state.`;
+  }
+  return null;
 }
 
 
@@ -52,6 +61,16 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
       if (!nominatorValidation.isValid) {
         await interaction.reply({
           content: nominatorValidation.errorMessage!,
+          flags: DISCORD_CONSTANTS.MESSAGE_FLAGS.EPHEMERAL
+        });
+        return;
+      }
+
+      // Check for existing nominee with same name
+      const duplicateError = await validateNomineeNotDuplicate(guildId, name);
+      if (duplicateError) {
+        await interaction.reply({
+          content: duplicateError,
           flags: DISCORD_CONSTANTS.MESSAGE_FLAGS.EPHEMERAL
         });
         return;
@@ -94,11 +113,18 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
         nominees
       );
 
-      await AnnouncementUtils.postToGovernanceChannel(
-        interaction.client,
-        guildId,
-        { embeds: [nominationEmbed] }
-      );
+      try {
+        const guild = await interaction.client.guilds.fetch(guildId);
+        const governanceChannel = await ChannelFinderService.findGovernanceChannel(guild);
+        if (governanceChannel) {
+          await governanceChannel.send({ embeds: [nominationEmbed] });
+        } else {
+          console.error('Governance channel not found. Check GOVERNANCE_CHANNEL_ID environment variable.');
+        }
+      } catch (announcementError) {
+        // Log the announcement error but don't fail the command
+        console.error('Failed to announce nomination:', announcementError);
+      }
       
       // Send private acknowledgment to mod
       const channelRef = NOMINATION_CONFIG.CHANNELS.GA_GOVERNANCE ? `<#${NOMINATION_CONFIG.CHANNELS.GA_GOVERNANCE}>` : 'governance channel';
@@ -111,7 +137,15 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
       return;
     }
 
-    // No need to check for duplicates - names don't need to be unique
+    // Check for existing nominee with same name
+    const duplicateError = await validateNomineeNotDuplicate(guildId, name);
+    if (duplicateError) {
+      await interaction.reply({
+        content: duplicateError,
+        flags: DISCORD_CONSTANTS.MESSAGE_FLAGS.EPHEMERAL
+      });
+      return;
+    }
 
     // Calculate schedule for new nominee
     const schedule = await calculateNomineeSchedule(guildId);
@@ -150,17 +184,24 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
       allNominees
     );
 
-    await AnnouncementUtils.postToGovernanceChannel(
-      interaction.client,
-      guildId,
-      { embeds: [nominationEmbed] }
-    );
+    try {
+      const guild = await interaction.client.guilds.fetch(guildId);
+      const governanceChannel = await ChannelFinderService.findGovernanceChannel(guild);
+      if (governanceChannel) {
+        await governanceChannel.send({ embeds: [nominationEmbed] });
+      } else {
+        console.error('Governance channel not found. Check GOVERNANCE_CHANNEL_ID environment variable.');
+      }
+    } catch (announcementError) {
+      // Log the announcement error but don't fail the command
+      console.error('Failed to announce nomination:', announcementError);
+    }
     
     // Send private acknowledgment to nominator
-    const channelRef = AnnouncementUtils.getGovernanceChannelReference();
+    const channelRef = NOMINATION_CONFIG.CHANNELS.GA_GOVERNANCE ? `<#${NOMINATION_CONFIG.CHANNELS.GA_GOVERNANCE}>` : 'governance channel';
     await interaction.reply({
       content: `Successfully nominated ${name} and announced in ${channelRef}.`,
-      flags: 64
+      flags: DISCORD_CONSTANTS.MESSAGE_FLAGS.EPHEMERAL
     });
 
 
