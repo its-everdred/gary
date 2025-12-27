@@ -1,5 +1,4 @@
 import type { ChatInputCommandInteraction } from 'discord.js';
-import pino from 'pino';
 import { prisma } from '../../lib/db.js';
 import { NomineeState } from '@prisma/client';
 import { validateNominatorUser } from '../../lib/permissions.js';
@@ -8,8 +7,6 @@ import { TimeCalculationService } from '../../lib/timeCalculation.js';
 import { NomineeDisplayUtils } from '../../lib/nomineeDisplayUtils.js';
 import { CommandUtils } from '../../lib/commandUtils.js';
 import { AnnouncementUtils } from '../../lib/announcementUtils.js';
-
-const logger = pino();
 
 async function calculateNomineeSchedule(guildId: string): Promise<{ discussionStart: Date; voteStart: Date; certifyStart: Date }> {
   // Get all active nominees to determine queue position
@@ -26,7 +23,6 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
     const guildId = process.env.GUILD_ID!;
     const name = interaction.options.getString('name', true).trim();
     const nominator = interaction.options.getUser('nominator');
-    const userId = interaction.user.id;
     const username = interaction.user.username;
 
     // Basic name validation
@@ -63,7 +59,7 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
       const schedule = await calculateNomineeSchedule(guildId);
       
       // Create nomination on behalf of nominator
-      const nominee = await prisma.nominee.create({
+      await prisma.nominee.create({
         data: {
           name,
           state: NomineeState.ACTIVE,
@@ -109,13 +105,6 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
         flags: 64
       });
 
-      logger.info({
-        nomineeId: nominee.id,
-        name,
-        nominator: nominator.username || nominator.id,
-        moderator: username,
-        user: userId
-      }, 'Moderator nomination created');
       
       return;
     }
@@ -126,7 +115,7 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
     const schedule = await calculateNomineeSchedule(guildId);
     
     // Create nomination
-    const nominee = await prisma.nominee.create({
+    await prisma.nominee.create({
       data: {
         name,
         state: NomineeState.ACTIVE,
@@ -172,12 +161,6 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
       flags: 64
     });
 
-    logger.info({
-      nomineeId: nominee.id,
-      name,
-      nominator: username,
-      user: userId
-    }, 'New nomination created');
 
   } catch (error) {
     await CommandUtils.handleCommandError(

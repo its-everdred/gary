@@ -23,10 +23,6 @@ export class AnnouncementService {
       const governanceChannel = await this.findGovernanceChannel(guild);
       
       if (!governanceChannel) {
-        logger.warn({
-          guildId: nominee.guildId,
-          nomineeName: nominee.name
-        }, 'GA governance channel not found for vote announcement');
         return false;
       }
 
@@ -85,10 +81,6 @@ export class AnnouncementService {
       const governanceChannel = await this.findGovernanceChannel(guild);
       
       if (!governanceChannel) {
-        logger.warn({
-          guildId: nominee.guildId,
-          nomineeName: nominee.name
-        }, 'GA governance channel not found for discussion announcement');
         return false;
       }
 
@@ -116,12 +108,6 @@ export class AnnouncementService {
         embeds: [embed]
       });
 
-      logger.info({
-        nomineeId: nominee.id,
-        nomineeName: nominee.name,
-        governanceChannelId: governanceChannel.id,
-        discussionChannelId
-      }, 'Discussion announcement posted to governance channel');
 
       return true;
     } catch (error) {
@@ -149,10 +135,6 @@ export class AnnouncementService {
       const generalChannel = await this.findGeneralChannel(guild);
       
       if (!generalChannel) {
-        logger.warn({
-          guildId: nominee.guildId,
-          nomineeName: nominee.name
-        }, 'General channel not found for results announcement');
         return false;
       }
 
@@ -212,15 +194,6 @@ export class AnnouncementService {
       // Also post to governance channel with next nominee info
       await this.postResultsToGovernanceChannel(nominee, passed, yesVotes, noVotes, quorumMet);
 
-      logger.info({
-        nomineeId: nominee.id,
-        nomineeName: nominee.name,
-        passed,
-        yesVotes,
-        noVotes,
-        quorumMet,
-        generalChannelId: generalChannel.id
-      }, 'Vote results announced in general channel');
 
       return true;
     } catch (error) {
@@ -248,7 +221,6 @@ export class AnnouncementService {
       const governanceChannel = await this.findGovernanceChannel(guild);
       
       if (!governanceChannel) {
-        logger.warn({ guildId: nominee.guildId }, 'Governance channel not found for results posting');
         return;
       }
 
@@ -292,12 +264,6 @@ export class AnnouncementService {
 
       await governanceChannel.send({ embeds: [embed] });
 
-      logger.info({
-        nomineeId: nominee.id,
-        nomineeName: nominee.name,
-        nextNomineeName: nextNominee?.name,
-        governanceChannelId: governanceChannel.id
-      }, 'Vote results posted to governance channel with next nominee info');
 
     } catch (error) {
       logger.error({
@@ -314,13 +280,11 @@ export class AnnouncementService {
   private async findGovernanceChannel(guild: Guild): Promise<TextChannel | null> {
     const governanceChannelId = NOMINATION_CONFIG.CHANNELS.GA_GOVERNANCE;
     if (!governanceChannelId) {
-      logger.warn('GOVERNANCE_CHANNEL_ID not configured');
       return null;
     }
 
     const channel = guild.channels.cache.get(governanceChannelId) as TextChannel;
     if (!channel?.isTextBased()) {
-      logger.warn(`Governance channel ${governanceChannelId} not found or not text-based`);
       return null;
     }
 
@@ -336,10 +300,6 @@ export class AnnouncementService {
       const generalChannel = await this.findGeneralChannel(guild);
       
       if (!generalChannel) {
-        logger.warn({
-          guildId: nominee.guildId,
-          nomineeName: nominee.name
-        }, 'General channel not found for vote expiration announcement');
         return false;
       }
 
@@ -368,11 +328,6 @@ export class AnnouncementService {
       // Also post to governance channel with next nominee info
       await this.postResultsToGovernanceChannel(nominee, false, 0, 0, false);
 
-      logger.info({
-        nomineeId: nominee.id,
-        nomineeName: nominee.name,
-        generalChannelId: generalChannel.id
-      }, 'Vote expiration announced in general channel');
 
       return true;
     } catch (error) {

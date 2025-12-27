@@ -43,7 +43,6 @@ export class NominationJobScheduler implements JobScheduler {
 
   start(): void {
     if (this._isRunning) {
-      logger.warn('Job scheduler is already running');
       return;
     }
 
@@ -51,19 +50,16 @@ export class NominationJobScheduler implements JobScheduler {
     this.scheduleScheduleRecalculationJob();
     this._isRunning = true;
     
-    logger.info('Nomination job scheduler started');
   }
 
   stop(): void {
-    this.jobs.forEach((job, name) => {
+    this.jobs.forEach((job) => {
       job.destroy();
-      logger.info({ jobName: name }, 'Job stopped');
     });
     
     this.jobs.clear();
     this._isRunning = false;
     
-    logger.info('Nomination job scheduler stopped');
   }
 
   isRunning(): boolean {
@@ -94,7 +90,6 @@ export class NominationJobScheduler implements JobScheduler {
     job.start();
     this.jobs.set('state-transitions', job);
     
-    logger.info('State transition job scheduled (every minute)');
   }
 
   /**
@@ -116,7 +111,6 @@ export class NominationJobScheduler implements JobScheduler {
     job.start();
     this.jobs.set('schedule-recalculation', job);
     
-    logger.info('Schedule recalculation job scheduled (every hour)');
   }
 
   /**
@@ -219,10 +213,6 @@ export class NominationJobScheduler implements JobScheduler {
       const voteChannel = guild.channels.cache.get(nominee.voteChannelId) as TextChannel;
       
       if (!voteChannel) {
-        logger.warn({
-          nomineeId: nominee.id,
-          voteChannelId: nominee.voteChannelId
-        }, 'Vote channel not found for governance announcement check');
         return;
       }
 
@@ -248,12 +238,6 @@ export class NominationJobScheduler implements JobScheduler {
             data: { voteGovernanceAnnounced: true }
           });
 
-          logger.info({
-            nomineeId: nominee.id,
-            nomineeName: nominee.name,
-            voteChannelId: nominee.voteChannelId,
-            pollMessageId: easyPollMessage.id
-          }, 'Governance announcement sent after EasyPoll detection');
         }
       }
     } catch (error) {
@@ -278,11 +262,6 @@ export class NominationJobScheduler implements JobScheduler {
     );
 
     if (result.success) {
-      logger.info({
-        nomineeId: nominee.id,
-        name: nominee.name,
-        guildId: nominee.guildId
-      }, 'Nominee transitioned to DISCUSSION state');
       
       // Create discussion channel
       const channelResult = await this.channelService.createDiscussionChannel(result.nominee);
@@ -325,11 +304,6 @@ export class NominationJobScheduler implements JobScheduler {
     );
 
     if (result.success) {
-      logger.info({
-        nomineeId: nominee.id,
-        name: nominee.name,
-        guildId: nominee.guildId
-      }, 'Nominee transitioned to VOTE state');
       
       // Create vote channel
       const channelResult = await this.channelService.createVoteChannel(result.nominee);
@@ -341,11 +315,6 @@ export class NominationJobScheduler implements JobScheduler {
       } else {
         // Note: Governance announcement will be sent automatically 
         // once the moderator posts the EasyPoll in the vote channel
-        logger.info({
-          nomineeId: nominee.id,
-          name: nominee.name,
-          voteChannelId: channelResult.channel!.id
-        }, 'Vote channel created, waiting for moderator to post EasyPoll before governance announcement');
       }
     } else {
       logger.error({
@@ -368,16 +337,6 @@ export class NominationJobScheduler implements JobScheduler {
     );
 
     if (result.success) {
-      logger.info({
-        nomineeId: nominee.id,
-        name: nominee.name,
-        guildId: nominee.guildId,
-        voteResults: voteResults ? {
-          passed: voteResults.passed,
-          yesVotes: voteResults.yesVotes,
-          noVotes: voteResults.noVotes
-        } : undefined
-      }, 'Nominee transitioned to CERTIFY state');
       
       // Post detailed results to both vote and governance channels if we have vote results
       if (voteResults) {
@@ -431,11 +390,6 @@ export class NominationJobScheduler implements JobScheduler {
     );
 
     if (result.success) {
-      logger.info({
-        nomineeId: nominee.id,
-        name: nominee.name,
-        guildId: nominee.guildId
-      }, 'Nominee transitioned to PAST state');
       
       // Start next nominee in queue if available
       await this.startNextNomineeIfReady(nominee.guildId);
@@ -496,12 +450,7 @@ export class NominationJobScheduler implements JobScheduler {
       });
     }
     
-    if (scheduleResults.length > 0) {
-      logger.info({
-        guildId,
-        updatedCount: scheduleResults.length
-      }, 'Guild schedules recalculated');
-    }
+    // Schedule results processed
   }
 
   /**

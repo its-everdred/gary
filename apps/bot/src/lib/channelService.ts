@@ -50,11 +50,6 @@ export class ChannelManagementService {
         const category = guild.channels.cache.get(nominationsCategoryId);
         if (category && category.type === DJSChannelType.GuildCategory) {
           createOptions.parent = nominationsCategoryId;
-        } else {
-          logger.warn({
-            nomineeId: nominee.id,
-            categoryId: nominationsCategoryId
-          }, 'Nominations category not found or invalid, creating channel without parent');
         }
       }
 
@@ -69,13 +64,6 @@ export class ChannelManagementService {
       // Send initial message
       await this.sendDiscussionStartMessage(channel, nominee);
 
-      logger.info({
-        nomineeId: nominee.id,
-        nomineeName: nominee.name,
-        channelId: channel.id,
-        channelName: channel.name,
-        guildId: guild.id
-      }, 'Discussion channel created successfully');
 
       return {
         success: true,
@@ -141,11 +129,6 @@ export class ChannelManagementService {
         const category = guild.channels.cache.get(nominationsCategoryId);
         if (category && category.type === DJSChannelType.GuildCategory) {
           createOptions.parent = nominationsCategoryId;
-        } else {
-          logger.warn({
-            nomineeId: nominee.id,
-            categoryId: nominationsCategoryId
-          }, 'Nominations category not found or invalid, creating vote channel without parent');
         }
       }
 
@@ -187,7 +170,6 @@ export class ChannelManagementService {
     try {
       const channel = await this.client.channels.fetch(channelId) as TextChannel;
       if (!channel || !channel.isTextBased()) {
-        logger.warn({ channelId }, 'Channel not found or not text-based');
         return false;
       }
 
@@ -206,12 +188,6 @@ export class ChannelManagementService {
       // Send archive message
       await channel.send(`🔒 **Channel Archived**\n\nReason: ${reason}\n\nThis channel is now read-only.`);
 
-      logger.info({
-        channelId: channel.id,
-        oldName: channel.name.replace('archived-', ''),
-        newName: newName,
-        reason
-      }, 'Channel archived successfully');
 
       return true;
     } catch (error) {
@@ -227,16 +203,11 @@ export class ChannelManagementService {
     try {
       const channel = await this.client.channels.fetch(channelId);
       if (!channel) {
-        logger.warn({ channelId }, 'Channel not found for deletion');
         return false;
       }
 
       await channel.delete(reason);
 
-      logger.info({
-        channelId,
-        reason
-      }, 'Channel deleted successfully');
 
       return true;
     } catch (error) {
@@ -299,10 +270,7 @@ export class ChannelManagementService {
             member.displayName === nominee.nominator
           );
         } catch (fetchError) {
-          logger.warn({
-            error: fetchError,
-            nomineeId: nominee.id
-          }, 'Failed to fetch guild members for nominator lookup, proceeding without ping');
+          // Failed to fetch guild members for nominator lookup, proceeding without ping
         }
       }
       
@@ -454,11 +422,6 @@ export class ChannelManagementService {
               content: `${moderatorsMention} **Vote poll needs to be created!**`,
               embeds: [modNotifyEmbed]
             });
-          } else {
-            logger.warn({
-              nomineeId: nominee.id,
-              modCommsChannelId
-            }, 'Mod comms channel not found or not text-based');
           }
         } catch (error) {
           logger.error({
@@ -469,10 +432,6 @@ export class ChannelManagementService {
             nomineeId: nominee.id
           }, 'Failed to send notification to mod comms channel');
         }
-      } else {
-        logger.warn({
-          nomineeId: nominee.id
-        }, 'MOD_COMMS_CHANNEL_ID not configured - no mod notification sent');
       }
 
     } catch (error) {

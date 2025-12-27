@@ -67,20 +67,14 @@ async function processWarningAsync(
   message: string
 ): Promise<void> {
   try {
-    logger.info({ targetId, message }, 'Creating warning vote');
     await createWarning(guildId, targetId, voterHash, message);
 
-    logger.info('Vote created, counting warnings');
     const totalWarningsCount = await countWarnings(guildId, targetId);
 
-    logger.info({ totalWarningsCount }, 'Getting eligible count');
     const eligibleCount = await getEligibleCount(client);
 
-    logger.info({ eligibleCount }, 'Sending warning to channel');
     const warningMessage = buildWarningMessage(targetId, message, totalWarningsCount, eligibleCount);
     await sendToModChannel(client, warningMessage);
-
-    logger.info('Warning processing completed');
   } catch (error) {
     logger.error({ error, targetId }, 'Async warning processing failed');
   }

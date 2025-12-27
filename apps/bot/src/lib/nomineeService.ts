@@ -166,13 +166,6 @@ export class NomineeStateManager {
         }
       });
 
-      logger.info({
-        nomineeId,
-        name: nominee.name,
-        previousState: nominee.state,
-        newState,
-        updateData
-      }, 'Nominee state transition completed');
 
       return {
         success: true,

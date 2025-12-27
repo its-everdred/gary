@@ -25,17 +25,10 @@ const commands = [warnCommand, unwarnCommand, nominateCommand, modCommand];
 let jobScheduler: NominationJobScheduler | null = null;
 
 client.on('clientReady', async () => {
-  logger.info(`Bot logged in as ${client.user?.tag}`);
-  logger.info(`Connected to ${client.guilds.cache.size} guilds`);
   
   const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN!);
   
   try {
-    logger.info('Registering slash commands...', { 
-      commandCount: commands.length,
-      appId: process.env.DISCORD_APP_ID,
-      commands: commands.map(c => c.name)
-    });
     
     // Add timeout to catch hanging API calls
     const timeoutPromise = new Promise((_, reject) => {
@@ -47,11 +40,8 @@ client.on('clientReady', async () => {
       { body: commands }
     );
     
-    const result = await Promise.race([registrationPromise, timeoutPromise]);
+    await Promise.race([registrationPromise, timeoutPromise]);
     
-    logger.info('Commands registered successfully', { 
-      registeredCount: Array.isArray(result) ? result.length : 'unknown'
-    });
   } catch (error: any) {
     logger.error({ 
       error: error?.message || 'Unknown error',
@@ -64,7 +54,6 @@ client.on('clientReady', async () => {
   try {
     jobScheduler = NominationJobScheduler.getInstance(client);
     jobScheduler.start();
-    logger.info('Nomination job scheduler started successfully');
   } catch (error: any) {
     logger.error({ 
       error: error?.message || 'Unknown error',
@@ -77,31 +66,13 @@ client.on('error', (error) => {
   logger.error(error, 'Discord client error');
 });
 
-client.on('warn', (warning) => {
-  logger.warn(warning, 'Discord client warning');
+client.on('warn', () => {
+  // Discord client warning
 });
 
-client.on('debug', (info) => {
-  if (info.includes('interaction')) {
-    logger.debug(info, 'Debug interaction info');
-  }
-});
 
 client.on('interactionCreate', async (interaction) => {
-  logger.info({ 
-    type: interaction.type,
-    isChatInput: interaction.isChatInputCommand(),
-    inGuild: interaction.inGuild(),
-    user: interaction.user.id
-  }, 'Interaction received');
-
   if (!interaction.isChatInputCommand()) return;
-  
-  logger.info({ 
-    command: interaction.commandName, 
-    user: interaction.user.id,
-    channel: interaction.channelId 
-  }, 'Command received');
   
   try {
     switch (interaction.commandName) {
@@ -127,28 +98,18 @@ client.on('interactionCreate', async (interaction) => {
   }
 });
 
-logger.info('Starting bot...', {
-  hasToken: !!process.env.DISCORD_TOKEN,
-  hasAppId: !!process.env.DISCORD_APP_ID,
-  tokenStart: process.env.DISCORD_TOKEN?.substring(0, 10)
-});
-
 // Graceful shutdown handling
-const gracefulShutdown = (signal: string) => {
-  logger.info(`Received ${signal}, starting graceful shutdown...`);
-  
+const gracefulShutdown = () => {
   if (jobScheduler?.isRunning()) {
-    logger.info('Stopping nomination job scheduler...');
     jobScheduler.stop();
   }
   
   client.destroy();
-  logger.info('Bot shutdown complete');
   process.exit(0);
 };
 
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => gracefulShutdown());
+process.on('SIGINT', () => gracefulShutdown());
 
 client.login(process.env.DISCORD_TOKEN).catch((error) => {
   logger.error(error, 'Failed to login');

@@ -1,19 +1,14 @@
 import type { ChatInputCommandInteraction } from 'discord.js';
-import pino from 'pino';
 import { prisma } from '../../lib/db.js';
 import { NomineeState } from '@prisma/client';
 import { CommandUtils } from '../../lib/commandUtils.js';
 import { TimeCalculationService } from '../../lib/timeCalculation.js';
 import { NomineeStateManager } from '../../lib/nomineeService.js';
 
-const logger = pino();
-
 export async function handleRemoveCommand(interaction: ChatInputCommandInteraction): Promise<void> {
   try {
     const guildId = process.env.GUILD_ID!;
     const name = interaction.options.getString('name', true).trim();
-    const userId = interaction.user.id;
-    const username = interaction.user.username;
 
     // Validate moderator permissions
     const modValidation = await CommandUtils.validateModeratorAccess(interaction, guildId);
@@ -40,9 +35,6 @@ export async function handleRemoveCommand(interaction: ChatInputCommandInteracti
       return;
     }
 
-    // Check if nominee is currently in DISCUSSION, VOTE, or CERTIFY state
-    const inProgressStates: NomineeState[] = [NomineeState.DISCUSSION, NomineeState.VOTE, NomineeState.CERTIFY];
-    const wasInProgress = inProgressStates.includes(nominee.state);
 
     // Remove the nominee
     await prisma.nominee.delete({
@@ -59,15 +51,6 @@ export async function handleRemoveCommand(interaction: ChatInputCommandInteracti
       flags: 64
     });
 
-    logger.info({
-      nomineeId: nominee.id,
-      name: nominee.name,
-      inputName: name,
-      previousState: nominee.state,
-      moderator: username,
-      user: userId,
-      wasInProgress
-    }, 'Nominee removed by moderator with schedule recalculation');
 
   } catch (error) {
     await CommandUtils.handleCommandError(
@@ -84,7 +67,6 @@ export async function handleRemoveCommand(interaction: ChatInputCommandInteracti
  */
 async function recalculateRemainingNominees(guildId: string, removedNomineeName: string): Promise<void> {
   try {
-    logger.info({ guildId, removedNomineeName }, 'Starting schedule recalculation after nominee removal');
 
     // Get all active nominees (not in PAST state) ordered by creation time
     const activeNominees = await prisma.nominee.findMany({
@@ -100,7 +82,6 @@ async function recalculateRemainingNominees(guildId: string, removedNomineeName:
     });
 
     if (activeNominees.length === 0) {
-      logger.info({ guildId }, 'No remaining nominees to recalculate');
       return;
     }
 
@@ -108,7 +89,6 @@ async function recalculateRemainingNominees(guildId: string, removedNomineeName:
     const recalculations = await TimeCalculationService.recalculateAllSchedules(activeNominees);
     
     // Update database with new schedules
-    let updatedCount = 0;
     for (const result of recalculations) {
       await prisma.nominee.update({
         where: { id: result.nominee.id },
@@ -118,15 +98,8 @@ async function recalculateRemainingNominees(guildId: string, removedNomineeName:
           certifyStart: result.scheduledTimes.certifyStart
         }
       });
-      updatedCount++;
     }
 
-    logger.info({
-      guildId,
-      removedNomineeName,
-      updatedCount,
-      remainingNominees: activeNominees.length
-    }, 'Schedule recalculation completed after nominee removal');
 
   } catch (error) {
     logger.error({ 

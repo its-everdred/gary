@@ -17,13 +17,11 @@ export class AnnouncementUtils {
   static async findGovernanceChannel(guild: Guild): Promise<TextChannel | null> {
     const governanceChannelId = NOMINATION_CONFIG.CHANNELS.GA_GOVERNANCE;
     if (!governanceChannelId) {
-      logger.warn('GOVERNANCE_CHANNEL_ID not configured');
       return null;
     }
 
     const channel = guild.channels.cache.get(governanceChannelId) as TextChannel;
     if (!channel?.isTextBased()) {
-      logger.warn(`Governance channel ${governanceChannelId} not found or not text-based`);
       return null;
     }
 
@@ -41,7 +39,6 @@ export class AnnouncementUtils {
     try {
       const governanceChannelId = NOMINATION_CONFIG.CHANNELS.GA_GOVERNANCE;
       if (!governanceChannelId) {
-        logger.warn('GOVERNANCE_CHANNEL_ID not configured');
         return { success: false, errorMessage: 'Governance channel not configured' };
       }
 
@@ -52,7 +49,6 @@ export class AnnouncementUtils {
 
       const channel = guild.channels.cache.get(governanceChannelId) as TextChannel;
       if (!channel?.isTextBased()) {
-        logger.warn(`Governance channel ${governanceChannelId} not found or not text-based`);
         return { success: false, errorMessage: 'Governance channel not found or not text-based' };
       }
 

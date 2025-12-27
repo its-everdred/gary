@@ -39,7 +39,6 @@ export class VoteResultService {
   async checkVoteCompletion(nominee: Nominee): Promise<VoteResults | null> {
     try {
       if (!nominee.voteChannelId) {
-        logger.warn({ nomineeId: nominee.id }, 'No vote channel ID found');
         return null;
       }
 
@@ -47,10 +46,6 @@ export class VoteResultService {
       const voteChannel = guild.channels.cache.get(nominee.voteChannelId) as TextChannel;
       
       if (!voteChannel) {
-        logger.warn({ 
-          nomineeId: nominee.id,
-          voteChannelId: nominee.voteChannelId 
-        }, 'Vote channel not found');
         return null;
       }
 
@@ -219,11 +214,6 @@ export class VoteResultService {
         const match = line.match(/[▓░]+\s*\|\s*(\d+\.?\d*)%\s*\((\d+)\)/);
         if (match) {
           const count = parseInt(match[2], 10);
-          logger.debug({
-            line: line,
-            percentage: match[1],
-            count: count
-          }, 'Successfully parsed vote count from EasyPoll format');
           return count;
         }
       }
@@ -315,12 +305,6 @@ export class VoteResultService {
         }
       });
 
-      logger.info({
-        nomineeId,
-        yesVotes: results.yesVotes,
-        noVotes: results.noVotes,
-        passed: results.passed
-      }, 'Nominee updated with vote results');
     } catch (error) {
       logger.error({ error, nomineeId }, 'Failed to update nominee with results');
     }
@@ -399,13 +383,11 @@ export class VoteResultService {
   async postDetailedVoteResults(nominee: Nominee, voteResults: VoteResults): Promise<void> {
     try {
       if (!nominee.voteChannelId) {
-        logger.warn({ nomineeId: nominee.id }, 'No vote channel ID found');
         return;
       }
 
       const channel = await this.client.channels.fetch(nominee.voteChannelId) as TextChannel;
       if (!channel) {
-        logger.warn({ nomineeId: nominee.id, voteChannelId: nominee.voteChannelId }, 'Vote channel not found');
         return;
       }
 
@@ -427,7 +409,6 @@ export class VoteResultService {
       const governanceChannel = await this.findGovernanceChannel(guild);
       
       if (!governanceChannel) {
-        logger.warn({ guildId: nominee.guildId }, 'Governance channel not found for results posting');
         return;
       }
 
@@ -445,7 +426,6 @@ export class VoteResultService {
   private async findGovernanceChannel(guild: any): Promise<any> {
     const governanceChannelId = process.env.GOVERNANCE_CHANNEL_ID;
     if (!governanceChannelId) {
-      logger.warn('GOVERNANCE_CHANNEL_ID not configured');
       return null;
     }
 
