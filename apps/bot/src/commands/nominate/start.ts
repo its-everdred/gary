@@ -5,6 +5,7 @@ import { NomineeStateManager } from '../../lib/nomineeService.js';
 import { ChannelManagementService } from '../../lib/channelService.js';
 import { AnnouncementService } from '../../lib/announcementService.js';
 import { NomineeState } from '@prisma/client';
+import { TimeCalculationService } from '../../lib/timeCalculation.js';
 import { NOMINATION_CONFIG } from '../../lib/constants.js';
 
 const logger = pino();
@@ -142,7 +143,16 @@ export async function handleStartCommand(interaction: ChatInputCommandInteractio
       }, 'Failed to create discussion channel for manual start');
     }
     
-    // Log the manual start
+    // Recalculate queue for remaining ACTIVE nominees
+    try {
+      await TimeCalculationService.recalculateAndUpdateQueueSchedules(guildId, nominee.id);
+    } catch (error) {
+      logger.error({
+        error,
+        nomineeId: nominee.id,
+        guildId
+      }, 'Failed to recalculate queue after manual start');
+    }
 
     // Don't send public response - governance announcement handles public notification
     // Just acknowledge the command was processed successfully

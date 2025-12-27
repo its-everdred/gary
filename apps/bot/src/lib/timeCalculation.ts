@@ -1,6 +1,10 @@
 import { NOMINATION_CONFIG } from './constants.js';
 import { NomineeState } from '@prisma/client';
 import type { Nominee } from '@prisma/client';
+import { prisma } from './db.js';
+import pino from 'pino';
+
+const logger = pino();
 
 export interface ScheduledTimes {
   discussionStart: Date;
@@ -146,6 +150,55 @@ export class TimeCalculationService {
     }
     
     return false;
+  }
+
+  /**
+   * Recalculates and updates schedules for remaining active nominees in database
+   */
+  static async recalculateAndUpdateQueueSchedules(guildId: string, excludeNomineeId?: number): Promise<void> {
+    try {
+      // Get all active nominees (not in PAST state) ordered by creation time
+      const whereClause: any = {
+        guildId,
+        state: NomineeState.ACTIVE
+      };
+      
+      if (excludeNomineeId) {
+        whereClause.id = { not: excludeNomineeId };
+      }
+
+      const activeNominees = await prisma.nominee.findMany({
+        where: whereClause,
+        orderBy: { createdAt: 'asc' }
+      });
+
+      if (activeNominees.length === 0) {
+        return;
+      }
+
+      // Recalculate times for all nominees based on their new queue positions
+      const recalculations = await this.recalculateAllSchedules(activeNominees);
+      
+      // Update database with new schedules
+      for (const result of recalculations) {
+        await prisma.nominee.update({
+          where: { id: result.nominee.id },
+          data: {
+            discussionStart: result.scheduledTimes.discussionStart,
+            voteStart: result.scheduledTimes.voteStart,
+            certifyStart: result.scheduledTimes.certifyStart
+          }
+        });
+      }
+
+    } catch (error) {
+      logger.error({ 
+        error, 
+        guildId, 
+        excludeNomineeId
+      }, 'Failed to recalculate and update queue schedules');
+      throw error;
+    }
   }
 
   /**

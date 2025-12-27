@@ -1,12 +1,9 @@
 import type { ChatInputCommandInteraction } from 'discord.js';
-import pino from 'pino';
 import { prisma } from '../../lib/db.js';
 import { NomineeState } from '@prisma/client';
 import { CommandUtils } from '../../lib/commandUtils.js';
 import { TimeCalculationService } from '../../lib/timeCalculation.js';
 import { ConfigService } from '../../lib/configService.js';
-
-const logger = pino();
 
 export async function handleRemoveCommand(interaction: ChatInputCommandInteraction): Promise<void> {
   try {
@@ -54,7 +51,7 @@ export async function handleRemoveCommand(interaction: ChatInputCommandInteracti
     });
 
     // Recalculate schedules for all remaining active nominees
-    await recalculateRemainingNominees(guildId, nominee.name);
+    await TimeCalculationService.recalculateAndUpdateQueueSchedules(guildId);
 
     await interaction.reply({
       content: `${nominee.name} has been removed from the nominations list. Schedules updated for remaining nominees.`,
@@ -72,51 +69,4 @@ export async function handleRemoveCommand(interaction: ChatInputCommandInteracti
   }
 }
 
-/**
- * Recalculates schedules for all remaining active nominees after a removal
- */
-async function recalculateRemainingNominees(guildId: string, removedNomineeName: string): Promise<void> {
-  try {
-
-    // Get all active nominees (not in PAST state) ordered by creation time
-    const activeNominees = await prisma.nominee.findMany({
-      where: {
-        guildId,
-        state: {
-          not: NomineeState.PAST
-        }
-      },
-      orderBy: {
-        createdAt: 'asc'
-      }
-    });
-
-    if (activeNominees.length === 0) {
-      return;
-    }
-
-    // Recalculate times for all nominees based on their new queue positions
-    const recalculations = await TimeCalculationService.recalculateAllSchedules(activeNominees);
-    
-    // Update database with new schedules
-    for (const result of recalculations) {
-      await prisma.nominee.update({
-        where: { id: result.nominee.id },
-        data: {
-          discussionStart: result.scheduledTimes.discussionStart,
-          voteStart: result.scheduledTimes.voteStart,
-          certifyStart: result.scheduledTimes.certifyStart
-        }
-      });
-    }
-
-
-  } catch (error) {
-    logger.error({ 
-      error, 
-      guildId, 
-      removedNomineeName 
-    }, 'Failed to recalculate schedules after nominee removal');
-  }
-}
 
