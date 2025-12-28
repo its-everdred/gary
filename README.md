@@ -1,18 +1,22 @@
 # GARY - Generally Autonomous Representative Yeoman
 
-Privacy focused discord moderation assistant manager.
+Minimal discord moderation assistant manager.
 
 ## Commands
 
 ### Warning System
+
 - `/warn target:<@user> message:<text>` - Warn mods about a user, tracks toward kick quorum
 - `/unwarn target:<@user>` - Remove your warning about a user
 
 ### Nomination System
-- `/nominate name:<text>` - Nominate someone for GA membership
+
+- `/nominate add name:<text>` - Nominate someone for GA membership
+- `/nominate list` - List all current nominations and their state
 - `/mod nominate add name:<text> nominator:<@user>` - Moderator: Add nomination on behalf of someone
 - `/mod nominate remove name:<text>` - Moderator: Remove a nominee
 - `/mod nominate start [name:<text>]` - Moderator: Start discussion for specific nominee or next in queue
+- `/mod nominate cleanup` - Moderator: Complete certification early and cleanup channels for nominee in CERTIFY state
 
 ## Features
 
@@ -26,11 +30,7 @@ Privacy focused discord moderation assistant manager.
 
 ## EasyPoll Integration
 
-The bot integrates with [EasyPoll](https://easypoll.bot) for anonymous voting:
-1. Bot creates vote channels automatically
-2. Bot provides the exact `/timepoll` command to create polls
-3. Bot reads poll results when voting ends
-4. Requires MESSAGE CONTENT INTENT to read EasyPoll embeds
+The bot integrates with [EasyPoll](https://easypoll.bot) for anonymous voting in the nominate feature.
 
 ## Quick Setup
 
@@ -40,7 +40,7 @@ The bot integrates with [EasyPoll](https://easypoll.bot) for anonymous voting:
 2. New Application → Name it → Bot → Add Bot
 3. **Token**: Reset Token → Copy for `DISCORD_TOKEN`
 4. **Application ID**: General Information → Copy for `DISCORD_APP_ID`
-5. **Privileged Gateway Intents**: 
+5. **Privileged Gateway Intents**:
    - ✅ Enable `MESSAGE CONTENT INTENT` (required to read EasyPoll embeds)
    - ❌ Keep `PRESENCE INTENT` disabled
    - ❌ Keep `SERVER MEMBERS INTENT` disabled
@@ -70,23 +70,7 @@ cp .env.example .env
 open .env
 ```
 
-Fill in all values:
-
-```bash
-DISCORD_TOKEN=         # Bot token from step 1.3
-DISCORD_APP_ID=        # Application ID from step 1.4
-GUILD_ID=              # Right-click server → Copy Server ID (needs Developer Mode*)
-MOD_CHANNEL_ID=        # Right-click mod channel → Copy Channel ID
-KICK_QUORUM_PERCENT=40 # % of members for kick alert
-GUILD_SALT=            # Run: openssl rand -base64 32
-DATABASE_URL=          # Local: postgres://gary:pass@localhost:5432/gary
-                       # Railway: ${{Postgres.DATABASE_URL}}
-
-# Optional: Nomination System Configuration
-GOVERNANCE_CHANNEL_ID= # Channel for nomination announcements
-MOD_ROLES=             # Comma-separated role IDs (e.g., "123,456")
-                       # Or use role names: "@Moderator,@Admin"
-```
+Follow instructions to fill in all values.
 
 \*Enable Developer Mode: Discord Settings → Advanced → Developer Mode
 
