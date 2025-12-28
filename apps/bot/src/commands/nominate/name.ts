@@ -46,8 +46,7 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
     const guildId = ConfigService.getGuildId();
     const name = interaction.options.getString('name', true).trim();
     const nominator = interaction.options.getUser('nominator');
-    const username = interaction.user.username;
-
+  
     // Basic name validation
     if (name.length < DISCORD_CONSTANTS.LIMITS.NOMINEE_NAME_MIN || name.length > DISCORD_CONSTANTS.LIMITS.NOMINEE_NAME_MAX) {
       await interaction.reply({
@@ -96,7 +95,7 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
         data: {
           name,
           state: NomineeState.ACTIVE,
-          nominator: nominator.username || nominator.id,
+          nominator: nominator.id,
           guildId,
           discussionStart: schedule.discussionStart,
           voteStart: schedule.voteStart,
@@ -110,8 +109,8 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
       // Create embed for governance channel
       const nominationEmbed = NomineeDisplayUtils.createNominationEmbed(
         name,
-        nominator.username,
-        username,
+        nominator.username || nominator.displayName || nominator.id,
+        interaction.user.username || interaction.user.displayName || interaction.user.id,
         nominees
       );
 
@@ -156,7 +155,7 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
       data: {
         name,
         state: NomineeState.ACTIVE,
-        nominator: username,
+        nominator: interaction.user.id,
         guildId,
         discussionStart: schedule.discussionStart,
         voteStart: schedule.voteStart,
@@ -170,7 +169,7 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
     // Create embed for governance channel
     const nominationEmbed = NomineeDisplayUtils.createNominationEmbed(
       name,
-      username,
+      interaction.user.username || interaction.user.displayName || interaction.user.id,
       null, // No moderator for regular nominations
       allNominees
     );

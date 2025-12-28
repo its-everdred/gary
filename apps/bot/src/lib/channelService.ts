@@ -250,11 +250,8 @@ export class ChannelManagementService {
   private async sendDiscussionStartMessage(channel: TextChannel, nominee: Nominee): Promise<void> {
     try {
 
-      // Try to find the nominator by username to ping them (using cached members only)
-      let nominatorMember = channel.guild.members.cache.find(member => 
-        member.user.username === nominee.nominator || 
-        member.displayName === nominee.nominator
-      );
+      // Try to find the nominator by user ID to ping them (using cached members only)
+      let nominatorMember = channel.guild.members.cache.get(nominee.nominator);
 
       // If not found in cache, try a limited fetch with timeout
       if (!nominatorMember) {
@@ -267,17 +264,14 @@ export class ChannelManagementService {
           ]);
           
           // Try to find the nominator again after fetch
-          nominatorMember = channel.guild.members.cache.find(member => 
-            member.user.username === nominee.nominator || 
-            member.displayName === nominee.nominator
-          );
+          nominatorMember = channel.guild.members.cache.get(nominee.nominator);
         } catch (fetchError) {
           // Failed to fetch guild members for nominator lookup, proceeding without ping
         }
       }
       
-      const nominatorMention = nominatorMember ? nominatorMember.toString() : nominee.nominator;
-      const nominatorDisplay = nominee.nominator || 'Unknown user';
+      const nominatorMention = nominatorMember ? nominatorMember.toString() : `<@${nominee.nominator}>`;
+      const nominatorDisplay = nominatorMember ? (nominatorMember.displayName || nominatorMember.user.username) : nominee.nominator;
       
       const embed = {
         title: `📋 Discussion: ${nominee.name}`,

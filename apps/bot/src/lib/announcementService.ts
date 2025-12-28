@@ -64,7 +64,7 @@ export class AnnouncementService {
         color: 0x00ff00,
         timestamp: new Date().toISOString(),
         footer: {
-          text: 'Governance • All members are encouraged to vote'
+          text: 'All members are encouraged to vote'
         }
       };
 
