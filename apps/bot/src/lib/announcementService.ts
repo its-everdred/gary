@@ -6,6 +6,7 @@ import { NomineeStateManager } from './nomineeService.js';
 import { NomineeDisplayUtils } from './nomineeDisplayUtils.js';
 import { ChannelFinderService } from './channelFinderService.js';
 import { prisma } from './db.js';
+import { ConfigService } from './configService.js';
 
 const logger = pino();
 
@@ -61,18 +62,6 @@ export class AnnouncementService {
       const embed = {
         title: '🗳️ New Vote Started',
         description,
-        fields: [
-          {
-            name: '⏱️ Duration',
-            value: NomineeDisplayUtils.formatDuration(NOMINATION_CONFIG.VOTE_DURATION_MINUTES),
-            inline: true
-          },
-          {
-            name: '📊 Requirements',
-            value: `• 40% member participation (quorum)\n• ${NOMINATION_CONFIG.VOTE_PASS_PERCENT}% approval threshold`,
-            inline: true
-          }
-        ],
         color: 0x00ff00,
         timestamp: new Date().toISOString(),
         footer: {
@@ -136,6 +125,11 @@ export class AnnouncementService {
         title: '💬 New Discussion Started',
         description: `Discussion period has begun for **${nominee.name}**'s nomination in ${discussionChannelMention}.`,
         fields: [
+          {
+            name: '👤 Nominated by',
+            value: nominee.nominator || 'Unknown user',
+            inline: true
+          },
           {
             name: '⏱️ Duration',
             value: NomineeDisplayUtils.formatDuration(NOMINATION_CONFIG.DISCUSSION_DURATION_MINUTES),
@@ -218,7 +212,7 @@ export class AnnouncementService {
           },
           {
             name: '📋 Requirements Met',
-            value: `Quorum (40%): ${quorumMet ? '✅' : '❌'}\nApproval (${NOMINATION_CONFIG.VOTE_PASS_PERCENT}%): ${yesPercentage >= NOMINATION_CONFIG.VOTE_PASS_PERCENT ? '✅' : '❌'}`,
+            value: `Quorum (${Math.round(ConfigService.getVoteQuorumPercent() * 100)}%): ${quorumMet ? '✅' : '❌'}\nApproval (${NOMINATION_CONFIG.VOTE_PASS_PERCENT}%): ${yesPercentage >= NOMINATION_CONFIG.VOTE_PASS_PERCENT ? '✅' : '❌'}`,
             inline: false
           }
         ],

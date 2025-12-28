@@ -6,6 +6,7 @@ import type { Nominee } from '@prisma/client';
 import { NOMINATION_CONFIG } from './constants.js';
 import { NomineeDisplayUtils } from './nomineeDisplayUtils.js';
 import { DISCORD_CONSTANTS } from './discordConstants.js';
+import { ConfigService } from './configService.js';
 
 const logger = pino();
 
@@ -99,7 +100,7 @@ export class ChannelManagementService {
 
       // Get member count using guild.memberCount (doesn't require GuildMembers intent)
       const memberCount = guild.memberCount || 1;
-      const requiredQuorum = Math.ceil(memberCount * NOMINATION_CONFIG.VOTE_QUORUM_THRESHOLD);
+      const requiredQuorum = Math.ceil(memberCount * ConfigService.getVoteQuorumPercent());
       
       // Quorum calculated
 
@@ -357,7 +358,7 @@ export class ChannelManagementService {
           },
           {
             name: '📊 Quorum Required',
-            value: `${requiredQuorum} vote minimum (40%)`,
+            value: `${requiredQuorum} vote minimum (${Math.round(ConfigService.getVoteQuorumPercent() * 100)}%)`,
             inline: true
           },
           {
