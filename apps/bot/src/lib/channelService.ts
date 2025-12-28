@@ -395,7 +395,7 @@ export class ChannelManagementService {
         description: `Voting period has begun for nominee **${nominee.name}**.`,
         fields: [
           {
-            name: "⏰ Vote",
+            name: "⏰ Duration",
             value: NomineeDisplayUtils.formatDuration(
               NOMINATION_CONFIG.VOTE_DURATION_MINUTES
             ),

@@ -56,7 +56,7 @@ The bot integrates with [EasyPoll](https://easypoll.bot) for anonymous voting in
    - ✅ `View Channels` - See channels in the server
    - ✅ `Send Messages` - Post announcements and results
    - ✅ `Manage Channels` - Create discussion/vote channels
-   - ✅ `Read Message History` - Read EasyPoll messages for vote parsing
+   - ✅ `Read Message History` - Only reads EasyPoll messages for vote parsing
    - Total permissions value: 2064 (or use Administrator for all permissions)
 5. Scroll down → Copy the generated URL
 6. Open URL in browser → Choose your server → Authorize
