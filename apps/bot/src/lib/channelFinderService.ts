@@ -1,30 +1,57 @@
-import type { Guild, TextChannel } from 'discord.js';
+import type { Client, Guild, TextChannel } from 'discord.js';
 import { NOMINATION_CONFIG } from './constants.js';
+import { ConfigService } from './configService.js';
 
 export class ChannelFinderService {
+  private static client: Client | null = null;
+  
+  /**
+   * Initialize the service with a client instance
+   */
+  static initialize(client: Client): void {
+    this.client = client;
+  }
+  
+  /**
+   * Get the configured guild
+   */
+  private static async getGuild(): Promise<Guild | null> {
+    if (!this.client) return null;
+    
+    try {
+      const guildId = ConfigService.getGuildId();
+      return await this.client.guilds.fetch(guildId);
+    } catch {
+      return null;
+    }
+  }
+  
   /**
    * Abstract function to find a channel by its ID
    */
-  private static async findChannel(guild: Guild, channelId: string | undefined): Promise<TextChannel | null> {
+  private static async findChannel(channelId: string | undefined): Promise<TextChannel | null> {
     if (!channelId) return null;
+    
+    const guild = await this.getGuild();
+    if (!guild) return null;
     
     const channel = guild.channels.cache.get(channelId);
     return channel?.isTextBased() ? channel as TextChannel : null;
   }
 
-  static async findGovernanceChannel(guild: Guild): Promise<TextChannel | null> {
-    return this.findChannel(guild, NOMINATION_CONFIG.CHANNELS.GA_GOVERNANCE);
+  static async governance(): Promise<TextChannel | null> {
+    return this.findChannel(NOMINATION_CONFIG.CHANNELS.GA_GOVERNANCE);
   }
 
-  static async findGeneralChannel(guild: Guild): Promise<TextChannel | null> {
-    return this.findChannel(guild, NOMINATION_CONFIG.CHANNELS.GENERAL);
+  static async general(): Promise<TextChannel | null> {
+    return this.findChannel(NOMINATION_CONFIG.CHANNELS.GENERAL);
   }
 
-  static async findModCommsChannel(guild: Guild): Promise<TextChannel | null> {
-    return this.findChannel(guild, NOMINATION_CONFIG.CHANNELS.MOD_COMMS);
+  static async modComms(): Promise<TextChannel | null> {
+    return this.findChannel(NOMINATION_CONFIG.CHANNELS.MOD_COMMS);
   }
 
-  static async findModWarnChannel(guild: Guild): Promise<TextChannel | null> {
-    return this.findChannel(guild, NOMINATION_CONFIG.CHANNELS.MOD_WARN);
+  static async modWarn(): Promise<TextChannel | null> {
+    return this.findChannel(NOMINATION_CONFIG.CHANNELS.MOD_WARN);
   }
 }

@@ -116,8 +116,7 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
       );
 
       try {
-        const guild = await interaction.client.guilds.fetch(guildId);
-        const governanceChannel = await ChannelFinderService.findGovernanceChannel(guild);
+        const governanceChannel = await ChannelFinderService.governance();
         if (governanceChannel) {
           await governanceChannel.send({ embeds: [nominationEmbed] });
         } else {
@@ -177,8 +176,7 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
     );
 
     try {
-      const guild = await interaction.client.guilds.fetch(guildId);
-      const governanceChannel = await ChannelFinderService.findGovernanceChannel(guild);
+      const governanceChannel = await ChannelFinderService.governance();
       if (governanceChannel) {
         await governanceChannel.send({ embeds: [nominationEmbed] });
       } else {

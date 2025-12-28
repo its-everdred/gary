@@ -19,9 +19,9 @@ mock.module('../lib/db.js', () => ({
 // Mock the channel finder service
 mock.module('../lib/channelFinderService.js', () => ({
   ChannelFinderService: {
-    findGovernanceChannel: mock(),
-    findGeneralChannel: mock(),
-    findModCommsChannel: mock(),
+    governance: mock(),
+    general: mock(),
+    modComms: mock(),
   },
 }));
 
@@ -79,9 +79,9 @@ describe('Announcement Message Cleanup', () => {
     jobScheduler = NominationJobScheduler.getInstance(mockClient);
 
     // Setup channel finder mocks
-    (ChannelFinderService.findGovernanceChannel as any).mockResolvedValue(mockGovernanceChannel);
-    (ChannelFinderService.findGeneralChannel as any).mockResolvedValue(mockGeneralChannel);
-    (ChannelFinderService.findModCommsChannel as any).mockResolvedValue(null);
+    (ChannelFinderService.governance as any).mockResolvedValue(mockGovernanceChannel);
+    (ChannelFinderService.general as any).mockResolvedValue(mockGeneralChannel);
+    (ChannelFinderService.modComms as any).mockResolvedValue(null);
   });
 
   afterEach(() => {

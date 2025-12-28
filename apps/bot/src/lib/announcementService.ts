@@ -47,8 +47,7 @@ export class AnnouncementService {
    */
   async announceVoteStart(nominee: Nominee, voteChannelId: string, pollUrl?: string): Promise<boolean> {
     try {
-      const guild = await this.client.guilds.fetch(nominee.guildId);
-      const governanceChannel = await ChannelFinderService.findGovernanceChannel(guild);
+      const governanceChannel = await ChannelFinderService.governance();
       
       if (!governanceChannel) {
         return false;
@@ -77,7 +76,7 @@ export class AnnouncementService {
 
       // Also announce vote start in general channel
       try {
-        const generalChannel = await ChannelFinderService.findGeneralChannel(guild);
+        const generalChannel = await ChannelFinderService.general();
         if (generalChannel) {
           const generalMessage = await generalChannel.send({
             embeds: [embed]
@@ -112,7 +111,7 @@ export class AnnouncementService {
   async announceDiscussionStart(nominee: Nominee, discussionChannelId: string): Promise<boolean> {
     try {
       const guild = await this.client.guilds.fetch(nominee.guildId);
-      const governanceChannel = await ChannelFinderService.findGovernanceChannel(guild);
+      const governanceChannel = await ChannelFinderService.governance();
       
       if (!governanceChannel) {
         return false;
@@ -172,8 +171,7 @@ export class AnnouncementService {
     quorumMet: boolean
   ): Promise<boolean> {
     try {
-      const guild = await this.client.guilds.fetch(nominee.guildId);
-      const generalChannel = await ChannelFinderService.findGeneralChannel(guild);
+      const generalChannel = await ChannelFinderService.general();
       
       if (!generalChannel) {
         return false;
@@ -258,8 +256,7 @@ export class AnnouncementService {
     quorumMet: boolean
   ): Promise<void> {
     try {
-      const guild = await this.client.guilds.fetch(nominee.guildId);
-      const governanceChannel = await ChannelFinderService.findGovernanceChannel(guild);
+      const governanceChannel = await ChannelFinderService.governance();
       
       if (!governanceChannel) {
         return;
@@ -321,8 +318,7 @@ export class AnnouncementService {
    */
   async announceVoteTimeExpired(nominee: Nominee): Promise<boolean> {
     try {
-      const guild = await this.client.guilds.fetch(nominee.guildId);
-      const generalChannel = await ChannelFinderService.findGeneralChannel(guild);
+      const generalChannel = await ChannelFinderService.general();
       
       if (!generalChannel) {
         return false;

@@ -407,15 +407,14 @@ export class VoteResultService {
    * Posts vote results to the specified channels (governance, general, and mod-comms)
    */
   async postVoteResults(nominee: Nominee, voteResults: VoteResults): Promise<void> {
-    const guild = await this.client.guilds.fetch(nominee.guildId);
     const resultEmbed = this.createVoteResultsEmbed(nominee, voteResults);
     const messageIds: string[] = [];
     
     // Define channels to post to
     const channelConfigs = [
-      { name: 'governance', finder: () => ChannelFinderService.findGovernanceChannel(guild) },
-      { name: 'general', finder: () => ChannelFinderService.findGeneralChannel(guild) },
-      { name: 'mod-comms', finder: () => ChannelFinderService.findModCommsChannel(guild) }
+      { name: 'governance', finder: () => ChannelFinderService.governance() },
+      { name: 'general', finder: () => ChannelFinderService.general() },
+      { name: 'mod-comms', finder: () => ChannelFinderService.modComms() }
     ];
     
     // Post to all configured channels

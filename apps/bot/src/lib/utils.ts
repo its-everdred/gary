@@ -1,7 +1,9 @@
-import { Client, Guild, TextChannel } from 'discord.js';
+import { Client, Guild } from 'discord.js';
 import { createHmac } from 'crypto';
 import pino from 'pino';
 import { prisma } from './db.js';
+import { ChannelFinderService } from './channelFinderService.js';
+import { ConfigService } from './configService.js';
 
 const logger = pino();
 
@@ -14,7 +16,8 @@ export function hmac(userId: string, salt: string): string {
 
 // Guild utilities
 export async function getEligibleCount(client: Client): Promise<number> {
-  const guild = await client.guilds.fetch(process.env.GUILD_ID!);
+  const guildId = ConfigService.getGuildId();
+  const guild = await client.guilds.fetch(guildId);
   return guild.memberCount || 1;
 }
 
@@ -65,12 +68,10 @@ export async function sendToModChannel(
   message: string
 ): Promise<void> {
   try {
-    const channel = (await client.channels.fetch(
-      process.env.MOD_WARN_CHANNEL_ID!
-    )) as TextChannel;
+    const channel = await ChannelFinderService.modWarn();
     
-    if (!channel || !channel.isTextBased()) {
-      logger.error('Mod channel not found or not text-based');
+    if (!channel) {
+      logger.error('Mod warn channel not found');
       return;
     }
 

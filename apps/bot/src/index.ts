@@ -5,6 +5,7 @@ import { unwarnCommand, unwarnHandler } from './commands/unwarn.js';
 import { nominateCommand, nominateHandler } from './commands/nominate/index.js';
 import { modCommand, modHandler } from './commands/mod.js';
 import { NominationJobScheduler } from './lib/jobScheduler.js';
+import { ChannelFinderService } from './lib/channelFinderService.js';
 
 const logger = pino({
   level: process.env.LOG_LEVEL || 'info',
@@ -50,6 +51,9 @@ client.on('clientReady', async () => {
     }, 'Failed to register commands');
   }
 
+  // Initialize ChannelFinderService
+  ChannelFinderService.initialize(client);
+  
   // Start nomination job scheduler
   try {
     jobScheduler = NominationJobScheduler.getInstance(client);

@@ -243,7 +243,7 @@ export class NominationJobScheduler implements JobScheduler {
           // Delete bot tracking messages (mod-comm instructions)
           if (nominee.botMessageIds) {
             try {
-              const modCommsChannel = await ChannelFinderService.findModCommsChannel(guild);
+              const modCommsChannel = await ChannelFinderService.modComms();
               if (modCommsChannel) {
                 const messageIds = nominee.botMessageIds.split(',');
                 for (const messageId of messageIds) {
@@ -512,9 +512,8 @@ export class NominationJobScheduler implements JobScheduler {
     try {
       if (!nominee.announcementMessageIds) return;
 
-      const guild = await this.client.guilds.fetch(nominee.guildId);
-      const governanceChannel = await ChannelFinderService.findGovernanceChannel(guild);
-      const generalChannel = await ChannelFinderService.findGeneralChannel(guild);
+      const governanceChannel = await ChannelFinderService.governance();
+      const generalChannel = await ChannelFinderService.general();
 
       const messageIds = nominee.announcementMessageIds.split(',').filter(Boolean);
 
@@ -564,7 +563,7 @@ export class NominationJobScheduler implements JobScheduler {
   private async sendCleanupInstructions(nominee: Nominee): Promise<void> {
     try {
       const guild = await this.client.guilds.fetch(nominee.guildId);
-      const modCommsChannel = await ChannelFinderService.findModCommsChannel(guild);
+      const modCommsChannel = await ChannelFinderService.modComms();
       
       if (!modCommsChannel) return;
       
