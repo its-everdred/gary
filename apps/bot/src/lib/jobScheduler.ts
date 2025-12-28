@@ -289,6 +289,7 @@ export class NominationJobScheduler implements JobScheduler {
     );
 
     if (result.success) {
+      logger.info(`Discussion started: ${nominee.name}`);
       
       // Create discussion channel
       const channelResult = await this.channelService.createDiscussionChannel(result.nominee);
@@ -331,6 +332,7 @@ export class NominationJobScheduler implements JobScheduler {
     );
 
     if (result.success) {
+      logger.info(`Vote started: ${nominee.name}`);
       
       // Create vote channel
       const channelResult = await this.channelService.createVoteChannel(result.nominee);
@@ -364,6 +366,7 @@ export class NominationJobScheduler implements JobScheduler {
     );
 
     if (result.success) {
+      logger.info(`Vote completed: ${nominee.name}${voteResults ? (voteResults.passed ? ' - PASSED' : ' - FAILED') : ''}`);
       
       // Post detailed results to both vote and governance channels if we have vote results
       if (voteResults) {
@@ -408,6 +411,8 @@ export class NominationJobScheduler implements JobScheduler {
     );
 
     if (result.success) {
+      logger.info(`Nomination completed: ${nominee.name}`);
+      
       // Cleanup: Delete discussion and vote channels
       try {
         const channelService = new ChannelManagementService(this.client);

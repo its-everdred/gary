@@ -10,6 +10,9 @@ import { ChannelFinderService } from '../../lib/channelFinderService.js';
 import { NOMINATION_CONFIG } from '../../lib/constants.js';
 import { ConfigService } from '../../lib/configService.js';
 import { DISCORD_CONSTANTS } from '../../lib/discordConstants.js';
+import pino from 'pino';
+
+const logger = pino();
 
 async function calculateNomineeSchedule(guildId: string): Promise<{ discussionStart: Date; voteStart: Date; certifyStart: Date }> {
   // Get all active nominees to determine queue position
@@ -103,6 +106,8 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
         }
       });
 
+      logger.info(`Nomination created: ${name} nominated by ${nominator.username} (via moderator)`);;
+
       // Get all nominees for the queue display
       const nominees = await NomineeDisplayUtils.getNomineesInQueueOrder(guildId);
 
@@ -162,6 +167,8 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
         certifyStart: schedule.certifyStart
       }
     });
+
+    logger.info(`Nomination added: ${name} by ${interaction.user.username}`);
 
     // Get all nominees for the queue display
     const allNominees = await NomineeDisplayUtils.getNomineesInQueueOrder(guildId);

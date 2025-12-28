@@ -163,7 +163,6 @@ export class ChannelManagementService {
       await this.sendVoteStartMessage(
         channel,
         nominee,
-        memberCount,
         requiredQuorum
       );
 
@@ -370,7 +369,6 @@ export class ChannelManagementService {
   private async sendVoteStartMessage(
     channel: TextChannel,
     nominee: Nominee,
-    memberCount: number,
     requiredQuorum: number
   ): Promise<void> {
     try {
@@ -405,7 +403,7 @@ export class ChannelManagementService {
             name: "📊 Quorum",
             value: `${requiredQuorum} vote minimum (${Math.round(
               ConfigService.getVoteQuorumPercent() * 100
-            )}%)`,
+            )}% of ${memberCount} members)`,
             inline: true,
           },
           {
