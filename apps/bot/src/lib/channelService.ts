@@ -114,30 +114,12 @@ export class ChannelManagementService {
 
       const channelName = this.generateVoteChannelName(nominee.name);
 
-      // Create the channel with restricted permissions
+      // Create the channel inheriting category permissions
       const createOptions = {
         name: channelName,
         type: DJSChannelType.GuildText,
         topic: `Vote for nominee: ${nominee.name}`,
         reason: `Vote channel for nominee ${nominee.name}`,
-        permissionOverwrites: [
-          {
-            id: guild.roles.everyone.id,
-            deny: [PermissionFlagsBits.SendMessages],
-            allow: [
-              PermissionFlagsBits.ViewChannel,
-              PermissionFlagsBits.ReadMessageHistory,
-            ],
-          },
-          {
-            id: this.client.user!.id,
-            allow: [
-              PermissionFlagsBits.ViewChannel,
-              PermissionFlagsBits.SendMessages,
-              PermissionFlagsBits.ReadMessageHistory,
-            ],
-          },
-        ],
       } as any;
 
       // Add parent category if configured
@@ -159,32 +141,22 @@ export class ChannelManagementService {
         data: { voteChannelId: channel.id },
       });
 
-      // Add EasyPoll permissions after channel creation
+      // Restrict @everyone from sending messages after channel inherits category permissions
       try {
-        const easyPollId = DISCORD_CONSTANTS.BOT_IDS.EASYPOLL;
-        
-        // Check if EasyPoll is in the guild
-        const easyPollMember = guild.members.cache.get(easyPollId) || 
-                               await guild.members.fetch(easyPollId).catch(() => null);
-        
-        if (easyPollMember) {
-          await channel.permissionOverwrites.edit(easyPollId, {
-            ViewChannel: true,
-            SendMessages: true,
-            EmbedLinks: true,
-            AddReactions: true
-          });
-          logger.info(`EasyPoll permissions added to vote channel: ${nominee.name}`);
-        } else {
-          logger.info(`EasyPoll not found in guild, skipping permissions for: ${nominee.name}`);
-        }
+        await channel.permissionOverwrites.edit(guild.roles.everyone.id, {
+          SendMessages: false,
+          ViewChannel: true,
+          ReadMessageHistory: true
+        });
+        logger.info(`Restricted @everyone from sending messages in vote channel: ${nominee.name}`);
       } catch (error) {
-        logger.warn({
+        logger.error({
           error,
-          nomineeName: nominee.name,
-          channelId: channel.id
-        }, 'Failed to add EasyPoll permissions - channel created successfully without them');
+          channelId: channel.id,
+          nomineeName: nominee.name
+        }, 'Failed to restrict @everyone permissions');
       }
+
 
       // Send initial vote message with calculated quorum
       await this.sendVoteStartMessage(
