@@ -581,7 +581,7 @@ export class NominationJobScheduler implements JobScheduler {
       if (passed) {
         const embed = {
           title: '🧹 Nomination Cleanup Required',
-          description: `${moderatorsMention}, nomination channels have been deleted for **${nominee.name}**.`,
+          description: `Nomination channels have been deleted for **${nominee.name}**.`,
           fields: [
             {
               name: '1️⃣ Clean up remaining discussion',
@@ -607,6 +607,7 @@ export class NominationJobScheduler implements JobScheduler {
         };
         
         await modCommsChannel.send({
+          content: moderatorsMention,
           embeds: [embed]
         });
       }
