@@ -135,6 +135,7 @@ export class ChannelManagementService {
               PermissionFlagsBits.ViewChannel,
               PermissionFlagsBits.SendMessages,
               PermissionFlagsBits.ReadMessageHistory,
+              PermissionFlagsBits.ManageRoles,
             ],
           },
         ],
