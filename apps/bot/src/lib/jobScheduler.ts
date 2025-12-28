@@ -11,6 +11,7 @@ import { prisma } from './db.js';
 import { NOMINATION_CONFIG } from './constants.js';
 import { ChannelFinderService } from './channelFinderService.js';
 import { DISCORD_CONSTANTS } from './discordConstants.js';
+import { NomineeDisplayUtils } from './nomineeDisplayUtils.js';
 
 const logger = pino();
 
@@ -578,6 +579,7 @@ export class NominationJobScheduler implements JobScheduler {
       
       // Only post cleanup instructions if the nominee passed
       if (passed) {
+        const nominatorName = await NomineeDisplayUtils.resolveNominatorName(nominee);
         const embed = {
           title: '🧹 Nomination Cleanup Required',
           description: `Nomination channels have been deleted for **${nominee.name}**.`,
@@ -589,7 +591,7 @@ export class NominationJobScheduler implements JobScheduler {
             },
             {
               name: '2️⃣ Send the invite link',
-              value: `Send invite link to **${nominee.nominator}**\n• Invite to Server → Edit invite link → Max number of uses → 1 use`,
+              value: `Send invite link to **${nominatorName}**\n• Invite to Server → Edit invite link → Max number of uses → 1 use`,
               inline: false
             },
             {

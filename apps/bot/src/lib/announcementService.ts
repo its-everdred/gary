@@ -120,13 +120,14 @@ export class AnnouncementService {
       const discussionChannel = guild.channels.cache.get(discussionChannelId);
       const discussionChannelMention = discussionChannel ? `<#${discussionChannelId}>` : '#discussion-channel';
 
+      const nominatorName = await NomineeDisplayUtils.resolveNominatorName(nominee);
       const embed = {
         title: '💬 New Discussion Started',
         description: `Discussion period has begun for **${nominee.name}**'s nomination in ${discussionChannelMention}.`,
         fields: [
           {
             name: '👤 Nominated by',
-            value: nominee.nominator || 'Unknown user',
+            value: nominatorName,
             inline: true
           },
           {

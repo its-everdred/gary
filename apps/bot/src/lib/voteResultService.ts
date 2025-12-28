@@ -351,9 +351,10 @@ export class VoteResultService {
   /**
    * Gets the appropriate description text based on vote results
    */
-  private getVoteResultDescription(nominee: Nominee, voteResults: VoteResults): string {
+  private async getVoteResultDescription(nominee: Nominee, voteResults: VoteResults): Promise<string> {
     if (voteResults.passed) {
-      return `🗳️ ${nominee.name} met quorum and succeeded! ${nominee.nominator} will receive an invite to send them in ${NOMINATION_CONFIG.CERTIFY_PERIOD_TEXT}.`;
+      const nominatorName = await NomineeDisplayUtils.resolveNominatorName(nominee);
+      return `🗳️ ${nominee.name} met quorum and succeeded! ${nominatorName} will receive an invite to send them in ${NOMINATION_CONFIG.CERTIFY_PERIOD_TEXT}.`;
     }
     
     // Failed - determine the reason
@@ -372,10 +373,11 @@ export class VoteResultService {
   /**
    * Creates the vote results embed (shared between vote and governance channels)
    */
-  private createVoteResultsEmbed(nominee: Nominee, voteResults: VoteResults): DiscordEmbed {
+  private async createVoteResultsEmbed(nominee: Nominee, voteResults: VoteResults): Promise<DiscordEmbed> {
+    const description = await this.getVoteResultDescription(nominee, voteResults);
     return {
       title: voteResults.passed ? '✅ Vote PASSED' : '❌ Vote FAILED',
-      description: this.getVoteResultDescription(nominee, voteResults),
+      description,
       fields: [
         {
           name: '📊 Vote Breakdown',
@@ -407,7 +409,7 @@ export class VoteResultService {
    * Posts vote results to the specified channels (governance, general, and mod-comms)
    */
   async postVoteResults(nominee: Nominee, voteResults: VoteResults): Promise<void> {
-    const resultEmbed = this.createVoteResultsEmbed(nominee, voteResults);
+    const resultEmbed = await this.createVoteResultsEmbed(nominee, voteResults);
     const messageIds: string[] = [];
     
     // Define channels to post to

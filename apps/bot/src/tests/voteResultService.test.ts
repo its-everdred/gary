@@ -254,9 +254,9 @@ describe('VoteResultService', () => {
       // Mock ChannelFinderService
       mock.module('../lib/channelFinderService.js', () => ({
         ChannelFinderService: {
-          findGovernanceChannel: mock(() => Promise.resolve(mockGovernanceChannel)),
-          findGeneralChannel: mock(() => Promise.resolve(mockGeneralChannel)),
-          findModCommsChannel: mock(() => Promise.resolve(mockModCommsChannel)),
+          governance: mock(() => Promise.resolve(mockGovernanceChannel)),
+          general: mock(() => Promise.resolve(mockGeneralChannel)),
+          modComms: mock(() => Promise.resolve(mockModCommsChannel)),
         }
       }));
 
@@ -296,9 +296,9 @@ describe('VoteResultService', () => {
       // Mock ChannelFinderService
       mock.module('../lib/channelFinderService.js', () => ({
         ChannelFinderService: {
-          findGovernanceChannel: mock(() => Promise.resolve(mockGovernanceChannel)),
-          findGeneralChannel: mock(() => Promise.resolve(null)), // No general channel
-          findModCommsChannel: mock(() => Promise.resolve(null)), // No mod comms channel
+          governance: mock(() => Promise.resolve(mockGovernanceChannel)),
+          general: mock(() => Promise.resolve(null)), // No general channel
+          modComms: mock(() => Promise.resolve(null)), // No mod comms channel
         }
       }));
 
