@@ -32,7 +32,7 @@ export const NOMINATION_CONFIG = {
       const hours = Math.round(minutes / 60);
       return hours === 1 ? '1 hour' : `${hours} hours`;
     } else {
-      return `${minutes} minutes`;
+      return minutes === 1 ? '1 minute' : `${minutes} minutes`;
     }
   },
 
