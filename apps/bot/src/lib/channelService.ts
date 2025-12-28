@@ -190,6 +190,7 @@ export class ChannelManagementService {
       await this.sendVoteStartMessage(
         channel,
         nominee,
+        memberCount,
         requiredQuorum
       );
 
@@ -396,6 +397,7 @@ export class ChannelManagementService {
   private async sendVoteStartMessage(
     channel: TextChannel,
     nominee: Nominee,
+    memberCount: number,
     requiredQuorum: number
   ): Promise<void> {
     try {
