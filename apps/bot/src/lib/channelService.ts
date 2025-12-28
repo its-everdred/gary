@@ -159,6 +159,33 @@ export class ChannelManagementService {
         data: { voteChannelId: channel.id },
       });
 
+      // Add EasyPoll permissions after channel creation
+      try {
+        const easyPollId = DISCORD_CONSTANTS.BOT_IDS.EASYPOLL;
+        
+        // Check if EasyPoll is in the guild
+        const easyPollMember = guild.members.cache.get(easyPollId) || 
+                               await guild.members.fetch(easyPollId).catch(() => null);
+        
+        if (easyPollMember) {
+          await channel.permissionOverwrites.edit(easyPollId, {
+            ViewChannel: true,
+            SendMessages: true,
+            EmbedLinks: true,
+            AddReactions: true
+          });
+          logger.info(`EasyPoll permissions added to vote channel: ${nominee.name}`);
+        } else {
+          logger.info(`EasyPoll not found in guild, skipping permissions for: ${nominee.name}`);
+        }
+      } catch (error) {
+        logger.warn({
+          error,
+          nomineeName: nominee.name,
+          channelId: channel.id
+        }, 'Failed to add EasyPoll permissions - channel created successfully without them');
+      }
+
       // Send initial vote message with calculated quorum
       await this.sendVoteStartMessage(
         channel,
