@@ -54,4 +54,11 @@ export class ChannelFinderService {
   static async modWarn(): Promise<TextChannel | null> {
     return this.findChannel(NOMINATION_CONFIG.CHANNELS.MOD_WARN);
   }
+  
+  /**
+   * Get the guild instance for other services to use
+   */
+  static async guild() {
+    return this.getGuild();
+  }
 }

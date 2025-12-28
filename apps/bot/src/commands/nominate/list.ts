@@ -10,7 +10,7 @@ export async function handleListCommand(interaction: ChatInputCommandInteraction
     
     const nominees = await NomineeDisplayUtils.getNomineesInQueueOrder(guildId);
 
-    const queueEmbed = NomineeDisplayUtils.createQueueEmbed(nominees);
+    const queueEmbed = await NomineeDisplayUtils.createQueueEmbed(nominees);
     await interaction.reply({
       embeds: [queueEmbed],
       flags: 64 // EPHEMERAL

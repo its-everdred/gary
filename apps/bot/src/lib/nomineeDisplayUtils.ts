@@ -2,6 +2,7 @@ import type { Nominee } from '@prisma/client';
 import { NomineeState } from '@prisma/client';
 import type { DiscordEmbed } from './voteResultService.js';
 import { prisma } from './db.js';
+import { ChannelFinderService } from './channelFinderService.js';
 
 export interface NomineeDisplayOptions {
   showHeader?: boolean;
@@ -80,10 +81,37 @@ export class NomineeDisplayUtils {
   }
 
   /**
+   * Resolves nominator display name from user ID or returns original value
+   */
+  static async resolveNominatorName(nominee: Nominee): Promise<string> {
+    if (!nominee.nominator) {
+      return 'Unknown';
+    }
+    
+    // Check if nominator is a user ID (numeric string)
+    if (/^\d+$/.test(nominee.nominator)) {
+      try {
+        const guild = await ChannelFinderService.guild();
+        if (guild) {
+          const member = guild.members.cache.get(nominee.nominator);
+          if (member) {
+            return member.displayName || member.user.username;
+          }
+        }
+      } catch {
+        // Fall back to original value if guild access fails
+      }
+    }
+    
+    // Return original value (either username or user ID as fallback)
+    return nominee.nominator;
+  }
+
+  /**
    * Formats a single nominee entry for display
    */
-  static formatNomineeEntry(nominee: Nominee, position?: number): string {
-    const nominator = nominee.nominator; // Don't ping - just show username
+  static async formatNomineeEntry(nominee: Nominee, position?: number): Promise<string> {
+    const nominator = await this.resolveNominatorName(nominee);
     const positionPrefix = position ? `**${position}.** ` : '';
     
     if (nominee.state === NomineeState.VOTE && nominee.certifyStart) {
@@ -105,7 +133,7 @@ export class NomineeDisplayUtils {
   /**
    * Formats a list of nominees for display
    */
-  static formatNomineeList(nominees: Nominee[], options: NomineeDisplayOptions = {}): string {
+  static async formatNomineeList(nominees: Nominee[], options: NomineeDisplayOptions = {}): Promise<string> {
     const {
       showHeader = true,
       headerText = '**Current Nominations:**',
@@ -122,10 +150,12 @@ export class NomineeDisplayUtils {
       lines.push(headerText);
     }
     
-    nominees.forEach((nominee, index) => {
+    for (let index = 0; index < nominees.length; index++) {
+      const nominee = nominees[index];
       const position = includePosition ? index + 1 : undefined;
-      lines.push(this.formatNomineeEntry(nominee, position));
-    });
+      const entry = await this.formatNomineeEntry(nominee, position);
+      lines.push(entry);
+    }
     
     return lines.join('\n');
   }
@@ -133,17 +163,19 @@ export class NomineeDisplayUtils {
   /**
    * Formats nominee queue for governance announcements
    */
-  static formatNominationQueue(nominees: Nominee[]): string {
+  static async formatNominationQueue(nominees: Nominee[]): Promise<string> {
     if (nominees.length === 0) {
       return '\n\n**Current Queue:** Empty';
     }
 
     const queueLines = ['\n\n**Current Queue:**'];
     
-    nominees.forEach((nominee, index) => {
+    for (let index = 0; index < nominees.length; index++) {
+      const nominee = nominees[index];
       const position = index + 1;
-      queueLines.push(this.formatNomineeEntry(nominee, position));
-    });
+      const entry = await this.formatNomineeEntry(nominee, position);
+      queueLines.push(entry);
+    }
     
     return queueLines.join('\n');
   }
@@ -151,23 +183,28 @@ export class NomineeDisplayUtils {
   /**
    * Creates the formatted queue display for embeds
    */
-  static formatQueueForEmbed(nominees: Nominee[]): string {
+  static async formatQueueForEmbed(nominees: Nominee[]): Promise<string> {
     if (nominees.length === 0) {
       return 'No nominees in queue';
     }
 
-    return nominees.map((nominee, index) => {
+    const entries = [];
+    for (let index = 0; index < nominees.length; index++) {
+      const nominee = nominees[index];
       const position = index + 1;
       const status = this.getStatusDisplay(nominee);
+      const nominator = await this.resolveNominatorName(nominee);
       
-      return `\`${position.toString().padEnd(2)}\` **${nominee.name}** *by ${nominee.nominator}* • ${status}`;
-    }).join('\n');
+      entries.push(`\`${position.toString().padEnd(2)}\` **${nominee.name}** *by ${nominator}* • ${status}`);
+    }
+    
+    return entries.join('\n');
   }
 
   /**
    * Creates an embed for nomination announcements with queue
    */
-  static createNominationEmbed(nomineeName: string, nominatorName: string, moderatorName: string | null, nominees: Nominee[]): DiscordEmbed {
+  static async createNominationEmbed(nomineeName: string, nominatorName: string, moderatorName: string | null, nominees: Nominee[]): Promise<DiscordEmbed> {
     const embed = {
       title: '📋 New Nomination',
       description: moderatorName 
@@ -182,9 +219,10 @@ export class NomineeDisplayUtils {
     };
 
     if (nominees.length > 0) {
+      const queueValue = await this.formatQueueForEmbed(nominees);
       embed.fields.push({
         name: '📊 Current Queue',
-        value: this.formatQueueForEmbed(nominees),
+        value: queueValue,
         inline: false
       });
     }
@@ -195,7 +233,7 @@ export class NomineeDisplayUtils {
   /**
    * Creates an embed for displaying the current nomination queue
    */
-  static createQueueEmbed(nominees: Nominee[]): DiscordEmbed {
+  static async createQueueEmbed(nominees: Nominee[]): Promise<DiscordEmbed> {
     const embed = {
       title: '📊 Current Nominations',
       color: 0x3498db,
@@ -206,9 +244,10 @@ export class NomineeDisplayUtils {
       }
     };
 
+    const queueValue = await this.formatQueueForEmbed(nominees);
     embed.fields.push({
       name: nominees.length === 0 ? 'Queue Status' : `Queue (${nominees.length} nominee${nominees.length === 1 ? '' : 's'})`,
-      value: this.formatQueueForEmbed(nominees),
+      value: queueValue,
       inline: false
     });
 

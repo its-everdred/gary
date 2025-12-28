@@ -107,7 +107,7 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
       const nominees = await NomineeDisplayUtils.getNomineesInQueueOrder(guildId);
 
       // Create embed for governance channel
-      const nominationEmbed = NomineeDisplayUtils.createNominationEmbed(
+      const nominationEmbed = await NomineeDisplayUtils.createNominationEmbed(
         name,
         nominator.username || nominator.displayName || nominator.id,
         interaction.user.username || interaction.user.displayName || interaction.user.id,
@@ -167,7 +167,7 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
     const allNominees = await NomineeDisplayUtils.getNomineesInQueueOrder(guildId);
 
     // Create embed for governance channel
-    const nominationEmbed = NomineeDisplayUtils.createNominationEmbed(
+    const nominationEmbed = await NomineeDisplayUtils.createNominationEmbed(
       name,
       interaction.user.username || interaction.user.displayName || interaction.user.id,
       null, // No moderator for regular nominations
