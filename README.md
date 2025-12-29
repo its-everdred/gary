@@ -4,10 +4,10 @@ Minimal discord moderation assistant manager.
 
 ## Commands
 
-### Warning System
+### Flagging System
 
-- `/warn target:<@user> message:<text>` - Warn mods about a user, tracks toward kick quorum
-- `/unwarn target:<@user>` - Remove your warning about a user
+- `/flag target:<@user> message:<text>` - Flag mods about a user, tracks toward kick quorum
+- `/unflag target:<@user>` - Remove your flag about a user
 
 ### Nomination System
 
@@ -20,7 +20,7 @@ Minimal discord moderation assistant manager.
 
 ## Features
 
-- **Anonymous Warning System**: Members can warn about problematic users anonymously
+- **Anonymous Flagging System**: Members can flag problematic users anonymously
 - **Nomination System**: Automated GA membership nomination workflow with:
   - Discussion channels (24 hours)
   - Vote channels with EasyPoll integration (48 hours)

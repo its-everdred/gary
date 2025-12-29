@@ -13,54 +13,54 @@ import {
 } from '../lib/utils.js';
 import { ConfigService } from '../lib/configService.js';
 
-export const warnCommand = new SlashCommandBuilder()
-  .setName('warn')
-  .setDescription('Send an anonymous warning about a member')
+export const flagCommand = new SlashCommandBuilder()
+  .setName('flag')
+  .setDescription('Send an anonymous flag about a member')
   .addUserOption((option) =>
     option
       .setName('target')
-      .setDescription('The member to warn')
+      .setDescription('The member to flag')
       .setRequired(true)
   )
   .addStringOption((option) =>
     option
       .setName('message')
-      .setDescription('The warning message to send anonymously')
+      .setDescription('The flag message to send anonymously')
       .setRequired(true)
   )
   .toJSON();
 
 const logger = pino();
 
-function buildWarningMessage(
+function buildFlagMessage(
   targetUserId: string,
   message: string,
-  totalWarningsCount: number,
+  totalFlagsCount: number,
   eligibleCount: number
 ): string {
   const kickQuorumPercent = ConfigService.getKickQuorumPercent();
   const kickThreshold = Math.ceil(eligibleCount * kickQuorumPercent);
-  const warningsUntilKick = kickThreshold - totalWarningsCount;
+  const flagsUntilKick = kickThreshold - totalFlagsCount;
 
-  let warningMessage =
-    `⚠️ **WARN** - Anon warns <@${targetUserId}>:\n` +
+  let flagMessage =
+    `⚠️ **FLAG** - Anon flags <@${targetUserId}>:\n` +
     `"${message}"\n` +
-    `*This member has received ${totalWarningsCount} warning${
-      totalWarningsCount !== 1 ? 's' : ''
+    `*This member has received ${totalFlagsCount} flag${
+      totalFlagsCount !== 1 ? 's' : ''
     } total.*`;
 
-  if (warningsUntilKick > 0) {
-    warningMessage += ` They are ${warningsUntilKick} more warning${
-      warningsUntilKick !== 1 ? 's' : ''
+  if (flagsUntilKick > 0) {
+    flagMessage += ` They are ${flagsUntilKick} more flag${
+      flagsUntilKick !== 1 ? 's' : ''
     } away from reaching kick quorum.`;
   } else {
-    warningMessage += ' **They have reached kick quorum!**';
+    flagMessage += ' **They have reached kick quorum!**';
   }
 
-  return warningMessage;
+  return flagMessage;
 }
 
-async function processWarningAsync(
+async function processFlagAsync(
   client: Client,
   guildId: string,
   targetId: string,
@@ -70,18 +70,18 @@ async function processWarningAsync(
   try {
     await createWarning(guildId, targetId, voterHash, message);
 
-    const totalWarningsCount = await countWarnings(guildId, targetId);
+    const totalFlagsCount = await countWarnings(guildId, targetId);
 
     const eligibleCount = await getEligibleCount(client);
 
-    const warningMessage = buildWarningMessage(targetId, message, totalWarningsCount, eligibleCount);
-    await sendToModChannel(client, warningMessage);
+    const flagMessage = buildFlagMessage(targetId, message, totalFlagsCount, eligibleCount);
+    await sendToModChannel(client, flagMessage);
   } catch (error) {
-    logger.error({ error, targetId }, 'Async warning processing failed');
+    logger.error({ error, targetId }, 'Async flag processing failed');
   }
 }
 
-export async function warnHandler(interaction: ChatInputCommandInteraction) {
+export async function flagHandler(interaction: ChatInputCommandInteraction) {
   await interaction.deferReply({ flags: 64 });
 
   const target = interaction.options.getUser('target', true);
@@ -106,29 +106,29 @@ export async function warnHandler(interaction: ChatInputCommandInteraction) {
       return;
     }
 
-    // Check for existing warning
+    // Check for existing flag
     const voterHash = hmac(voterId, ConfigService.getGuildSalt());
     const hasExistingWarning = await checkExistingWarning(guildId, targetId, voterHash);
     
     if (hasExistingWarning) {
-      await interaction.editReply('You already submit a warning for this user.');
+      await interaction.editReply('You already submit a flag for this user.');
       return;
     }
 
     // Reply immediately to user
-    await interaction.editReply('Warning sent anonymously to moderators.');
+    await interaction.editReply('Flag sent anonymously to moderators.');
 
-    // Process warning asynchronously
-    processWarningAsync(interaction.client, guildId, targetId, voterHash, message);
+    // Process flag asynchronously
+    processFlagAsync(interaction.client, guildId, targetId, voterHash, message);
     
   } catch (error) {
-    logger.error({ error, command: 'warn', user: interaction.user.id }, 'Warn command error');
+    logger.error({ error, command: 'flag', user: interaction.user.id }, 'Flag command error');
 
     if (interaction.deferred) {
-      await interaction.editReply('An error occurred while sending your warning.');
+      await interaction.editReply('An error occurred while sending your flag.');
     } else {
       await interaction.reply({
-        content: 'An error occurred while sending your warning.',
+        content: 'An error occurred while sending your flag.',
         flags: 64,
       });
     }

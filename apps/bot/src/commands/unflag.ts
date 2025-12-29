@@ -10,20 +10,20 @@ import {
 } from '../lib/utils.js';
 import { ConfigService } from '../lib/configService.js';
 
-export const unwarnCommand = new SlashCommandBuilder()
-  .setName('unwarn')
-  .setDescription('Remove your warning for a member')
+export const unflagCommand = new SlashCommandBuilder()
+  .setName('unflag')
+  .setDescription('Remove your flag for a member')
   .addUserOption((option) =>
     option
       .setName('target')
-      .setDescription('The member to remove your warning from')
+      .setDescription('The member to remove your flag from')
       .setRequired(true)
   )
   .toJSON();
 
 const logger = pino();
 
-export async function unwarnHandler(interaction: ChatInputCommandInteraction) {
+export async function unflagHandler(interaction: ChatInputCommandInteraction) {
   await interaction.deferReply({ flags: 64 });
 
   const target = interaction.options.getUser('target', true);
@@ -51,9 +51,9 @@ export async function unwarnHandler(interaction: ChatInputCommandInteraction) {
       return;
     }
 
-    // Check if warning exists
+    // Check if flag exists
     const voterHash = hmac(voterId, ConfigService.getGuildSalt());
-    const existingWarning = await prisma.warn.findUnique({
+    const existingFlag = await prisma.flag.findUnique({
       where: {
         guildId_targetUserId_voterHash: {
           guildId,
@@ -63,13 +63,13 @@ export async function unwarnHandler(interaction: ChatInputCommandInteraction) {
       },
     });
 
-    if (!existingWarning) {
-      await interaction.editReply('You have not warned this user.');
+    if (!existingFlag) {
+      await interaction.editReply('You have not flagged this user.');
       return;
     }
 
-    // Delete the warning
-    await prisma.warn.delete({
+    // Delete the flag
+    await prisma.flag.delete({
       where: {
         guildId_targetUserId_voterHash: {
           guildId,
@@ -80,24 +80,24 @@ export async function unwarnHandler(interaction: ChatInputCommandInteraction) {
     });
 
     // Reply immediately to user
-    await interaction.editReply('Your warning has been removed.');
+    await interaction.editReply('Your flag has been removed.');
 
     // Send notification to mod channel
-    const unwarnMessage = `🥹 **UNWARN** - Anon removed their warning for <@${targetId}>`;
-    await sendToModChannel(interaction.client, unwarnMessage);
+    const unflagMessage = `🥹 **UNFLAG** - Anon removed their flag for <@${targetId}>`;
+    await sendToModChannel(interaction.client, unflagMessage);
   } catch (error) {
     logger.error(
-      { error, command: 'unwarn', user: interaction.user.id },
-      'Unwarn command error'
+      { error, command: 'unflag', user: interaction.user.id },
+      'Unflag command error'
     );
 
     if (interaction.deferred) {
       await interaction.editReply(
-        'An error occurred while removing your warning.'
+        'An error occurred while removing your flag.'
       );
     } else {
       await interaction.reply({
-        content: 'An error occurred while removing your warning.',
+        content: 'An error occurred while removing your flag.',
         flags: 64,
       });
     }

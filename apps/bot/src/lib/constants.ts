@@ -44,7 +44,7 @@ export const NOMINATION_CONFIG = {
   CHANNELS: {
     GA_GOVERNANCE: ConfigService.getGovernanceChannelId() || '',
     GENERAL: ConfigService.getGeneralChannelId() || '',
-    MOD_WARN: ConfigService.getModWarnChannelId() || '',
+    MOD_FLAG: ConfigService.getModFlagChannelId() || '',
     MOD_COMMS: ConfigService.getModCommsChannelId() || '',
   },
   CATEGORIES: {

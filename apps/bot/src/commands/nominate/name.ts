@@ -106,7 +106,7 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
         }
       });
 
-      logger.info(`Nomination created: ${name} nominated by ${nominator.username} (via moderator)`);;
+      logger.info(`Nomination created: ${name} nominated by ${nominator.username} (via moderator)`);
 
       // Get all nominees for the queue display
       const nominees = await NomineeDisplayUtils.getNomineesInQueueOrder(guildId);

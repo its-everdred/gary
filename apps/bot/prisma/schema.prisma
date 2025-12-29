@@ -7,7 +7,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Warn {
+model Flag {
   id           String   @id @default(cuid())
   guildId      String
   targetUserId String

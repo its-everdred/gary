@@ -1,7 +1,7 @@
 import { Client, GatewayIntentBits, REST, Routes, Partials } from 'discord.js';
 import pino from 'pino';
-import { warnCommand, warnHandler } from './commands/warn.js';
-import { unwarnCommand, unwarnHandler } from './commands/unwarn.js';
+import { flagCommand, flagHandler } from './commands/flag.js';
+import { unflagCommand, unflagHandler } from './commands/unflag.js';
 import { nominateCommand, nominateHandler } from './commands/nominate/index.js';
 import { modCommand, modHandler } from './commands/mod.js';
 import { NominationJobScheduler } from './lib/jobScheduler.js';
@@ -21,7 +21,7 @@ const client = new Client({
   partials: [Partials.Channel],
 });
 
-const commands = [warnCommand, unwarnCommand, nominateCommand, modCommand];
+const commands = [flagCommand, unflagCommand, nominateCommand, modCommand];
 
 let jobScheduler: NominationJobScheduler | null = null;
 
@@ -80,11 +80,11 @@ client.on('interactionCreate', async (interaction) => {
   
   try {
     switch (interaction.commandName) {
-      case 'warn':
-        await warnHandler(interaction);
+      case 'flag':
+        await flagHandler(interaction);
         break;
-      case 'unwarn':
-        await unwarnHandler(interaction);
+      case 'unflag':
+        await unflagHandler(interaction);
         break;
       case 'nominate':
         await nominateHandler(interaction);
