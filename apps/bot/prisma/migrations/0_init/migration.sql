@@ -38,10 +38,10 @@ CREATE TABLE "Nominee" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Warn_guildId_targetUserId_voterHash_key" ON "Warn"("guildId", "targetUserId", "voterHash");
+CREATE INDEX "Warn_guildId_targetUserId_idx" ON "Warn"("guildId", "targetUserId");
 
 -- CreateIndex
-CREATE INDEX "Warn_guildId_targetUserId_idx" ON "Warn"("guildId", "targetUserId");
+CREATE UNIQUE INDEX "Warn_guildId_targetUserId_voterHash_key" ON "Warn"("guildId", "targetUserId", "voterHash");
 
 -- CreateIndex
 CREATE INDEX "Nominee_guildId_state_idx" ON "Nominee"("guildId", "state");
@@ -54,3 +54,4 @@ CREATE INDEX "Nominee_guildId_voteStart_idx" ON "Nominee"("guildId", "voteStart"
 
 -- CreateIndex
 CREATE INDEX "Nominee_guildId_certifyStart_idx" ON "Nominee"("guildId", "certifyStart");
+
