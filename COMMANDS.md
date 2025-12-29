@@ -1,4 +1,4 @@
-# GARY Commands Reference
+# GARY
 
 ## User Commands
 
@@ -6,9 +6,10 @@
 
 - `/flag target:<@user> message:<text>` - Flag a user anonymously to moderators
 
-  - Tracks toward kick quorum
-  - Prevents duplicate flags from the same user
   - Sends anonymous notification to mod channel
+  - Tracks toward 40% kick quorum
+  - Flags do not expire
+  - Prevents duplicate flags from-to the same user
 
 - `/unflag target:<@user>` - Remove your flag for a user
   - Shows first 10 characters of original message
@@ -25,8 +26,6 @@
 - `/nominate list` - List all current nominations and their state
   - Shows ACTIVE, DISCUSSION, VOTE, CERTIFY nominees
   - Displays scheduled times for queued nominees
-
----
 
 ## Mod Commands
 
