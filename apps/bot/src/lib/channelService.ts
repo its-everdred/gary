@@ -141,14 +141,15 @@ export class ChannelManagementService {
         data: { voteChannelId: channel.id },
       });
 
-      // Restrict @everyone from sending messages after channel inherits category permissions
+      // Restrict @everyone from sending messages and adding reactions after channel inherits category permissions
       try {
         await channel.permissionOverwrites.edit(guild.roles.everyone.id, {
           SendMessages: false,
+          AddReactions: false,
           ViewChannel: true,
           ReadMessageHistory: true
         });
-        logger.info(`Restricted @everyone from sending messages in vote channel: ${nominee.name}`);
+        logger.info(`Restricted @everyone from sending messages and adding reactions in vote channel: ${nominee.name}`);
       } catch (error) {
         logger.error({
           error,
@@ -385,7 +386,7 @@ export class ChannelManagementService {
           ? `${Math.round(NOMINATION_CONFIG.VOTE_DURATION_MINUTES / 60)}h`
           : `${NOMINATION_CONFIG.VOTE_DURATION_MINUTES}m`;
 
-      const pollCommand = `/timepoll question:Should we invite ${nominee.name} to GA? time:${voteDurationFormatted} type:Anonymous (Buttons) maxchoices:1 text:Start: <t:${startTime}:F>\\nEnd: <t:${endTime}:F> answer-1:✅:Yes, Accept answer-2:❌:No, Reject`;
+      const pollCommand = `/timepoll question:Should we invite ${nominee.name} to GA? time:${voteDurationFormatted} type:Anonymous (Buttons) maxchoices:1 text:Start: \`<t:${startTime}:F>\`\\nEnd: \`<t:${endTime}:F>\` answer-1:✅:Yes, Accept answer-2:❌:No, Reject`;
 
       // Moderator role lookup removed - using direct moderators role in mod comms
 
@@ -452,7 +453,7 @@ export class ChannelManagementService {
             modCommMessages.push(msg1.id);
 
             // Send command in its own message for easy copying
-            const msg2 = await modCommsChannel.send(pollCommand);
+            const msg2 = await modCommsChannel.send(`\`\`\`\n${pollCommand}\n\`\`\``);
             modCommMessages.push(msg2.id);
 
             // Send reaction instruction
