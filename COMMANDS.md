@@ -12,7 +12,7 @@
   - Prevents duplicate flags from-to the same user
 
 - `/unflag target:<@user>` - Remove your flag for a user
-  - Shows first 10 characters of original message
+  - Shows full original message in notification
   - Notifies moderators of the unflag action
 
 ### Nomination
