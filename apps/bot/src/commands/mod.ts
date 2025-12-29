@@ -61,11 +61,11 @@ export const modCommand = new SlashCommandBuilder()
       .addSubcommand(subcommand =>
         subcommand
           .setName('discussion')
-          .setDescription('Adjust discussion period duration for current nominee')
+          .setDescription('Set discussion period duration for current nominee')
           .addNumberOption(option =>
             option
               .setName('hours')
-              .setDescription('Hours to add (positive) or subtract (negative) from discussion period')
+              .setDescription('Total hours for the discussion period (positive number)')
               .setRequired(true)
           )
       )

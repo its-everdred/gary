@@ -3,6 +3,7 @@ import { EmbedBuilder } from 'discord.js';
 import pino from 'pino';
 import { prisma } from '../../lib/db.js';
 import { NomineeState } from '@prisma/client';
+import { NomineeStateManager } from '../../lib/nomineeService.js';
 import { NOMINATION_CONFIG } from '../../lib/constants.js';
 import { TimeCalculationService } from '../../lib/timeCalculation.js';
 
@@ -12,6 +13,12 @@ export async function handleDiscussionCommand(interaction: ChatInputCommandInter
   await interaction.deferReply({ flags: 64 });
 
   const hours = interaction.options.getNumber('hours', true);
+
+  // Validate input
+  if (hours < 0) {
+    await interaction.editReply('Hours must be a positive number.');
+    return;
+  }
 
   try {
     // Find nominee currently in DISCUSSION state
@@ -32,13 +39,26 @@ export async function handleDiscussionCommand(interaction: ChatInputCommandInter
       return;
     }
 
-    // Calculate new vote start time
-    const currentVoteStart = new Date(nominee.voteStart);
-    const newVoteStart = new Date(currentVoteStart.getTime() + (hours * 60 * 60 * 1000));
+    // Calculate new vote start time based on override duration
+    const discussionStart = new Date(nominee.discussionStart);
+    const newVoteStart = new Date(discussionStart.getTime() + (hours * 60 * 60 * 1000));
+    const currentTime = new Date();
     
-    // Ensure discussion doesn't end in the past
-    if (newVoteStart <= new Date()) {
-      await interaction.editReply('Cannot adjust discussion period to end in the past.');
+    // Check if the new duration has already passed
+    if (newVoteStart <= currentTime) {
+      // Transition to VOTE state immediately
+      const transitionResult = await NomineeStateManager.transitionNominee(nominee.id, NomineeState.VOTE);
+      
+      if (transitionResult.success) {
+        await interaction.editReply(
+          `Discussion duration set to ${hours} hour${hours !== 1 ? 's' : ''}, which has already elapsed. ` +
+          `**${nominee.name}** has been transitioned to VOTE state.`
+        );
+      } else {
+        await interaction.editReply(
+          `Failed to transition nominee to VOTE state: ${transitionResult.errorMessage || 'Unknown error'}`
+        );
+      }
       return;
     }
 
@@ -53,8 +73,9 @@ export async function handleDiscussionCommand(interaction: ChatInputCommandInter
       }
     });
 
-    // Recalculate schedules for queued nominees if discussion is being extended
-    if (hours > 0) {
+    // Recalculate schedules for queued nominees based on new end time
+    const oldVoteStart = new Date(nominee.voteStart);
+    if (newVoteStart > oldVoteStart) {
       // Find the next nominee in queue  
       const nextNominee = await prisma.nominee.findFirst({
         where: {
@@ -128,17 +149,16 @@ export async function handleDiscussionCommand(interaction: ChatInputCommandInter
       }
     }
 
-    const adjustment = hours > 0 ? `extended by ${hours}` : `reduced by ${Math.abs(hours)}`;
     await interaction.editReply(
-      `Discussion period for **${nominee.name}** has been ${adjustment} hour${Math.abs(hours) !== 1 ? 's' : ''}. ` +
-      `New vote start: ${formatDiscordTimestamp(newVoteStart, 'F')}`
+      `Discussion duration for **${nominee.name}** has been set to ${hours} hour${hours !== 1 ? 's' : ''}. ` +
+      `Vote will start: ${formatDiscordTimestamp(newVoteStart, 'F')}`
     );
 
     logger.info({
       nominee: nominee.name,
-      adjustment: hours,
+      newDuration: hours,
       newVoteStart: newVoteStart.toISOString()
-    }, 'Discussion period adjusted');
+    }, 'Discussion duration updated');
 
   } catch (error) {
     logger.error({ error }, 'Failed to adjust discussion period');
