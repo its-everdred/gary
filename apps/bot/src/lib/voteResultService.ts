@@ -336,7 +336,7 @@ export class VoteResultService {
     const memberCount = await this.getNonBotMemberCount(guild);
     
     const pollData: PollData = {
-      question: `Should we invite ${nominee.name} to GA?`,
+      question: `Should we invite ${nominee.name}?`,
       yesVotes,
       noVotes,
       voterIds: [],

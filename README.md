@@ -4,6 +4,8 @@ Minimal discord moderation assistant manager.
 
 ## Commands
 
+See [COMMANDS.md](COMMANDS.md) for detailed command reference.
+
 ### Flagging System
 
 - `/flag target:<@user> message:<text>` - Flag mods about a user, tracks toward kick quorum
@@ -11,17 +13,18 @@ Minimal discord moderation assistant manager.
 
 ### Nomination System
 
-- `/nominate add name:<text>` - Nominate someone for GA membership
+- `/nominate add name:<text>` - Nominate someone for membership
 - `/nominate list` - List all current nominations and their state
 - `/mod nominate add name:<text> nominator:<@user>` - Moderator: Add nomination on behalf of someone
 - `/mod nominate remove name:<text>` - Moderator: Remove a nominee
 - `/mod nominate start [name:<text>]` - Moderator: Start discussion for specific nominee or next in queue
+- `/mod nominate discussion hours:<number>` - Moderator: Set discussion duration for current nominee
 - `/mod nominate cleanup` - Moderator: Complete certification early and cleanup channels for nominee in CERTIFY state
 
 ## Features
 
 - **Anonymous Flagging System**: Members can flag problematic users anonymously
-- **Nomination System**: Automated GA membership nomination workflow with:
+- **Nomination System**: Automated membership nomination workflow with:
   - Discussion channels (24 hours)
   - Vote channels with EasyPoll integration (48 hours)
   - Automatic quorum calculation (40% of members)

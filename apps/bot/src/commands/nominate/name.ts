@@ -132,7 +132,7 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
       }
       
       // Send private acknowledgment to mod
-      const channelRef = NOMINATION_CONFIG.CHANNELS.GA_GOVERNANCE ? `<#${NOMINATION_CONFIG.CHANNELS.GA_GOVERNANCE}>` : 'governance channel';
+      const channelRef = NOMINATION_CONFIG.CHANNELS.GOVERNANCE ? `<#${NOMINATION_CONFIG.CHANNELS.GOVERNANCE}>` : 'governance channel';
       await interaction.reply({
         content: `Successfully nominated ${name} on behalf of ${nominator.username} and announced in ${channelRef}.`,
         flags: DISCORD_CONSTANTS.MESSAGE_FLAGS.EPHEMERAL
@@ -194,7 +194,7 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
     }
     
     // Send private acknowledgment to nominator
-    const channelRef = NOMINATION_CONFIG.CHANNELS.GA_GOVERNANCE ? `<#${NOMINATION_CONFIG.CHANNELS.GA_GOVERNANCE}>` : 'governance channel';
+    const channelRef = NOMINATION_CONFIG.CHANNELS.GOVERNANCE ? `<#${NOMINATION_CONFIG.CHANNELS.GOVERNANCE}>` : 'governance channel';
     await interaction.reply({
       content: `Successfully nominated ${name} and announced in ${channelRef}.`,
       flags: DISCORD_CONSTANTS.MESSAGE_FLAGS.EPHEMERAL

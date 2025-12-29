@@ -395,7 +395,7 @@ export class ChannelManagementService {
           ? `${Math.round(NOMINATION_CONFIG.VOTE_DURATION_MINUTES / 60)}h`
           : `${NOMINATION_CONFIG.VOTE_DURATION_MINUTES}m`;
 
-      const pollCommand = `/timepoll question:Should we invite ${nominee.name} to GA? time:${voteDurationFormatted} type:Anonymous (Buttons) maxchoices:1 text:Start: \`<t:${startTime}:F>\`\\nEnd: \`<t:${endTime}:F>\` answer-1:✅:Yes, Accept answer-2:❌:No, Reject`;
+      const pollCommand = `/timepoll question:Should we invite ${nominee.name}? time:${voteDurationFormatted} type:Anonymous (Buttons) maxchoices:1 text:Start: \`<t:${startTime}:F>\`\\nEnd: \`<t:${endTime}:F>\` answer-1:✅:Yes, Accept answer-2:❌:No, Reject`;
 
       // Moderator role lookup removed - using direct moderators role in mod comms
 

@@ -45,7 +45,7 @@ export class AnnouncementService {
   }
 
   /**
-   * Posts vote announcement to #ga-governance channel
+   * Posts vote announcement to governance channel
    */
   async announceVoteStart(nominee: Nominee, voteChannelId: string, pollUrl?: string): Promise<boolean> {
     try {
@@ -115,7 +115,7 @@ export class AnnouncementService {
   }
 
   /**
-   * Posts discussion announcement to #ga-governance channel
+   * Posts discussion announcement to governance channel
    */
   async announceDiscussionStart(nominee: Nominee, discussionChannelId: string): Promise<boolean> {
     try {
