@@ -18,6 +18,14 @@ export class AnnouncementService {
   }
 
   /**
+   * Formats a Discord timestamp
+   */
+  private formatDiscordTimestamp(date: Date, format: string = 't'): string {
+    const timestamp = Math.floor(date.getTime() / 1000);
+    return `<t:${timestamp}:${format}>`;
+  }
+
+  /**
    * Adds message IDs to the nominee's announcement tracking field
    */
   private async addAnnouncementMessageIds(nomineeId: string, messageIds: string[]): Promise<void> {
@@ -53,6 +61,13 @@ export class AnnouncementService {
         return false;
       }
 
+      if (!nominee.voteStart || !nominee.certifyStart) {
+        logger.warn({ nomineeId: nominee.id }, 'Vote start or certify start time not set');
+        return false;
+      }
+
+      const voteStart = new Date(nominee.voteStart);
+      const voteEnd = new Date(nominee.certifyStart);
 
       const description = pollUrl 
         ? `Voting has begun for **${nominee.name}**'s nomination: [Vote Now](${pollUrl})`
@@ -64,7 +79,7 @@ export class AnnouncementService {
         color: 0x00ff00,
         timestamp: new Date().toISOString(),
         footer: {
-          text: 'All members are encouraged to vote'
+          text: `Began ${this.formatDiscordTimestamp(voteStart)} • Ends ${this.formatDiscordTimestamp(voteEnd)}`
         }
       };
 
@@ -120,6 +135,14 @@ export class AnnouncementService {
       const discussionChannel = guild.channels.cache.get(discussionChannelId);
       const discussionChannelMention = discussionChannel ? `<#${discussionChannelId}>` : '#discussion-channel';
 
+      if (!nominee.discussionStart || !nominee.voteStart) {
+        logger.warn({ nomineeId: nominee.id }, 'Discussion start or vote start time not set');
+        return false;
+      }
+
+      const discussionStart = new Date(nominee.discussionStart);
+      const discussionEnd = new Date(nominee.voteStart);
+
       const nominatorName = await NomineeDisplayUtils.resolveNominatorName(nominee);
       const embed = {
         title: '💬 New Discussion Started',
@@ -139,7 +162,7 @@ export class AnnouncementService {
         color: 0x3498db,
         timestamp: new Date().toISOString(),
         footer: {
-          text: 'Governance • All members welcome to participate'
+          text: `Began ${this.formatDiscordTimestamp(discussionStart)} • Ends ${this.formatDiscordTimestamp(discussionEnd)}`
         }
       };
 

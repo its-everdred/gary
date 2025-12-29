@@ -4,6 +4,7 @@ import { handleNameCommand } from './nominate/name.js';
 import { handleRemoveCommand } from './nominate/remove.js';
 import { handleStartCommand } from './nominate/start.js';
 import { handleCleanupCommand } from './nominate/cleanup.js';
+import { handleDiscussionCommand } from './nominate/discussion.js';
 
 export const modCommand = new SlashCommandBuilder()
   .setName('mod')
@@ -57,6 +58,17 @@ export const modCommand = new SlashCommandBuilder()
           .setName('cleanup')
           .setDescription('Complete certification early and cleanup channels for nominee in CERTIFY state')
       )
+      .addSubcommand(subcommand =>
+        subcommand
+          .setName('discussion')
+          .setDescription('Adjust discussion period duration for current nominee')
+          .addNumberOption(option =>
+            option
+              .setName('hours')
+              .setDescription('Hours to add (positive) or subtract (negative) from discussion period')
+              .setRequired(true)
+          )
+      )
   )
   .toJSON();
 
@@ -77,6 +89,9 @@ export async function modHandler(interaction: ChatInputCommandInteraction): Prom
         break;
       case 'cleanup':
         await handleCleanupCommand(interaction);
+        break;
+      case 'discussion':
+        await handleDiscussionCommand(interaction);
         break;
       default:
         await interaction.reply({
