@@ -82,8 +82,11 @@ export async function unflagHandler(interaction: ChatInputCommandInteraction) {
     // Reply immediately to user
     await interaction.editReply('Your flag has been removed.');
 
-    // Send notification to mod channel
-    const unflagMessage = `🥹 **UNFLAG** - Anon removed their flag for <@${targetId}>`;
+    // Send notification to mod channel with truncated message
+    const truncatedMessage = existingFlag.message ? 
+      existingFlag.message.substring(0, 10) + (existingFlag.message.length > 10 ? '...' : '') : 
+      '';
+    const unflagMessage = `🥹 **UNFLAG** - Anon unflags <@${targetId}> "${truncatedMessage}"`;
     await sendToModChannel(interaction.client, unflagMessage);
   } catch (error) {
     logger.error(
