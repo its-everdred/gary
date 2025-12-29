@@ -7,6 +7,7 @@ import { NOMINATION_CONFIG } from './constants.js';
 import { NomineeDisplayUtils } from './nomineeDisplayUtils.js';
 import { DISCORD_CONSTANTS } from './discordConstants.js';
 import { ConfigService } from './configService.js';
+import { TimestampUtils } from './timestampUtils.js';
 
 const logger = pino();
 
@@ -312,6 +313,11 @@ export class ChannelManagementService {
         ? nominatorMember.displayName || nominatorMember.user.username
         : nominee.nominator;
 
+      // Get discussion time boundaries
+      const discussionStart = nominee.discussionStart ? new Date(nominee.discussionStart) : new Date();
+      const discussionEnd = nominee.voteStart ? new Date(nominee.voteStart) : 
+        new Date(discussionStart.getTime() + NOMINATION_CONFIG.DISCUSSION_DURATION_MINUTES * 60 * 1000);
+
       const embed = {
         title: `📋 Discussion: ${nominee.name}`,
         description: `Discussion period has begun for nominee **${nominee.name}**.`,
@@ -332,14 +338,17 @@ export class ChannelManagementService {
         color: 0x3498db,
         timestamp: new Date().toISOString(),
         footer: {
-          text: 'Governance Discussion',
+          text: TimestampUtils.createTimeRangeFooter(discussionStart, discussionEnd),
         },
       };
 
-      // Send embed first
-      await channel.send({
+      // Send embed first and pin it
+      const embedMessage = await channel.send({
         embeds: [embed],
       });
+      
+      // Pin the embed message
+      await embedMessage.pin();
 
       // Then send nominator ping as separate message
       const content = nominatorMember
@@ -421,7 +430,7 @@ export class ChannelManagementService {
         color: 0x3498db,
         timestamp: new Date().toISOString(),
         footer: {
-          text: `Began <t:${Math.floor(voteStart.getTime() / 1000)}:t> • Ends <t:${Math.floor(voteEnd.getTime() / 1000)}:t>`,
+          text: TimestampUtils.createTimeRangeFooter(voteStart, voteEnd),
         },
       };
 

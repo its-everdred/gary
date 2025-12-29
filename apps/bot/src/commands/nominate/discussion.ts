@@ -6,6 +6,7 @@ import { NomineeState } from '@prisma/client';
 import { NomineeStateManager } from '../../lib/nomineeService.js';
 import { NOMINATION_CONFIG } from '../../lib/constants.js';
 import { TimeCalculationService } from '../../lib/timeCalculation.js';
+import { TimestampUtils } from '../../lib/timestampUtils.js';
 
 const logger = pino();
 
@@ -141,7 +142,7 @@ export async function handleDiscussionCommand(interaction: ChatInputCommandInter
               { name: 'Duration', value: `${totalHours} hours`, inline: true }
             ])
             .setFooter({ 
-              text: `Began ${formatDiscordTimestamp(discussionStart)} • Ends ${formatDiscordTimestamp(newVoteStart)}` 
+              text: TimestampUtils.createTimeRangeFooter(discussionStart, newVoteStart)
             });
 
           await pinnedMessage.edit({ embeds: [updatedEmbed] });
@@ -151,7 +152,7 @@ export async function handleDiscussionCommand(interaction: ChatInputCommandInter
 
     await interaction.editReply(
       `Discussion duration for **${nominee.name}** has been set to ${hours} hour${hours !== 1 ? 's' : ''}. ` +
-      `Vote will start: ${formatDiscordTimestamp(newVoteStart, 'F')}`
+      `Vote will start: ${TimestampUtils.formatDiscordTimestamp(newVoteStart, 'F')}`
     );
 
     logger.info({
@@ -166,7 +167,3 @@ export async function handleDiscussionCommand(interaction: ChatInputCommandInter
   }
 }
 
-function formatDiscordTimestamp(date: Date, format: string = 't'): string {
-  const timestamp = Math.floor(date.getTime() / 1000);
-  return `<t:${timestamp}:${format}>`;
-}

@@ -7,6 +7,7 @@ import { NomineeDisplayUtils } from './nomineeDisplayUtils.js';
 import { ChannelFinderService } from './channelFinderService.js';
 import { prisma } from './db.js';
 import { ConfigService } from './configService.js';
+import { TimestampUtils } from './timestampUtils.js';
 
 const logger = pino();
 
@@ -17,13 +18,6 @@ export class AnnouncementService {
     this.client = client;
   }
 
-  /**
-   * Formats a Discord timestamp
-   */
-  private formatDiscordTimestamp(date: Date, format: string = 't'): string {
-    const timestamp = Math.floor(date.getTime() / 1000);
-    return `<t:${timestamp}:${format}>`;
-  }
 
   /**
    * Adds message IDs to the nominee's announcement tracking field
@@ -79,7 +73,7 @@ export class AnnouncementService {
         color: 0x00ff00,
         timestamp: new Date().toISOString(),
         footer: {
-          text: `Began ${this.formatDiscordTimestamp(voteStart)} • Ends ${this.formatDiscordTimestamp(voteEnd)}`
+          text: TimestampUtils.createTimeRangeFooter(voteStart, voteEnd)
         }
       };
 
@@ -162,7 +156,7 @@ export class AnnouncementService {
         color: 0x3498db,
         timestamp: new Date().toISOString(),
         footer: {
-          text: `Began ${this.formatDiscordTimestamp(discussionStart)} • Ends ${this.formatDiscordTimestamp(discussionEnd)}`
+          text: TimestampUtils.createTimeRangeFooter(discussionStart, discussionEnd)
         }
       };
 
@@ -241,7 +235,11 @@ export class AnnouncementService {
         color: resultColor,
         timestamp: new Date().toISOString(),
         footer: {
-          text: passed ? 'Vote passed' : 'Vote failed'
+          text: TimestampUtils.createVoteResultFooter(
+            nominee.voteStart ? new Date(nominee.voteStart) : null,
+            nominee.certifyStart ? new Date(nominee.certifyStart) : null,
+            passed
+          )
         }
       };
 
@@ -320,7 +318,11 @@ export class AnnouncementService {
         color: embedColor,
         timestamp: new Date().toISOString(),
         footer: {
-          text: 'Governance • Vote Results'
+          text: TimestampUtils.createVoteResultFooter(
+            nominee.voteStart ? new Date(nominee.voteStart) : null,
+            nominee.certifyStart ? new Date(nominee.certifyStart) : null,
+            passed
+          )
         }
       };
 
@@ -361,7 +363,11 @@ export class AnnouncementService {
         color: 0xff9500,
         timestamp: new Date().toISOString(),
         footer: {
-          text: 'Governance • Vote Expired'
+          text: TimestampUtils.createTimeRangeFooter(
+            nominee.voteStart ? new Date(nominee.voteStart) : null,
+            nominee.certifyStart ? new Date(nominee.certifyStart) : null,
+            'Vote Expired'
+          )
         }
       };
 
