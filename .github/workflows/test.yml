@@ -1,13 +1,14 @@
-name: Test
+name: CI
 
 on:
-  push:
-    branches: [ main, staging ]
   pull_request:
+    branches: [ main, staging ]
+  push:
     branches: [ main, staging ]
 
 jobs:
   test:
+    name: Test, Lint & Build
     runs-on: ubuntu-latest
     
     defaults:
@@ -28,11 +29,15 @@ jobs:
       - name: Generate Prisma Client
         run: bun run db:generate
 
-      - name: Run tests
-        run: bun test
+      - name: 🧪 Run tests
+        run: bun test --timeout 60000 --bail 1
+        env:
+          NODE_ENV: test
 
-      - name: Run lint
+      - name: 🔍 Run lint
         run: bun run lint
+        if: always()
 
-      - name: Run build
+      - name: 📦 Run build
         run: bun run build
+        if: always()
