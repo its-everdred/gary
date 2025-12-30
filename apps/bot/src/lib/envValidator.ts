@@ -5,7 +5,7 @@ const logger = pino();
 interface EnvConfig {
   // Discord
   DISCORD_TOKEN: string;
-  DISCORD_CLIENT_ID: string;
+  DISCORD_APP_ID: string;
   GUILD_ID: string;
   
   // Channels
@@ -37,7 +37,7 @@ interface EnvConfig {
 
 const REQUIRED_ENV_VARS: (keyof EnvConfig)[] = [
   'DISCORD_TOKEN',
-  'DISCORD_CLIENT_ID',
+  'DISCORD_APP_ID',
   'GUILD_ID',
   'GOVERNANCE_CHANNEL_ID',
   'GENERAL_CHANNEL_ID',

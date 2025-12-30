@@ -8,7 +8,7 @@ The following environment variables MUST be set in your Railway service:
 
 #### Discord Configuration
 - `DISCORD_TOKEN` - Your Discord bot token
-- `DISCORD_CLIENT_ID` - Discord application client ID
+- `DISCORD_APP_ID` - Discord application ID (from Discord Developer Portal)
 - `GUILD_ID` - Discord server ID
 
 #### Channel IDs
@@ -57,7 +57,7 @@ This ensures the bot won't run with missing configuration that could cause unexp
 
 ```env
 DISCORD_TOKEN=your_discord_token
-DISCORD_CLIENT_ID=your_client_id
+DISCORD_APP_ID=your_application_id
 GUILD_ID=your_guild_id
 
 GOVERNANCE_CHANNEL_ID=123456789
