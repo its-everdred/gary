@@ -415,50 +415,91 @@ export class VoteResultService {
    * Posts vote results to the specified channels (governance, general, and mod-comms)
    */
   async postVoteResults(nominee: Nominee, voteResults: VoteResults): Promise<void> {
-    const resultEmbed = await this.createVoteResultsEmbed(nominee, voteResults);
-    const messageIds: string[] = [];
-    
-    // Define channels to post to
-    const channelConfigs = [
-      { name: 'governance', finder: () => ChannelFinderService.governance() },
-      { name: 'general', finder: () => ChannelFinderService.general() },
-      { name: 'mod-comms', finder: () => ChannelFinderService.modComms() }
-    ];
-    
-    // Post to all configured channels
-    for (const config of channelConfigs) {
-      try {
-        const channel = await config.finder();
-        if (channel) {
-          const message = await channel.send({ embeds: [resultEmbed] });
-          if (config.name === 'governance' || config.name === 'general') {
-            messageIds.push(message.id);
+    try {
+      logger.info({ nomineeId: nominee.id, nomineeName: nominee.name }, 'Starting to post vote results');
+      
+      const resultEmbed = await this.createVoteResultsEmbed(nominee, voteResults);
+      logger.info({ nomineeId: nominee.id }, 'Vote results embed created successfully');
+      
+      const messageIds: string[] = [];
+      
+      // Define channels to post to
+      const channelConfigs = [
+        { name: 'governance', finder: () => ChannelFinderService.governance() },
+        { name: 'general', finder: () => ChannelFinderService.general() },
+        { name: 'mod-comms', finder: () => ChannelFinderService.modComms() }
+      ];
+      
+      // Post to all configured channels
+      for (const config of channelConfigs) {
+        try {
+          logger.info({ nomineeId: nominee.id, channelType: config.name }, `Finding ${config.name} channel`);
+          const channel = await config.finder();
+          
+          if (channel) {
+            logger.info({ nomineeId: nominee.id, channelType: config.name, channelId: channel.id }, `Sending vote results to ${config.name}`);
+            const message = await channel.send({ embeds: [resultEmbed] });
+            logger.info({ nomineeId: nominee.id, channelType: config.name, messageId: message.id }, `Successfully posted vote results to ${config.name}`);
+            
+            if (config.name === 'governance' || config.name === 'general') {
+              messageIds.push(message.id);
+            }
+          } else {
+            logger.warn({ nomineeId: nominee.id, channelType: config.name }, `${config.name} channel not found`);
           }
+        } catch (error) {
+          logger.error({ 
+            error: error instanceof Error ? {
+              name: error.name,
+              message: error.message,
+              stack: error.stack
+            } : error, 
+            nomineeId: nominee.id, 
+            channelType: config.name 
+          }, `Failed to post vote results to ${config.name}`);
         }
-      } catch (error) {
-        logger.error({ 
-          error, 
-          nomineeId: nominee.id, 
-          channelType: config.name 
-        }, `Failed to post vote results to ${config.name}`);
       }
-    }
 
-    // Store message IDs for cleanup (only governance and general, not mod-comms)
-    if (messageIds.length > 0) {
-      try {
-        const existingIds = nominee.announcementMessageIds ? nominee.announcementMessageIds.split(',') : [];
-        const allIds = [...existingIds, ...messageIds].filter(Boolean);
+      // Store message IDs for cleanup (only governance and general, not mod-comms)
+      if (messageIds.length > 0) {
+        try {
+          logger.info({ nomineeId: nominee.id, messageIds }, 'Storing vote result message IDs');
+          const existingIds = nominee.announcementMessageIds ? nominee.announcementMessageIds.split(',') : [];
+          const allIds = [...existingIds, ...messageIds].filter(Boolean);
 
-        await prisma.nominee.update({
-          where: { id: nominee.id },
-          data: {
-            announcementMessageIds: allIds.join(',')
-          }
-        });
-      } catch (error) {
-        logger.error({ error, nomineeId: nominee.id, messageIds }, 'Failed to store vote result message IDs');
+          await prisma.nominee.update({
+            where: { id: nominee.id },
+            data: {
+              announcementMessageIds: allIds.join(',')
+            }
+          });
+          logger.info({ nomineeId: nominee.id, totalIds: allIds.length }, 'Successfully stored vote result message IDs');
+        } catch (error) {
+          logger.error({ 
+            error: error instanceof Error ? {
+              name: error.name,
+              message: error.message,
+              stack: error.stack
+            } : error, 
+            nomineeId: nominee.id, 
+            messageIds 
+          }, 'Failed to store vote result message IDs');
+        }
       }
+      
+      logger.info({ nomineeId: nominee.id }, 'Vote results posting completed successfully');
+    } catch (error) {
+      logger.error({ 
+        error: error instanceof Error ? {
+          name: error.name,
+          message: error.message,
+          stack: error.stack
+        } : error, 
+        nomineeId: nominee.id, 
+        nomineeName: nominee.name,
+        voteResults 
+      }, 'Failed to post vote results - top level error');
+      throw error; // Re-throw to maintain error propagation
     }
   }
 
