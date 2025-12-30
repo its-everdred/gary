@@ -12,9 +12,9 @@ concurrency:
 
 jobs:
   test:
-    name: Run tests
+    name: 🧪 Tests
     runs-on: ubuntu-latest
-
+    
     defaults:
       run:
         working-directory: ./apps/bot
@@ -33,15 +33,54 @@ jobs:
       - name: Generate Prisma Client
         run: bun run db:generate
 
-      - name: 🧪 Run tests
+      - name: Run tests
         run: bun test --timeout 60000 --bail=1
         env:
           NODE_ENV: test
 
-      - name: 🔍 Run lint
-        run: bun run lint
-        if: always()
+  lint:
+    name: 🔍 Lint
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: ./apps/bot
 
-      - name: 📦 Run build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Run lint
+        run: bun run lint
+
+  build:
+    name: 📦 Build
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: ./apps/bot
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Generate Prisma Client
+        run: bun run db:generate
+
+      - name: Run build
         run: bun run build
-        if: always()
