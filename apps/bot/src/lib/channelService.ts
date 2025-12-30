@@ -285,21 +285,6 @@ export class ChannelManagementService {
     try {
       // Try to find the nominator by user ID to ping them (using cached members only)
       const nominatorMember = channel.guild.members.cache.get(nominee.nominator);
-      
-      logger.info({
-        nomineeId: nominee.id,
-        nominator: nominee.nominator,
-        foundInCache: !!nominatorMember,
-        cachedMemberCount: channel.guild.members.cache.size
-      }, 'Looking up nominator for ping - using cache only without GuildMembers intent');
-
-      if (!nominatorMember) {
-        logger.warn({
-          nomineeId: nominee.id,
-          nominator: nominee.nominator,
-          cachedMemberCount: channel.guild.members.cache.size
-        }, 'Nominator not found in member cache - will use fallback mention format');
-      }
 
       const nominatorMention = nominatorMember
         ? nominatorMember.toString()
@@ -350,13 +335,6 @@ export class ChannelManagementService {
         ? `${nominatorMention}, please kick us off and let us know why you nominated ${nominee.name}.`
         : `The discussion period for **${nominee.name}** has begun.`;
 
-      logger.info({
-        nomineeId: nominee.id,
-        nominator: nominee.nominator,
-        hasNominatorMember: !!nominatorMember,
-        willPing: !!nominatorMember,
-        contentPreview: content.substring(0, 50) + '...'
-      }, 'Sending discussion start message');
 
       await channel.send({
         content,
