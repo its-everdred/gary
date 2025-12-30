@@ -586,7 +586,7 @@ export class NominationJobScheduler implements JobScheduler {
       if (passed) {
         const nominatorName = await NomineeDisplayUtils.resolveNominatorName(nominee);
         const embed = {
-          title: '🧹 Nomination Cleanup Required',
+          title: '🔗 Cleanup and Send Invite',
           description: `Nomination channels have been deleted for **${nominee.name}**.`,
           fields: [
             {
