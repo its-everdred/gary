@@ -1,10 +1,6 @@
-import dotenv from 'dotenv';
 import pino from 'pino';
 
 const logger = pino();
-
-// Load .env file
-dotenv.config();
 
 interface EnvConfig {
   // Discord

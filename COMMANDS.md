@@ -30,8 +30,7 @@ Demo:
   - Shows ACTIVE, DISCUSSION, VOTE, CLEANUP nominees
   - Displays scheduled times for queued nominees
 
-Demo:
-![Nomination Demo](public/nomination.png)
+<img src="public/nomination.png" width="400" alt="Nomination Demo">
 
 ## Mod Commands
 

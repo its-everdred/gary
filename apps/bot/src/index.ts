@@ -8,6 +8,8 @@ import { NominationJobScheduler } from './lib/jobScheduler.js';
 import { ChannelFinderService } from './lib/channelFinderService.js';
 import { validateEnvironment } from './lib/envValidator.js';
 
+// Note: Environment variables should be set by the deployment platform (Railway, Docker, etc)
+// or loaded by the Prisma CLI which reads .env files automatically
 // Validate environment variables before anything else
 try {
   validateEnvironment();
