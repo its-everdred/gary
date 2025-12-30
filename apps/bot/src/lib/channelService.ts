@@ -311,7 +311,7 @@ export class ChannelManagementService {
         : `<@${nominee.nominator}>`;
       const nominatorDisplay = nominatorMember
         ? nominatorMember.displayName || nominatorMember.user.username
-        : nominee.nominator;
+        : `<@${nominee.nominator}>`;
 
       // Get discussion time boundaries
       const discussionStart = nominee.discussionStart ? new Date(nominee.discussionStart) : new Date();
@@ -336,10 +336,7 @@ export class ChannelManagementService {
           },
         ],
         color: 0x3498db,
-        timestamp: new Date().toISOString(),
-        footer: {
-          text: TimestampUtils.createTimeRangeFooter(discussionStart, discussionEnd),
-        },
+        timestamp: discussionStart.toISOString(),
       };
 
       // Send embed 
@@ -354,6 +351,12 @@ export class ChannelManagementService {
 
       await channel.send({
         content,
+      });
+
+      // Send vote start notification with timezone-aware timestamp
+      const voteStartMessage = `Voting will commence at ${TimestampUtils.formatDiscordTimestamp(discussionEnd, 'F')}`;
+      await channel.send({
+        content: voteStartMessage,
       });
     } catch (error) {
       logger.error(

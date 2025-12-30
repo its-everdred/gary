@@ -123,33 +123,41 @@ export async function handleDiscussionCommand(interaction: ChatInputCommandInter
       }
     }
 
-    // Update discussion channel embed
+    // Update discussion channel embed and vote start message
     if (nominee.discussionChannelId) {
       const discussionChannel = await interaction.client.channels.fetch(nominee.discussionChannelId);
       if (discussionChannel?.isTextBased()) {
-        // Find and update the pinned embed
-        const messages = await discussionChannel.messages.fetchPinned();
-        const pinnedMessage = messages.find(msg => 
+        // Find and update the first bot embed message
+        const messages = await discussionChannel.messages.fetch({ limit: 10 });
+        const embedMessage = messages.find(msg => 
           msg.author.id === interaction.client.user?.id &&
           msg.embeds.length > 0
         );
 
-        if (pinnedMessage) {
+        if (embedMessage) {
           const discussionStart = new Date(nominee.discussionStart);
           const totalDuration = newVoteStart.getTime() - discussionStart.getTime();
           const totalHours = Math.floor(totalDuration / (1000 * 60 * 60));
 
-          const updatedEmbed = EmbedBuilder.from(pinnedMessage.embeds[0])
+          const updatedEmbed = EmbedBuilder.from(embedMessage.embeds[0])
             .setFields([
-              { name: 'Nominated by', value: `<@${nominee.nominator}>`, inline: true },
-              { name: 'State', value: '🗣️ Discussion', inline: true },
-              { name: 'Duration', value: `${totalHours} hours`, inline: true }
+              { name: '👤 Nominator', value: `<@${nominee.nominator}>`, inline: true },
+              { name: '⏰ Duration', value: `${totalHours} hours`, inline: true }
             ])
-            .setFooter({ 
-              text: TimestampUtils.createTimeRangeFooter(discussionStart, newVoteStart)
-            });
+            .setTimestamp(discussionStart);
 
-          await pinnedMessage.edit({ embeds: [updatedEmbed] });
+          await embedMessage.edit({ embeds: [updatedEmbed] });
+        }
+
+        // Find and update the "Voting will commence" message
+        const voteStartMessage = messages.find(msg =>
+          msg.author.id === interaction.client.user?.id &&
+          msg.content.includes('Voting will commence at')
+        );
+
+        if (voteStartMessage) {
+          const newVoteStartMessage = `Voting will commence at ${TimestampUtils.formatDiscordTimestamp(newVoteStart, 'F')}`;
+          await voteStartMessage.edit({ content: newVoteStartMessage });
         }
       }
     }
