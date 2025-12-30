@@ -1,17 +1,17 @@
-import cron from "node-cron";
-import type { Client } from "discord.js";
-import pino from "pino";
-import { NomineeStateManager } from "./nomineeService.js";
-import { TimeCalculationService } from "./timeCalculation.js";
-import { ChannelManagementService } from "./channelService.js";
-import { AnnouncementService } from "./announcementService.js";
-import { VoteResultService, type VoteResults } from "./voteResultService.js";
-import { NomineeState } from "@prisma/client";
-import { prisma } from "./db.js";
-import { NOMINATION_CONFIG } from "./constants.js";
-import { ChannelFinderService } from "./channelFinderService.js";
-import { DISCORD_CONSTANTS } from "./discordConstants.js";
-import { NomineeDisplayUtils } from "./nomineeDisplayUtils.js";
+import cron from 'node-cron';
+import type { Client } from 'discord.js';
+import pino from 'pino';
+import { NomineeStateManager } from './nomineeService.js';
+import { TimeCalculationService } from './timeCalculation.js';
+import { ChannelManagementService } from './channelService.js';
+import { AnnouncementService } from './announcementService.js';
+import { VoteResultService, type VoteResults } from './voteResultService.js';
+import { NomineeState } from '@prisma/client';
+import { prisma } from './db.js';
+import { NOMINATION_CONFIG } from './constants.js';
+import { ChannelFinderService } from './channelFinderService.js';
+import { DISCORD_CONSTANTS } from './discordConstants.js';
+import { NomineeDisplayUtils } from './nomineeDisplayUtils.js';
 
 const logger = pino();
 
@@ -73,7 +73,7 @@ export class NominationJobScheduler implements JobScheduler {
    */
   private scheduleStateTransitionJob(): void {
     const job = cron.schedule(
-      "* * * * *",
+      '* * * * *',
       async () => {
         try {
           await this.processStateTransitions();
@@ -88,18 +88,18 @@ export class NominationJobScheduler implements JobScheduler {
                     }
                   : error,
             },
-            "State transition job failed"
+            'State transition job failed'
           );
         }
       },
       {
         scheduled: false,
-        timezone: "UTC",
+        timezone: 'UTC',
       }
     );
 
     job.start();
-    this.jobs.set("state-transitions", job);
+    this.jobs.set('state-transitions', job);
   }
 
   /**
@@ -108,22 +108,22 @@ export class NominationJobScheduler implements JobScheduler {
    */
   private scheduleScheduleRecalculationJob(): void {
     const job = cron.schedule(
-      "0 * * * *",
+      '0 * * * *',
       async () => {
         try {
           await this.recalculateActiveSchedules();
         } catch (error) {
-          logger.error({ error }, "Schedule recalculation job failed");
+          logger.error({ error }, 'Schedule recalculation job failed');
         }
       },
       {
         scheduled: false,
-        timezone: "UTC",
+        timezone: 'UTC',
       }
     );
 
     job.start();
-    this.jobs.set("schedule-recalculation", job);
+    this.jobs.set('schedule-recalculation', job);
   }
 
   /**
@@ -148,7 +148,7 @@ export class NominationJobScheduler implements JobScheduler {
                 : error,
             guildId,
           },
-          "Guild state transition processing failed"
+          'Guild state transition processing failed'
         );
       }
     }
@@ -280,7 +280,7 @@ export class NominationJobScheduler implements JobScheduler {
             try {
               const modCommsChannel = await ChannelFinderService.modComms();
               if (modCommsChannel) {
-                const messageIds = nominee.botMessageIds.split(",");
+                const messageIds = nominee.botMessageIds.split(',');
                 for (const messageId of messageIds) {
                   try {
                     const message = await modCommsChannel.messages.fetch(
@@ -300,7 +300,7 @@ export class NominationJobScheduler implements JobScheduler {
                   nomineeId: nominee.id,
                   botMessageIds: nominee.botMessageIds,
                 },
-                "Failed to delete bot messages"
+                'Failed to delete bot messages'
               );
             }
           }
@@ -313,7 +313,7 @@ export class NominationJobScheduler implements JobScheduler {
           nomineeId: nominee.id,
           nomineeName: nominee.name,
         },
-        "Failed to check for EasyPoll and announce to governance"
+        'Failed to check for EasyPoll and announce to governance'
       );
     }
   }
@@ -343,7 +343,7 @@ export class NominationJobScheduler implements JobScheduler {
             nomineeId: nominee.id,
             error: channelResult.errorMessage,
           },
-          "Failed to create discussion channel"
+          'Failed to create discussion channel'
         );
       } else {
         // Send announcement to governance channel
@@ -358,7 +358,7 @@ export class NominationJobScheduler implements JobScheduler {
           nomineeId: nominee.id,
           error: result.errorMessage,
         },
-        "Failed to transition nominee to DISCUSSION"
+        'Failed to transition nominee to DISCUSSION'
       );
     }
   }
@@ -396,7 +396,7 @@ export class NominationJobScheduler implements JobScheduler {
             nomineeId: nominee.id,
             error: channelResult.errorMessage,
           },
-          "Failed to create vote channel"
+          'Failed to create vote channel'
         );
       } else {
         // Note: Governance announcement will be sent automatically
@@ -408,7 +408,7 @@ export class NominationJobScheduler implements JobScheduler {
           nomineeId: nominee.id,
           error: result.errorMessage,
         },
-        "Failed to transition nominee to VOTE"
+        'Failed to transition nominee to VOTE'
       );
     }
   }
@@ -431,7 +431,7 @@ export class NominationJobScheduler implements JobScheduler {
     if (result.success) {
       logger.info(
         `Vote completed: ${nominee.name}${
-          voteResults ? (voteResults.passed ? " - PASSED" : " - FAILED") : ""
+          voteResults ? (voteResults.passed ? ' - PASSED' : ' - FAILED') : ''
         }`
       );
 
@@ -443,7 +443,7 @@ export class NominationJobScheduler implements JobScheduler {
           .catch((error) => {
             logger.error(
               { error, nomineeId: nominee.id },
-              "Failed to post vote results"
+              'Failed to post vote results'
             );
           });
       } else {
@@ -466,7 +466,7 @@ export class NominationJobScheduler implements JobScheduler {
           .catch((error) => {
             logger.error(
               { error, nomineeId: nominee.id },
-              "Failed to post expired vote results"
+              'Failed to post expired vote results'
             );
           });
       }
@@ -476,7 +476,7 @@ export class NominationJobScheduler implements JobScheduler {
           nomineeId: nominee.id,
           error: result.errorMessage,
         },
-        "Failed to transition nominee to CLEANUP"
+        'Failed to transition nominee to CLEANUP'
       );
     }
   }
@@ -503,7 +503,7 @@ export class NominationJobScheduler implements JobScheduler {
         if (nominee.discussionChannelId) {
           await channelService.deleteChannel(
             nominee.discussionChannelId,
-            "Nomination completed"
+            'Nomination completed'
           );
         }
 
@@ -511,7 +511,7 @@ export class NominationJobScheduler implements JobScheduler {
         if (nominee.voteChannelId) {
           await channelService.deleteChannel(
             nominee.voteChannelId,
-            "Nomination completed"
+            'Nomination completed'
           );
         }
 
@@ -526,9 +526,9 @@ export class NominationJobScheduler implements JobScheduler {
             error,
             nomineeId: nominee.id,
           },
-          "Failed to delete nomination channels"
+          'Failed to delete nomination channels'
         );
-        return { success: false, errorMessage: "Failed to cleanup channels" };
+        return { success: false, errorMessage: 'Failed to cleanup channels' };
       }
 
       // Start next nominee in queue if available
@@ -540,7 +540,7 @@ export class NominationJobScheduler implements JobScheduler {
           nomineeId: nominee.id,
           error: result.errorMessage,
         },
-        "Failed to transition nominee to PAST"
+        'Failed to transition nominee to PAST'
       );
       return { success: false, errorMessage: result.errorMessage };
     }
@@ -586,7 +586,7 @@ export class NominationJobScheduler implements JobScheduler {
       try {
         await this.recalculateGuildSchedules(guildId);
       } catch (error) {
-        logger.error({ error, guildId }, "Guild schedule recalculation failed");
+        logger.error({ error, guildId }, 'Guild schedule recalculation failed');
       }
     }
   }
@@ -625,7 +625,7 @@ export class NominationJobScheduler implements JobScheduler {
       const generalChannel = await ChannelFinderService.general();
 
       const messageIds = nominee.announcementMessageIds
-        .split(",")
+        .split(',')
         .filter(Boolean);
 
       for (const messageId of messageIds) {
@@ -657,7 +657,7 @@ export class NominationJobScheduler implements JobScheduler {
               nomineeId: nominee.id,
               messageId,
             },
-            "Failed to delete announcement message"
+            'Failed to delete announcement message'
           );
         }
       }
@@ -668,7 +668,7 @@ export class NominationJobScheduler implements JobScheduler {
           nomineeId: nominee.id,
           announcementMessageIds: nominee.announcementMessageIds,
         },
-        "Failed to delete announcement messages"
+        'Failed to delete announcement messages'
       );
     }
   }
@@ -685,11 +685,11 @@ export class NominationJobScheduler implements JobScheduler {
 
       // Find moderators role
       const moderatorsRole = guild.roles.cache.find(
-        (r) => r.name.toLowerCase() === "moderators"
+        (r) => r.name.toLowerCase() === 'moderators'
       );
       const moderatorsMention = moderatorsRole
         ? `<@&${moderatorsRole.id}>`
-        : "@moderators";
+        : '@moderators';
 
       // Determine if the nominee passed or failed
       const passed = nominee.votePassed === true;
@@ -700,30 +700,30 @@ export class NominationJobScheduler implements JobScheduler {
           nominee
         );
         const embed = {
-          title: "🔗 Cleanup and Send Invite",
+          title: '🔗 Cleanup and Send Invite',
           description: `Nomination channels have been deleted for **${nominee.name}**.`,
           fields: [
             {
-              name: "1️⃣ Clean up remaining discussion",
+              name: '1️⃣ Clean up remaining discussion',
               value: `Manually search for '${nominee.name}' and delete any discussion that occurred in other channels.`,
               inline: false,
             },
             {
-              name: "2️⃣ Send the invite link",
+              name: '2️⃣ Send the invite link',
               value: `Send invite link to **${nominatorName}**\n• Invite to Server → Edit invite link → Max number of uses → 1 use`,
               inline: false,
             },
             {
-              name: "3️⃣ Delete this message",
+              name: '3️⃣ Delete this message',
               value:
-                "Delete this message to indicate to other mods that the invite link was sent",
+                'Delete this message to indicate to other mods that the invite link was sent',
               inline: false,
             },
           ],
           color: 0xff6600,
           timestamp: new Date().toISOString(),
           footer: {
-            text: "Manual Action Required",
+            text: 'Manual Action Required',
           },
         };
 
@@ -738,7 +738,7 @@ export class NominationJobScheduler implements JobScheduler {
           error,
           nomineeId: nominee.id,
         },
-        "Failed to send cleanup instructions to mod-comms"
+        'Failed to send cleanup instructions to mod-comms'
       );
     }
   }

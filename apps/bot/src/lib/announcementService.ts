@@ -61,7 +61,6 @@ export class AnnouncementService {
       }
 
       const voteStart = new Date(nominee.voteStart);
-      const voteEnd = new Date(nominee.cleanupStart);
 
       const description = pollUrl 
         ? `Voting has begun for **${nominee.name}**'s nomination: [Vote Now](${pollUrl})`
@@ -132,7 +131,6 @@ export class AnnouncementService {
       }
 
       const discussionStart = new Date(nominee.discussionStart);
-      const discussionEnd = new Date(nominee.voteStart);
 
       const nominatorName = await NomineeDisplayUtils.resolveNominatorName(nominee);
       const embed = {

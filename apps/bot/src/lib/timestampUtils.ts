@@ -8,7 +8,7 @@ export class TimestampUtils {
    * @param date - The date to format
    * @param format - Discord timestamp format (t=time, T=long time, d=date, D=long date, f=full, F=long full, R=relative)
    */
-  static formatDiscordTimestamp(date: Date, format: string = "t"): string {
+  static formatDiscordTimestamp(date: Date, format: string = 't'): string {
     const timestamp = Math.floor(date.getTime() / 1000);
     return `<t:${timestamp}:${format}>`;
   }
@@ -25,7 +25,7 @@ export class TimestampUtils {
     prefix?: string
   ): string {
     if (!startDate || !endDate) {
-      return prefix || "";
+      return prefix || '';
     }
 
     const parts = [];
@@ -35,7 +35,7 @@ export class TimestampUtils {
     parts.push(`Began ${this.formatDiscordTimestamp(startDate)}`);
     parts.push(`Ends ${this.formatDiscordTimestamp(endDate)}`);
 
-    return parts.join(" • ");
+    return parts.join(' • ');
   }
 
 }

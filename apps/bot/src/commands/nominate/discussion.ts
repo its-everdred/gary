@@ -3,7 +3,6 @@ import { EmbedBuilder } from 'discord.js';
 import pino from 'pino';
 import { prisma } from '../../lib/db.js';
 import { NomineeState } from '@prisma/client';
-import { NomineeStateManager } from '../../lib/nomineeService.js';
 import { NOMINATION_CONFIG } from '../../lib/constants.js';
 import { TimeCalculationService } from '../../lib/timeCalculation.js';
 import { TimestampUtils } from '../../lib/timestampUtils.js';

@@ -7,7 +7,6 @@ import { ChannelFinderService } from './channelFinderService.js';
 import { DISCORD_CONSTANTS } from './discordConstants.js';
 import { ConfigService } from './configService.js';
 import { NomineeDisplayUtils } from './nomineeDisplayUtils.js';
-import { TimestampUtils } from './timestampUtils.js';
 
 const logger = pino();
 

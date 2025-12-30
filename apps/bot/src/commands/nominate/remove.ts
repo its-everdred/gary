@@ -1,5 +1,4 @@
 import type { ChatInputCommandInteraction } from 'discord.js';
-import pino from 'pino';
 import { prisma } from '../../lib/db.js';
 import { NomineeState } from '@prisma/client';
 import { CommandUtils } from '../../lib/commandUtils.js';
@@ -7,7 +6,6 @@ import { TimeCalculationService } from '../../lib/timeCalculation.js';
 import { ConfigService } from '../../lib/configService.js';
 import { NominationJobScheduler } from '../../lib/jobScheduler.js';
 
-const logger = pino();
 
 export async function handleRemoveCommand(interaction: ChatInputCommandInteraction): Promise<void> {
   try {
