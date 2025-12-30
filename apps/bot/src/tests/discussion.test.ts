@@ -50,6 +50,18 @@ mock.module('pino', () => ({
   })
 }));
 
+mock.module('../../lib/timeCalculation.js', () => ({
+  TimeCalculationService: {
+    getNextMondayAt9AM: mock(() => new Date())
+  }
+}));
+
+mock.module('../../lib/timestampUtils.js', () => ({
+  TimestampUtils: {
+    formatDiscordTimestamp: mock(() => 'formatted-timestamp')
+  }
+}));
+
 const { handleDiscussionCommand } = await import('../commands/nominate/discussion.js');
 
 describe('discussion command', () => {
@@ -76,7 +88,9 @@ describe('discussion command', () => {
 
     await handleDiscussionCommand(mockInteraction);
 
-    expect(mockInteraction.editReply).toHaveBeenCalledWith('There is no nominee currently in discussion.');
+    expect(mockInteraction.editReply).toHaveBeenCalledWith(
+      "There is no nominee currently in discussion."
+    );
   });
 
   test('sets discussion duration successfully', async () => {
