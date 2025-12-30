@@ -22,6 +22,9 @@ const mockPrisma = {
 
 mock.module('../lib/db.js', () => ({ prisma: mockPrisma }));
 
+// Ensure isolated test environment
+const testId = 'voteResultService-' + Math.random().toString(36);
+
 const { VoteResultService } = await import('../lib/voteResultService.js');
 
 function createMockNominee(overrides: Partial<Nominee> = {}): Nominee {
