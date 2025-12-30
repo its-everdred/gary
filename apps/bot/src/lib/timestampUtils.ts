@@ -14,7 +14,28 @@ export class TimestampUtils {
   }
 
   /**
-   * Creates a time range footer text
+   * Creates a time range footer text for regular message content
+   * @param startDate - Start date
+   * @param endDate - End date
+   * @param prefix - Optional prefix text
+   */
+  static createTimeRangeMessage(startDate: Date | null, endDate: Date | null, prefix?: string): string {
+    if (!startDate || !endDate) {
+      return prefix || '';
+    }
+
+    const parts = [];
+    if (prefix) {
+      parts.push(prefix);
+    }
+    parts.push(`Began ${this.formatDiscordTimestamp(startDate)}`);
+    parts.push(`Ends ${this.formatDiscordTimestamp(endDate)}`);
+    
+    return parts.join(' • ');
+  }
+
+  /**
+   * Creates a simple footer text for embeds (timestamps should use embed.timestamp field)
    * @param startDate - Start date
    * @param endDate - End date
    * @param prefix - Optional prefix text
@@ -28,8 +49,25 @@ export class TimestampUtils {
     if (prefix) {
       parts.push(prefix);
     }
-    parts.push(`Began ${this.formatDiscordTimestamp(startDate)}`);
-    parts.push(`Ends ${this.formatDiscordTimestamp(endDate)}`);
+    
+    // Format dates as readable strings for embed footers
+    const startStr = startDate.toLocaleDateString('en-US', { 
+      weekday: 'short', 
+      month: 'short', 
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
+    });
+    const endStr = endDate.toLocaleDateString('en-US', { 
+      weekday: 'short', 
+      month: 'short', 
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
+    });
+    
+    parts.push(`Began ${startStr}`);
+    parts.push(`Ends ${endStr}`);
     
     return parts.join(' • ');
   }

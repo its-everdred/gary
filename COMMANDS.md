@@ -4,8 +4,6 @@
 
 ### Flag
 
-![Flag Demo](public/flag.gif)
-
 - `/flag target:<@user> message:<text>` - Flag a user anonymously to moderators
 
   - Sends anonymous notification to mod channel
@@ -16,6 +14,9 @@
 - `/unflag target:<@user>` - Remove your flag for a user
   - Shows full original message in notification
   - Notifies moderators of the unflag action
+
+Demo:
+![Flag Demo](public/flag.gif)
 
 ### Nomination
 
