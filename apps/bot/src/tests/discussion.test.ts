@@ -9,8 +9,12 @@ const mockPrisma = {
   }
 };
 
-const mockNomineeStateManager = {
-  transitionNominee: mock(() => Promise.resolve({ success: true }))
+const mockJobScheduler = {
+  transitionToVote: mock(() => Promise.resolve())
+};
+
+const mockNominationJobScheduler = {
+  getInstance: mock(() => mockJobScheduler)
 };
 
 const mockChannel = {
@@ -36,7 +40,7 @@ const mockInteraction = {
 } as any as ChatInputCommandInteraction;
 
 mock.module('../../lib/db.js', () => ({ prisma: mockPrisma }));
-mock.module('../../lib/nomineeService.js', () => ({ NomineeStateManager: mockNomineeStateManager }));
+mock.module('../../lib/jobScheduler.js', () => ({ NominationJobScheduler: mockNominationJobScheduler }));
 mock.module('pino', () => ({
   default: () => ({
     info: () => {},
@@ -52,7 +56,7 @@ describe('discussion command', () => {
   beforeEach(() => {
     mockPrisma.nominee.findFirst.mockReset();
     mockPrisma.nominee.update.mockReset();
-    mockNomineeStateManager.transitionNominee.mockReset();
+    mockJobScheduler.transitionToVote.mockReset();
     mockInteraction.deferReply.mockClear();
     mockInteraction.editReply.mockClear();
     mockInteraction.options.getNumber.mockClear();
@@ -83,6 +87,7 @@ describe('discussion command', () => {
       id: 'nominee-1',
       name: 'Test User',
       state: NomineeState.DISCUSSION,
+      guildId: 'test-guild-id',
       discussionStart,
       voteStart,
       discussionChannelId: 'channel-123'
@@ -113,17 +118,19 @@ describe('discussion command', () => {
       id: 'nominee-1',
       name: 'Test User',
       state: NomineeState.DISCUSSION,
+      guildId: 'test-guild-id',
       discussionStart,
       voteStart,
       discussionChannelId: 'channel-123'
     });
 
     mockInteraction.options.getNumber.mockReturnValue(2); // Set to 2 hours (already passed)
-    mockNomineeStateManager.transitionNominee.mockResolvedValue({ success: true });
 
     await handleDiscussionCommand(mockInteraction);
 
-    expect(mockNomineeStateManager.transitionNominee).toHaveBeenCalledWith('nominee-1', NomineeState.VOTE);
+    expect(mockJobScheduler.transitionToVote).toHaveBeenCalledWith(expect.objectContaining({
+      id: 'nominee-1'
+    }));
     expect(mockInteraction.editReply).toHaveBeenCalledWith(
       expect.stringContaining('has been transitioned to VOTE state')
     );

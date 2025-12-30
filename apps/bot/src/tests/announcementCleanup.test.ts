@@ -96,6 +96,8 @@ describe('Announcement Message Cleanup', () => {
       state: NomineeState.DISCUSSION,
       nominator: 'test-nominator',
       announcementMessageIds: null,
+      discussionStart: new Date(),
+      voteStart: new Date(Date.now() + 24 * 60 * 60 * 1000),
     };
 
     // Mock database calls
@@ -122,6 +124,8 @@ describe('Announcement Message Cleanup', () => {
       state: NomineeState.VOTE,
       nominator: 'test-nominator',
       announcementMessageIds: null,
+      voteStart: new Date(),
+      cleanupStart: new Date(Date.now() + 24 * 60 * 60 * 1000),
     };
 
     // Mock different message IDs for governance and general
@@ -156,6 +160,8 @@ describe('Announcement Message Cleanup', () => {
       state: NomineeState.DISCUSSION,
       nominator: 'test-nominator',
       announcementMessageIds: 'existing-message-id',
+      discussionStart: new Date(),
+      voteStart: new Date(Date.now() + 24 * 60 * 60 * 1000),
     };
 
     // Mock database calls
