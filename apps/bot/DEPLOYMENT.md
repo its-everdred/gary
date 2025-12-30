@@ -53,6 +53,20 @@ The bot will validate all environment variables on startup. If any required vari
 
 This ensures the bot won't run with missing configuration that could cause unexpected behavior.
 
+### Database Setup
+
+#### First-time Production Deployment
+
+If you're deploying to a production database that already has data (e.g., from a previous version), you need to baseline the migrations:
+
+1. Deploy your code
+2. Run `npm run baseline` ONCE to mark existing migrations as applied
+3. Future deployments will work with just `npm start`
+
+#### Fresh Database
+
+If starting with a fresh database, just run `npm start` - no baseline needed.
+
 ### Example .env file for local development
 
 ```env
