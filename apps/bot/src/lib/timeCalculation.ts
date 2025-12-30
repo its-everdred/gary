@@ -9,7 +9,7 @@ const logger = pino();
 export interface ScheduledTimes {
   discussionStart: Date;
   voteStart: Date;
-  certifyStart: Date;
+  cleanupStart: Date;
 }
 
 export class TimeCalculationService {
@@ -64,15 +64,15 @@ export class TimeCalculationService {
       voteStart.getUTCMinutes() + NOMINATION_CONFIG.DISCUSSION_DURATION_MINUTES
     );
     
-    const certifyStart = new Date(voteStart);
-    certifyStart.setUTCMinutes(
-      certifyStart.getUTCMinutes() + NOMINATION_CONFIG.VOTE_DURATION_MINUTES
+    const cleanupStart = new Date(voteStart);
+    cleanupStart.setUTCMinutes(
+      cleanupStart.getUTCMinutes() + NOMINATION_CONFIG.VOTE_DURATION_MINUTES
     );
     
     return {
       discussionStart,
       voteStart,
-      certifyStart
+      cleanupStart
     };
   }
 
@@ -122,8 +122,8 @@ export class TimeCalculationService {
               nominee.state === NomineeState.DISCUSSION;
           break;
           
-        case NomineeState.CERTIFY:
-          shouldTransition = nominee.certifyStart && nominee.certifyStart <= currentTime && 
+        case NomineeState.CLEANUP:
+          shouldTransition = nominee.cleanupStart && nominee.cleanupStart <= currentTime && 
               nominee.state === NomineeState.VOTE;
           break;
       }
@@ -140,13 +140,21 @@ export class TimeCalculationService {
    * Checks if a nominee should transition to PAST state (failed vote or completed process)
    */
   static shouldTransitionToPast(nominee: Nominee, currentTime: Date = new Date()): boolean {
-    if (nominee.state === NomineeState.CERTIFY && nominee.certifyStart) {
-      const certifyEndTime = new Date(nominee.certifyStart);
-      certifyEndTime.setUTCMinutes(
-        certifyEndTime.getUTCMinutes() + NOMINATION_CONFIG.CERTIFY_DURATION_MINUTES
+    if (nominee.state === NomineeState.CLEANUP && nominee.cleanupStart) {
+      const cleanupEndTime = new Date(nominee.cleanupStart);
+      cleanupEndTime.setUTCMinutes(
+        cleanupEndTime.getUTCMinutes() + NOMINATION_CONFIG.CLEANUP_DURATION_MINUTES
       );
       
-      return currentTime >= certifyEndTime;
+      logger.debug(`shouldTransitionToPast calculation for ${nominee.name}:`, {
+        cleanupStart: nominee.cleanupStart.toISOString(),
+        cleanupDurationMinutes: NOMINATION_CONFIG.CLEANUP_DURATION_MINUTES,
+        cleanupEndTime: cleanupEndTime.toISOString(),
+        currentTime: currentTime.toISOString(),
+        shouldTransition: currentTime >= cleanupEndTime
+      });
+      
+      return currentTime >= cleanupEndTime;
     }
     
     return false;
@@ -186,7 +194,7 @@ export class TimeCalculationService {
           data: {
             discussionStart: result.scheduledTimes.discussionStart,
             voteStart: result.scheduledTimes.voteStart,
-            certifyStart: result.scheduledTimes.certifyStart
+            cleanupStart: result.scheduledTimes.cleanupStart
           }
         });
       }

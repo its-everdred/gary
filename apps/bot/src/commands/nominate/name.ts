@@ -14,7 +14,7 @@ import pino from 'pino';
 
 const logger = pino();
 
-async function calculateNomineeSchedule(guildId: string): Promise<{ discussionStart: Date; voteStart: Date; certifyStart: Date }> {
+async function calculateNomineeSchedule(guildId: string): Promise<{ discussionStart: Date; voteStart: Date; cleanupStart: Date }> {
   // Get all active nominees to determine queue position
   const activeNominees = await NomineeStateManager.getActiveNominees(guildId);
   const queuePosition = activeNominees.length + 1; // New nominee goes to end of queue
@@ -102,11 +102,11 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
           guildId,
           discussionStart: schedule.discussionStart,
           voteStart: schedule.voteStart,
-          certifyStart: schedule.certifyStart
+          cleanupStart: schedule.cleanupStart
         }
       });
 
-      logger.info(`Nomination created: ${name} nominated by ${nominator.username} (via moderator)`);;
+      logger.info(`Nomination created: ${name} nominated by ${nominator.username} (via moderator)`);
 
       // Get all nominees for the queue display
       const nominees = await NomineeDisplayUtils.getNomineesInQueueOrder(guildId);
@@ -132,7 +132,7 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
       }
       
       // Send private acknowledgment to mod
-      const channelRef = NOMINATION_CONFIG.CHANNELS.GA_GOVERNANCE ? `<#${NOMINATION_CONFIG.CHANNELS.GA_GOVERNANCE}>` : 'governance channel';
+      const channelRef = NOMINATION_CONFIG.CHANNELS.GOVERNANCE ? `<#${NOMINATION_CONFIG.CHANNELS.GOVERNANCE}>` : 'governance channel';
       await interaction.reply({
         content: `Successfully nominated ${name} on behalf of ${nominator.username} and announced in ${channelRef}.`,
         flags: DISCORD_CONSTANTS.MESSAGE_FLAGS.EPHEMERAL
@@ -164,7 +164,7 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
         guildId,
         discussionStart: schedule.discussionStart,
         voteStart: schedule.voteStart,
-        certifyStart: schedule.certifyStart
+        cleanupStart: schedule.cleanupStart
       }
     });
 
@@ -194,7 +194,7 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
     }
     
     // Send private acknowledgment to nominator
-    const channelRef = NOMINATION_CONFIG.CHANNELS.GA_GOVERNANCE ? `<#${NOMINATION_CONFIG.CHANNELS.GA_GOVERNANCE}>` : 'governance channel';
+    const channelRef = NOMINATION_CONFIG.CHANNELS.GOVERNANCE ? `<#${NOMINATION_CONFIG.CHANNELS.GOVERNANCE}>` : 'governance channel';
     await interaction.reply({
       content: `Successfully nominated ${name} and announced in ${channelRef}.`,
       flags: DISCORD_CONSTANTS.MESSAGE_FLAGS.EPHEMERAL

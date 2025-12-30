@@ -33,7 +33,7 @@ export class NomineeDisplayUtils {
       const statePriority = {
         [NomineeState.DISCUSSION]: 1,
         [NomineeState.VOTE]: 2,
-        [NomineeState.CERTIFY]: 3,
+        [NomineeState.CLEANUP]: 3,
         [NomineeState.ACTIVE]: 4
       };
 
@@ -74,9 +74,12 @@ export class NomineeDisplayUtils {
   static formatDuration(minutes: number): string {
     if (minutes < 60) {
       return `${minutes} minute${minutes === 1 ? '' : 's'}`;
-    } else {
+    } else if (minutes < 1440) { // Less than 24 hours
       const hours = Math.round(minutes / 60);
       return `${hours} hour${hours === 1 ? '' : 's'}`;
+    } else { // 24 hours or more
+      const days = Math.round(minutes / 1440);
+      return `${days} day${days === 1 ? '' : 's'}`;
     }
   }
 
@@ -99,11 +102,14 @@ export class NomineeDisplayUtils {
           }
         }
       } catch {
-        // Fall back to original value if guild access fails
+        // Fall back to mention format if guild access fails
       }
+      
+      // Return mention format if member not found
+      return `<@${nominee.nominator}>`;
     }
     
-    // Return original value (either username or user ID as fallback)
+    // Return original value (username)
     return nominee.nominator;
   }
 
@@ -114,13 +120,13 @@ export class NomineeDisplayUtils {
     const nominator = await this.resolveNominatorName(nominee);
     const positionPrefix = position ? `**${position}.** ` : '';
     
-    if (nominee.state === NomineeState.VOTE && nominee.certifyStart) {
-      const endTime = this.formatDiscordTimestamp(nominee.certifyStart);
+    if (nominee.state === NomineeState.VOTE && nominee.cleanupStart) {
+      const endTime = this.formatDiscordTimestamp(nominee.cleanupStart);
       return `${positionPrefix}${nominee.name} *(by ${nominator})* • Vote ends ${endTime}`;
     } else if (nominee.state === NomineeState.DISCUSSION && nominee.voteStart) {
       const voteTime = this.formatDiscordTimestamp(nominee.voteStart);
       return `${positionPrefix}${nominee.name} *(by ${nominator})* • Vote begins ${voteTime}`;
-    } else if (nominee.state === NomineeState.CERTIFY) {
+    } else if (nominee.state === NomineeState.CLEANUP) {
       return `${positionPrefix}${nominee.name} *(by ${nominator})* • Results pending`;
     } else if (nominee.state === NomineeState.ACTIVE && nominee.discussionStart) {
       const discussionTime = this.formatDiscordTimestamp(nominee.discussionStart);
@@ -212,10 +218,7 @@ export class NomineeDisplayUtils {
         : `**${nomineeName}** has been nominated by ${nominatorName}.`,
       color: 0x3498db,
       fields: [],
-      timestamp: new Date().toISOString(),
-      footer: {
-        text: 'Governance • Nomination Queue'
-      }
+      timestamp: new Date().toISOString()
     };
 
     if (nominees.length > 0) {
@@ -238,10 +241,7 @@ export class NomineeDisplayUtils {
       title: '📊 Current Nominations',
       color: 0x3498db,
       fields: [],
-      timestamp: new Date().toISOString(),
-      footer: {
-        text: 'Governance • Nomination Queue'
-      }
+      timestamp: new Date().toISOString()
     };
 
     const queueValue = await this.formatQueueForEmbed(nominees);
@@ -258,11 +258,11 @@ export class NomineeDisplayUtils {
    * Gets complete status display for a nominee
    */
   private static getStatusDisplay(nominee: Nominee): string {
-    if (nominee.state === NomineeState.VOTE && nominee.certifyStart) {
-      return `Vote active ${this.formatDiscordTimestamp(nominee.certifyStart)} 🗳️`;
+    if (nominee.state === NomineeState.VOTE && nominee.cleanupStart) {
+      return `Vote active ${this.formatDiscordTimestamp(nominee.cleanupStart)} 🗳️`;
     } else if (nominee.state === NomineeState.DISCUSSION && nominee.voteStart) {
       return `Currently in discussion ${this.formatDiscordTimestamp(nominee.voteStart)} 🗣️`;
-    } else if (nominee.state === NomineeState.CERTIFY) {
+    } else if (nominee.state === NomineeState.CLEANUP) {
       return 'Results pending ⏳';
     } else if (nominee.state === NomineeState.ACTIVE && nominee.discussionStart) {
       return `Scheduled for discussion ${this.formatDiscordTimestamp(nominee.discussionStart)} 📅`;

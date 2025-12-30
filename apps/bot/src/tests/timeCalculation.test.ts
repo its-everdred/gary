@@ -1,7 +1,10 @@
 import { describe, test, expect } from 'bun:test';
-import { TimeCalculationService } from '../lib/timeCalculation.js';
 import { NomineeState } from '@prisma/client';
 import type { Nominee } from '@prisma/client';
+
+// NOTE: This test file tests the ACTUAL TimeCalculationService implementation
+// Import directly without any mocking to ensure we get the real implementation
+import { TimeCalculationService } from '../lib/timeCalculation.js';
 
 function createMockNominee(overrides: Partial<Nominee> = {}): Nominee {
   return {
@@ -12,10 +15,18 @@ function createMockNominee(overrides: Partial<Nominee> = {}): Nominee {
     guildId: 'test-guild',
     discussionStart: null,
     voteStart: null,
-    certifyStart: null,
+    cleanupStart: null,
     createdAt: new Date(),
+    updatedAt: new Date(),
     discussionChannelId: null,
     voteChannelId: null,
+    votePollMessageId: null,
+    voteYesCount: 0,
+    voteNoCount: 0,
+    votePassed: null,
+    botMessageIds: null,
+    voteGovernanceAnnounced: false,
+    announcementMessageIds: null,
     ...overrides
   };
 }
@@ -104,8 +115,8 @@ describe('TimeCalculationService', () => {
       const hoursDiff = (times.voteStart.getTime() - times.discussionStart.getTime()) / (1000 * 60 * 60);
       expect(hoursDiff).toBe(48);
       
-      // Certify should start 120 hours (5 days) after vote
-      const voteHoursDiff = (times.certifyStart.getTime() - times.voteStart.getTime()) / (1000 * 60 * 60);
+      // Cleanup should start 120 hours (5 days) after vote
+      const voteHoursDiff = (times.cleanupStart.getTime() - times.voteStart.getTime()) / (1000 * 60 * 60);
       expect(voteHoursDiff).toBe(120);
     });
 
@@ -230,35 +241,35 @@ describe('TimeCalculationService', () => {
   });
 
   describe('shouldTransitionToPast', () => {
-    test('returns true when certify period has ended', () => {
-      const pastCertifyStart = new Date('2024-01-01T14:00:00.000Z');
+    test('returns true when cleanup period has ended', () => {
+      const pastCleanupStart = new Date('2024-01-01T14:00:00.000Z');
       const nominee = createMockNominee({
-        state: NomineeState.CERTIFY,
-        certifyStart: pastCertifyStart
+        state: NomineeState.CLEANUP,
+        cleanupStart: pastCleanupStart
       });
       
-      // 25 hours later (certify period is 24 hours)
+      // 25 hours later (cleanup period is 24 hours)
       const currentTime = new Date('2024-01-02T15:00:00.000Z');
       
       const shouldTransition = TimeCalculationService.shouldTransitionToPast(nominee, currentTime);
       expect(shouldTransition).toBe(true);
     });
 
-    test('returns false when certify period is still active', () => {
-      const recentCertifyStart = new Date('2024-01-01T14:00:00.000Z');
+    test('returns false when cleanup period is still active', () => {
+      const recentCleanupStart = new Date('2024-01-01T14:00:00.000Z');
       const nominee = createMockNominee({
-        state: NomineeState.CERTIFY,
-        certifyStart: recentCertifyStart
+        state: NomineeState.CLEANUP,
+        cleanupStart: recentCleanupStart
       });
       
-      // 12 hours later (certify period is 24 hours)
+      // 12 hours later (cleanup period is 24 hours)
       const currentTime = new Date('2024-01-02T02:00:00.000Z');
       
       const shouldTransition = TimeCalculationService.shouldTransitionToPast(nominee, currentTime);
       expect(shouldTransition).toBe(false);
     });
 
-    test('returns false for non-certify states', () => {
+    test('returns false for non-cleanup states', () => {
       const nominee = createMockNominee({ state: NomineeState.VOTE });
       const shouldTransition = TimeCalculationService.shouldTransitionToPast(nominee);
       expect(shouldTransition).toBe(false);

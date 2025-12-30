@@ -40,7 +40,7 @@ export class ChannelFinderService {
   }
 
   static async governance(): Promise<TextChannel | null> {
-    return this.findChannel(NOMINATION_CONFIG.CHANNELS.GA_GOVERNANCE);
+    return this.findChannel(NOMINATION_CONFIG.CHANNELS.GOVERNANCE);
   }
 
   static async general(): Promise<TextChannel | null> {
@@ -51,8 +51,8 @@ export class ChannelFinderService {
     return this.findChannel(NOMINATION_CONFIG.CHANNELS.MOD_COMMS);
   }
 
-  static async modWarn(): Promise<TextChannel | null> {
-    return this.findChannel(NOMINATION_CONFIG.CHANNELS.MOD_WARN);
+  static async modFlag(): Promise<TextChannel | null> {
+    return this.findChannel(NOMINATION_CONFIG.CHANNELS.MOD_FLAG);
   }
   
   /**

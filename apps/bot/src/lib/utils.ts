@@ -68,7 +68,7 @@ export async function sendToModChannel(
   message: string
 ): Promise<void> {
   try {
-    const channel = await ChannelFinderService.modWarn();
+    const channel = await ChannelFinderService.modFlag();
     
     if (!channel) {
       logger.error('Mod warn channel not found');
@@ -81,13 +81,13 @@ export async function sendToModChannel(
   }
 }
 
-// Warn utilities
+// Flag utilities
 export async function checkExistingWarning(
   guildId: string,
   targetUserId: string,
   voterHash: string
 ): Promise<boolean> {
-  const existingWarning = await prisma.warn.findUnique({
+  const existingFlag = await prisma.flag.findUnique({
     where: {
       guildId_targetUserId_voterHash: {
         guildId,
@@ -97,7 +97,7 @@ export async function checkExistingWarning(
     },
   });
   
-  return !!existingWarning;
+  return !!existingFlag;
 }
 
 export async function createWarning(
@@ -106,7 +106,7 @@ export async function createWarning(
   voterHash: string,
   message: string
 ): Promise<void> {
-  await prisma.warn.create({
+  await prisma.flag.create({
     data: {
       guildId,
       targetUserId,
@@ -120,7 +120,7 @@ export async function countWarnings(
   guildId: string,
   targetUserId: string
 ): Promise<number> {
-  return await prisma.warn.count({
+  return await prisma.flag.count({
     where: {
       guildId,
       targetUserId,

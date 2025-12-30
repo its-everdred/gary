@@ -1,0 +1,2 @@
+-- Empty baseline migration to satisfy P3017 error
+-- Production database already has the required tables

@@ -54,21 +54,12 @@ export async function handleStartCommand(interaction: ChatInputCommandInteractio
     }
 
     if (nomineeName) {
-      // Specific nominee requested
-      nominee = await NomineeStateManager.findNomineeByName(guildId, nomineeName);
+      // Specific nominee requested - only look for ACTIVE nominees
+      nominee = await NomineeStateManager.findActiveNomineeByName(guildId, nomineeName);
       
       if (!nominee) {
         await interaction.reply({
-          content: `❌ **Nominee Not Found**\n\nNo nominee named "${nomineeName}" found in this server.`,
-          ephemeral: true
-        });
-        return;
-      }
-
-      // Check if nominee is in ACTIVE state
-      if (nominee.state !== NomineeState.ACTIVE) {
-        await interaction.reply({
-          content: `❌ **Invalid State**\n\nNominee "${nomineeName}" is currently in ${nominee.state} state. Only ACTIVE nominees can be manually started.`,
+          content: `❌ **Active Nominee Not Found**\n\nNo active nominee named "${nomineeName}" found. Only nominees in ACTIVE state can be started.`,
           ephemeral: true
         });
         return;
@@ -93,8 +84,8 @@ export async function handleStartCommand(interaction: ChatInputCommandInteractio
     const voteStart = new Date(now);
     voteStart.setUTCMinutes(voteStart.getUTCMinutes() + NOMINATION_CONFIG.DISCUSSION_DURATION_MINUTES);
     
-    const certifyStart = new Date(voteStart);
-    certifyStart.setUTCMinutes(certifyStart.getUTCMinutes() + NOMINATION_CONFIG.VOTE_DURATION_MINUTES);
+    const cleanupStart = new Date(voteStart);
+    cleanupStart.setUTCMinutes(cleanupStart.getUTCMinutes() + NOMINATION_CONFIG.VOTE_DURATION_MINUTES);
     
     // Transition nominee to DISCUSSION state
     const transitionResult = await NomineeStateManager.transitionNominee(
@@ -103,7 +94,7 @@ export async function handleStartCommand(interaction: ChatInputCommandInteractio
       {
         discussionStart: now,
         voteStart: voteStart,
-        certifyStart: certifyStart
+        cleanupStart: cleanupStart
       }
     );
 

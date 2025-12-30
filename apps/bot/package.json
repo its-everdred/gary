@@ -1,12 +1,12 @@
 {
   "name": "gary-bot",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch --env-file=.env src/index.ts",
     "build": "prisma generate && tsup src/index.ts --format esm,cjs --dts",
-    "start": "prisma db push --skip-generate && node dist/index.js",
+    "start": "prisma migrate deploy && node dist/index.js",
     "lint": "eslint .",
     "test": "bun test",
     "db:generate": "prisma generate",

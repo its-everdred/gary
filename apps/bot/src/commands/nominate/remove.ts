@@ -4,6 +4,8 @@ import { NomineeState } from '@prisma/client';
 import { CommandUtils } from '../../lib/commandUtils.js';
 import { TimeCalculationService } from '../../lib/timeCalculation.js';
 import { ConfigService } from '../../lib/configService.js';
+import { NominationJobScheduler } from '../../lib/jobScheduler.js';
+
 
 export async function handleRemoveCommand(interaction: ChatInputCommandInteraction): Promise<void> {
   try {
@@ -43,20 +45,46 @@ export async function handleRemoveCommand(interaction: ChatInputCommandInteracti
 
 
 
-    // Remove the nominee
-    await prisma.nominee.delete({
-      where: {
-        id: nominee.id
+    await interaction.deferReply({ ephemeral: true });
+
+    // Check if this is the current active nominee (has channels)
+    const hasChannels = nominee.discussionChannelId || nominee.voteChannelId;
+    
+    if (hasChannels) {
+      // Perform full cleanup using existing job scheduler logic
+      const jobScheduler = NominationJobScheduler.getInstance(interaction.client);
+      const result = await jobScheduler.performPostCleanupCleanup(nominee);
+
+      if (result.success) {
+        await interaction.editReply({
+          content: `✅ **${nominee.name} has been removed**\n\n` +
+                   '• Deleted from nominations list\n' +
+                   '• Removed discussion and vote channels\n' +
+                   '• Cleaned up associated messages\n' +
+                   '• Updated schedules for remaining nominees'
+        });
+      } else {
+        await interaction.editReply({
+          content: `❌ **Failed to remove ${nominee.name}**\n\nError: ${result.errorMessage}`
+        });
       }
-    });
+    } else {
+      // Simple removal for queued nominees (no channels to clean up)
+      await prisma.nominee.delete({
+        where: {
+          id: nominee.id
+        }
+      });
 
-    // Recalculate schedules for all remaining active nominees
-    await TimeCalculationService.recalculateAndUpdateQueueSchedules(guildId);
+      // Recalculate schedules for remaining nominees
+      await TimeCalculationService.recalculateAndUpdateQueueSchedules(guildId);
 
-    await interaction.reply({
-      content: `${nominee.name} has been removed from the nominations list. Schedules updated for remaining nominees.`,
-      flags: 64
-    });
+      await interaction.editReply({
+        content: `✅ **${nominee.name} has been removed from the queue**\n\n` +
+                 '• Deleted from nominations list\n' +
+                 '• Updated schedules for remaining nominees'
+      });
+    }
 
 
   } catch (error) {

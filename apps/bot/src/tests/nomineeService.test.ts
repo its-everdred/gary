@@ -27,7 +27,7 @@ function createMockNominee(overrides: Partial<Nominee> = {}): Nominee {
     guildId: 'test-guild',
     discussionStart: null,
     voteStart: null,
-    certifyStart: null,
+    cleanupStart: null,
     createdAt: new Date(),
     discussionChannelId: null,
     voteChannelId: null,
@@ -79,19 +79,19 @@ describe('NomineeStateManager', () => {
       expect(result.isValid).toBe(true);
     });
 
-    test('allows valid VOTE to CERTIFY transition', async () => {
+    test('allows valid VOTE to CLEANUP transition', async () => {
       const nominee = createMockNominee({ 
         state: NomineeState.VOTE,
         voteStart: new Date()
       });
 
-      const result = await NomineeStateManager.validateStateTransition(nominee, NomineeState.CERTIFY);
+      const result = await NomineeStateManager.validateStateTransition(nominee, NomineeState.CLEANUP);
 
       expect(result.isValid).toBe(true);
     });
 
     test('allows any state to PAST transition', async () => {
-      const states = [NomineeState.ACTIVE, NomineeState.DISCUSSION, NomineeState.VOTE, NomineeState.CERTIFY];
+      const states = [NomineeState.ACTIVE, NomineeState.DISCUSSION, NomineeState.VOTE, NomineeState.CLEANUP];
 
       for (const state of states) {
         const nominee = createMockNominee({ state });
@@ -146,16 +146,16 @@ describe('NomineeStateManager', () => {
       expect(result.errorMessage).toContain('Discussion start time must be set before starting vote');
     });
 
-    test('rejects CERTIFY start without vote start time', async () => {
+    test('rejects CLEANUP start without vote start time', async () => {
       const nominee = createMockNominee({ 
         state: NomineeState.VOTE,
         voteStart: null
       });
 
-      const result = await NomineeStateManager.validateStateTransition(nominee, NomineeState.CERTIFY);
+      const result = await NomineeStateManager.validateStateTransition(nominee, NomineeState.CLEANUP);
 
       expect(result.isValid).toBe(false);
-      expect(result.errorMessage).toContain('Vote start time must be set before starting certification');
+      expect(result.errorMessage).toContain('Vote start time must be set before starting cleanup');
     });
   });
 
@@ -244,7 +244,7 @@ describe('NomineeStateManager', () => {
         where: {
           guildId: 'test-guild',
           state: {
-            in: [NomineeState.DISCUSSION, NomineeState.VOTE, NomineeState.CERTIFY]
+            in: [NomineeState.DISCUSSION, NomineeState.VOTE, NomineeState.CLEANUP]
           }
         }
       });
@@ -318,7 +318,7 @@ describe('NomineeStateManager', () => {
         where: {
           guildId: 'test-guild',
           state: {
-            in: [NomineeState.DISCUSSION, NomineeState.VOTE, NomineeState.CERTIFY]
+            in: [NomineeState.DISCUSSION, NomineeState.VOTE, NomineeState.CLEANUP]
           }
         },
         orderBy: {

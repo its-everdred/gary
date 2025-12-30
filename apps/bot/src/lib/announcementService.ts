@@ -7,6 +7,7 @@ import { NomineeDisplayUtils } from './nomineeDisplayUtils.js';
 import { ChannelFinderService } from './channelFinderService.js';
 import { prisma } from './db.js';
 import { ConfigService } from './configService.js';
+import { TimestampUtils } from './timestampUtils.js';
 
 const logger = pino();
 
@@ -16,6 +17,7 @@ export class AnnouncementService {
   constructor(client: Client) {
     this.client = client;
   }
+
 
   /**
    * Adds message IDs to the nominee's announcement tracking field
@@ -43,7 +45,7 @@ export class AnnouncementService {
   }
 
   /**
-   * Posts vote announcement to #ga-governance channel
+   * Posts vote announcement to governance channel
    */
   async announceVoteStart(nominee: Nominee, voteChannelId: string, pollUrl?: string): Promise<boolean> {
     try {
@@ -53,6 +55,12 @@ export class AnnouncementService {
         return false;
       }
 
+      if (!nominee.voteStart || !nominee.cleanupStart) {
+        logger.warn({ nomineeId: nominee.id }, 'Vote start or cleanup start time not set');
+        return false;
+      }
+
+      const voteStart = new Date(nominee.voteStart);
 
       const description = pollUrl 
         ? `Voting has begun for **${nominee.name}**'s nomination: [Vote Now](${pollUrl})`
@@ -62,10 +70,7 @@ export class AnnouncementService {
         title: '🗳️ New Vote Started',
         description,
         color: 0x00ff00,
-        timestamp: new Date().toISOString(),
-        footer: {
-          text: 'All members are encouraged to vote'
-        }
+        timestamp: voteStart.toISOString()
       };
 
       const governanceMessage = await governanceChannel.send({
@@ -106,7 +111,7 @@ export class AnnouncementService {
   }
 
   /**
-   * Posts discussion announcement to #ga-governance channel
+   * Posts discussion announcement to governance channel
    */
   async announceDiscussionStart(nominee: Nominee, discussionChannelId: string): Promise<boolean> {
     try {
@@ -119,6 +124,13 @@ export class AnnouncementService {
 
       const discussionChannel = guild.channels.cache.get(discussionChannelId);
       const discussionChannelMention = discussionChannel ? `<#${discussionChannelId}>` : '#discussion-channel';
+
+      if (!nominee.discussionStart || !nominee.voteStart) {
+        logger.warn({ nomineeId: nominee.id }, 'Discussion start or vote start time not set');
+        return false;
+      }
+
+      const discussionStart = new Date(nominee.discussionStart);
 
       const nominatorName = await NomineeDisplayUtils.resolveNominatorName(nominee);
       const embed = {
@@ -137,10 +149,7 @@ export class AnnouncementService {
           }
         ],
         color: 0x3498db,
-        timestamp: new Date().toISOString(),
-        footer: {
-          text: 'Governance • All members welcome to participate'
-        }
+        timestamp: discussionStart.toISOString()
       };
 
       const governanceMessage = await governanceChannel.send({
@@ -216,10 +225,7 @@ export class AnnouncementService {
           }
         ],
         color: resultColor,
-        timestamp: new Date().toISOString(),
-        footer: {
-          text: passed ? 'Vote passed' : 'Vote failed'
-        }
+        timestamp: new Date().toISOString()
       };
 
       const announcement = passed 
@@ -295,10 +301,7 @@ export class AnnouncementService {
           }
         ],
         color: embedColor,
-        timestamp: new Date().toISOString(),
-        footer: {
-          text: 'Governance • Vote Results'
-        }
+        timestamp: new Date().toISOString()
       };
 
       await governanceChannel.send({ embeds: [embed] });
@@ -338,7 +341,11 @@ export class AnnouncementService {
         color: 0xff9500,
         timestamp: new Date().toISOString(),
         footer: {
-          text: 'Governance • Vote Expired'
+          text: TimestampUtils.createTimeRangeFooter(
+            nominee.voteStart ? new Date(nominee.voteStart) : null,
+            nominee.cleanupStart ? new Date(nominee.cleanupStart) : null,
+            'Vote Expired'
+          )
         }
       };
 

@@ -22,8 +22,8 @@ export class ConfigService {
     return process.env.MOD_COMMS_CHANNEL_ID || null;
   }
 
-  static getModWarnChannelId(): string | null {
-    return process.env.MOD_WARN_CHANNEL_ID || null;
+  static getModFlagChannelId(): string | null {
+    return process.env.MOD_FLAG_CHANNEL_ID || null;
   }
 
   static getNominationsCategoryId(): string | null {

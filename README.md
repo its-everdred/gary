@@ -4,29 +4,32 @@ Minimal discord moderation assistant manager.
 
 ## Commands
 
-### Warning System
+See [COMMANDS.md](COMMANDS.md) for detailed command reference.
 
-- `/warn target:<@user> message:<text>` - Warn mods about a user, tracks toward kick quorum
-- `/unwarn target:<@user>` - Remove your warning about a user
+### Flagging System
+
+- `/flag target:<@user> message:<text>` - Flag mods about a user, tracks toward kick quorum
+- `/unflag target:<@user>` - Remove your flag about a user
 
 ### Nomination System
 
-- `/nominate add name:<text>` - Nominate someone for GA membership
+- `/nominate add name:<text>` - Nominate someone for membership
 - `/nominate list` - List all current nominations and their state
 - `/mod nominate add name:<text> nominator:<@user>` - Moderator: Add nomination on behalf of someone
 - `/mod nominate remove name:<text>` - Moderator: Remove a nominee
 - `/mod nominate start [name:<text>]` - Moderator: Start discussion for specific nominee or next in queue
-- `/mod nominate cleanup` - Moderator: Complete certification early and cleanup channels for nominee in CERTIFY state
+- `/mod nominate discussion hours:<number>` - Moderator: Set discussion duration for current nominee
+- `/mod nominate cleanup` - Moderator: Complete cleanup early and cleanup channels for nominee in CLEANUP state
 
 ## Features
 
-- **Anonymous Warning System**: Members can warn about problematic users anonymously
-- **Nomination System**: Automated GA membership nomination workflow with:
+- **Anonymous Flagging System**: Members can flag problematic users anonymously
+- **Nomination System**: Automated membership nomination workflow with:
   - Discussion channels (24 hours)
   - Vote channels with EasyPoll integration (48 hours)
   - Automatic quorum calculation (40% of members)
   - Pass threshold (80% yes votes)
-  - Certification period (7 days)
+  - Cleanup period (7 days)
 
 ## EasyPoll Integration
 

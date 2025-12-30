@@ -1,12 +1,12 @@
-import type { Client, TextChannel } from "discord.js";
-import { ChannelType as DJSChannelType, PermissionFlagsBits } from "discord.js";
-import pino from "pino";
-import { prisma } from "./db.js";
-import type { Nominee } from "@prisma/client";
-import { NOMINATION_CONFIG } from "./constants.js";
-import { NomineeDisplayUtils } from "./nomineeDisplayUtils.js";
-import { DISCORD_CONSTANTS } from "./discordConstants.js";
-import { ConfigService } from "./configService.js";
+import type { Client, TextChannel } from 'discord.js';
+import { ChannelType as DJSChannelType } from 'discord.js';
+import pino from 'pino';
+import { prisma } from './db.js';
+import type { Nominee } from '@prisma/client';
+import { NOMINATION_CONFIG } from './constants.js';
+import { NomineeDisplayUtils } from './nomineeDisplayUtils.js';
+import { ConfigService } from './configService.js';
+import { TimestampUtils } from './timestampUtils.js';
 
 const logger = pino();
 
@@ -81,12 +81,12 @@ export class ChannelManagementService {
           nomineeId: nominee.id,
           nomineeName: nominee.name,
         },
-        "Failed to create discussion channel"
+        'Failed to create discussion channel'
       );
 
       return {
         success: false,
-        errorMessage: error instanceof Error ? error.message : "Unknown error",
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }
@@ -141,22 +141,27 @@ export class ChannelManagementService {
         data: { voteChannelId: channel.id },
       });
 
-      // Restrict @everyone from sending messages after channel inherits category permissions
+      // Restrict @everyone from sending messages and adding reactions after channel inherits category permissions
       try {
         await channel.permissionOverwrites.edit(guild.roles.everyone.id, {
           SendMessages: false,
+          AddReactions: false,
           ViewChannel: true,
-          ReadMessageHistory: true
+          ReadMessageHistory: true,
         });
-        logger.info(`Restricted @everyone from sending messages in vote channel: ${nominee.name}`);
+        logger.info(
+          `Restricted @everyone from sending messages and adding reactions in vote channel: ${nominee.name}`
+        );
       } catch (error) {
-        logger.error({
-          error,
-          channelId: channel.id,
-          nomineeName: nominee.name
-        }, 'Failed to restrict @everyone permissions');
+        logger.error(
+          {
+            error,
+            channelId: channel.id,
+            nomineeName: nominee.name,
+          },
+          'Failed to restrict @everyone permissions'
+        );
       }
-
 
       // Send initial vote message with calculated quorum
       await this.sendVoteStartMessage(
@@ -179,12 +184,12 @@ export class ChannelManagementService {
           nomineeId: nominee.id,
           nomineeName: nominee.name,
         },
-        "Failed to create vote channel"
+        'Failed to create vote channel'
       );
 
       return {
         success: false,
-        errorMessage: error instanceof Error ? error.message : "Unknown error",
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }
@@ -220,7 +225,7 @@ export class ChannelManagementService {
 
       return true;
     } catch (error) {
-      logger.error({ error, channelId, reason }, "Failed to archive channel");
+      logger.error({ error, channelId, reason }, 'Failed to archive channel');
       return false;
     }
   }
@@ -239,7 +244,7 @@ export class ChannelManagementService {
 
       return true;
     } catch (error) {
-      logger.error({ error, channelId, reason }, "Failed to delete channel");
+      logger.error({ error, channelId, reason }, 'Failed to delete channel');
       return false;
     }
   }
@@ -250,8 +255,8 @@ export class ChannelManagementService {
   private generateDiscussionChannelName(nomineeName: string): string {
     const sanitized = nomineeName
       .toLowerCase()
-      .replace(/[^\w\s-]/g, "")
-      .replace(/\s+/g, "-")
+      .replace(/[^\w\s-]/g, '')
+      .replace(/\s+/g, '-')
       .substring(0, 88); // 100 - "discussion-".length = 88
 
     return `discussion-${sanitized}`;
@@ -263,8 +268,8 @@ export class ChannelManagementService {
   private generateVoteChannelName(nomineeName: string): string {
     const sanitized = nomineeName
       .toLowerCase()
-      .replace(/[^\w\s-]/g, "")
-      .replace(/\s+/g, "-")
+      .replace(/[^\w\s-]/g, '')
+      .replace(/\s+/g, '-')
       .substring(0, 95); // 100 - "vote-".length = 95
 
     return `vote-${sanitized}`;
@@ -279,49 +284,39 @@ export class ChannelManagementService {
   ): Promise<void> {
     try {
       // Try to find the nominator by user ID to ping them (using cached members only)
-      let nominatorMember = channel.guild.members.cache.get(nominee.nominator);
-
-      // If not found in cache, try a limited fetch with timeout
-      if (!nominatorMember) {
-        try {
-          // Use a Promise.race with timeout to prevent hanging
-          await Promise.race([
-            channel.guild.members.fetch({
-              limit: DISCORD_CONSTANTS.LIMITS.MEMBER_FETCH_LIMIT,
-            }),
-            new Promise((_, reject) =>
-              setTimeout(
-                () => reject(new Error("Member fetch timeout")),
-                DISCORD_CONSTANTS.TIMEOUTS.MEMBER_FETCH
-              )
-            ),
-          ]);
-
-          // Try to find the nominator again after fetch
-          nominatorMember = channel.guild.members.cache.get(nominee.nominator);
-        } catch (fetchError) {
-          // Failed to fetch guild members for nominator lookup, proceeding without ping
-        }
-      }
+      const nominatorMember = channel.guild.members.cache.get(
+        nominee.nominator
+      );
 
       const nominatorMention = nominatorMember
         ? nominatorMember.toString()
         : `<@${nominee.nominator}>`;
       const nominatorDisplay = nominatorMember
         ? nominatorMember.displayName || nominatorMember.user.username
-        : nominee.nominator;
+        : `<@${nominee.nominator}>`;
+
+      // Get discussion time boundaries
+      const discussionStart = nominee.discussionStart
+        ? new Date(nominee.discussionStart)
+        : new Date();
+      const discussionEnd = nominee.voteStart
+        ? new Date(nominee.voteStart)
+        : new Date(
+            discussionStart.getTime() +
+              NOMINATION_CONFIG.DISCUSSION_DURATION_MINUTES * 60 * 1000
+          );
 
       const embed = {
         title: `📋 Discussion: ${nominee.name}`,
         description: `Discussion period has begun for nominee **${nominee.name}**.`,
         fields: [
           {
-            name: "👤 Nominator",
+            name: '👤 Nominator',
             value: nominatorDisplay,
             inline: true,
           },
           {
-            name: "⏰ Duration",
+            name: '⏰ Duration',
             value: NomineeDisplayUtils.formatDuration(
               NOMINATION_CONFIG.DISCUSSION_DURATION_MINUTES
             ),
@@ -329,15 +324,21 @@ export class ChannelManagementService {
           },
         ],
         color: 0x3498db,
-        timestamp: new Date().toISOString(),
-        footer: {
-          text: "Governance Discussion",
-        },
+        timestamp: discussionStart.toISOString(),
       };
 
-      // Send embed first
+      // Send embed
       await channel.send({
         embeds: [embed],
+      });
+
+      // Send vote start notification with timezone-aware timestamp
+      const voteStartMessage = `Voting will commence ${TimestampUtils.formatDiscordTimestamp(
+        discussionEnd,
+        'F'
+      )}`;
+      await channel.send({
+        content: voteStartMessage,
       });
 
       // Then send nominator ping as separate message
@@ -357,7 +358,7 @@ export class ChannelManagementService {
           nomineeName: nominee.name,
           nominator: nominee.nominator,
         },
-        "Failed to send discussion start message"
+        'Failed to send discussion start message'
       );
       throw error; // Re-throw so the calling function knows it failed
     }
@@ -385,39 +386,41 @@ export class ChannelManagementService {
           ? `${Math.round(NOMINATION_CONFIG.VOTE_DURATION_MINUTES / 60)}h`
           : `${NOMINATION_CONFIG.VOTE_DURATION_MINUTES}m`;
 
-      const pollCommand = `/timepoll question:Should we invite ${nominee.name} to GA? time:${voteDurationFormatted} type:Anonymous (Buttons) maxchoices:1 text:Start: <t:${startTime}:F>\\nEnd: <t:${endTime}:F> answer-1:✅:Yes, Accept answer-2:❌:No, Reject`;
+      const pollCommand = `/timepoll question:Should we invite ${nominee.name}? time:${voteDurationFormatted} type:Anonymous (Buttons) maxchoices:1 text:Start: <t:${startTime}:F>\nEnd: <t:${endTime}:F> answer-1:✅:Yes, Accept answer-2:❌:No, Reject`;
 
       // Moderator role lookup removed - using direct moderators role in mod comms
+
+      // Get vote start time
+      const voteStart = nominee.voteStart
+        ? new Date(nominee.voteStart)
+        : new Date();
 
       const infoEmbed = {
         title: `🗳️ Vote: ${nominee.name}`,
         description: `Voting period has begun for nominee **${nominee.name}**.`,
         fields: [
           {
-            name: "⏰ Duration",
+            name: '⏰ Duration',
             value: NomineeDisplayUtils.formatDuration(
               NOMINATION_CONFIG.VOTE_DURATION_MINUTES
             ),
             inline: true,
           },
           {
-            name: "📊 Quorum",
+            name: '📊 Quorum',
             value: `${requiredQuorum} vote minimum (${Math.round(
               ConfigService.getVoteQuorumPercent() * 100
             )}% of ${memberCount} members)`,
             inline: true,
           },
           {
-            name: "✅ Threshold",
+            name: '✅ Threshold',
             value: `${NOMINATION_CONFIG.VOTE_PASS_PERCENT}% yes votes`,
             inline: true,
           },
         ],
         color: 0x3498db,
-        timestamp: new Date().toISOString(),
-        footer: {
-          text: "GA Governance Vote",
-        },
+        timestamp: voteStart.toISOString(),
       };
 
       // Send the message with moderator ping
@@ -437,11 +440,11 @@ export class ChannelManagementService {
           if (modCommsChannel?.isTextBased()) {
             // Find moderators role specifically
             const moderatorsRole = channel.guild.roles.cache.find(
-              (r) => r.name.toLowerCase() === "moderators"
+              (r) => r.name.toLowerCase() === 'moderators'
             );
             const moderatorsMention = moderatorsRole
               ? `<@&${moderatorsRole.id}>`
-              : "@moderators";
+              : '@moderators';
 
             // Send main notification and store message IDs for later deletion
             const modCommMessages: string[] = [];
@@ -452,18 +455,20 @@ export class ChannelManagementService {
             modCommMessages.push(msg1.id);
 
             // Send command in its own message for easy copying
-            const msg2 = await modCommsChannel.send(pollCommand);
+            const msg2 = await modCommsChannel.send(
+              `\`\`\`\n${pollCommand}\n\`\`\``
+            );
             modCommMessages.push(msg2.id);
 
             // Send reaction instruction
             const msg3 = await modCommsChannel.send(
-              "**2️⃣ Copy/Paste Emoji React:**"
+              '**2️⃣ Copy/Paste Emoji React:**'
             );
             modCommMessages.push(msg3.id);
 
-            // Send the actual text to copy
+            // Send the actual text to copy in a code block
             const msg4 = await modCommsChannel.send(
-              "Optionally, react to this message with :PepeVoted: so we can estimate quorum."
+              '```\nOptionally, react to this message with :PepeVoted: so we can estimate quorum.\n```'
             );
             modCommMessages.push(msg4.id);
 
@@ -471,7 +476,7 @@ export class ChannelManagementService {
             await prisma.nominee.update({
               where: { id: nominee.id },
               data: {
-                botMessageIds: modCommMessages.join(","),
+                botMessageIds: modCommMessages.join(','),
               },
             });
           }
@@ -487,7 +492,7 @@ export class ChannelManagementService {
                   : error,
               nomineeId: nominee.id,
             },
-            "Failed to send notification to mod comms channel"
+            'Failed to send notification to mod comms channel'
           );
         }
       }
@@ -506,7 +511,7 @@ export class ChannelManagementService {
           nomineeId: nominee.id,
           nomineeName: nominee.name,
         },
-        "Failed to send vote start message"
+        'Failed to send vote start message'
       );
     }
   }
