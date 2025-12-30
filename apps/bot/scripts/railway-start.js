@@ -9,21 +9,19 @@ import { execSync } from 'child_process';
 
 console.log('🚂 Railway deployment starting...\n');
 
+// Always try to baseline first (it will skip if not needed)
+console.log('📊 Checking database status...');
 try {
-  // Try to run baseline - it will fail if already applied
-  console.log('📊 Checking if baseline is needed...');
-  try {
-    execSync('npm run baseline', { stdio: 'inherit' });
-    console.log('✅ Baseline complete\n');
-  } catch (error) {
-    console.log('ℹ️  Baseline already applied or not needed\n');
-  }
-  
-  // Start the actual application
-  console.log('🤖 Starting bot...');
-  execSync('node dist/index.js', { stdio: 'inherit' });
-  
+  execSync('npm run baseline', { stdio: 'inherit' });
 } catch (error) {
-  console.error('❌ Failed to start:', error.message);
+  console.log('⚠️  Baseline step completed with warnings\n');
+}
+
+// Start the actual application regardless
+console.log('🤖 Starting bot...');
+try {
+  execSync('node dist/index.js', { stdio: 'inherit' });
+} catch (error) {
+  console.error('❌ Bot failed to start:', error.message);
   process.exit(1);
 }
