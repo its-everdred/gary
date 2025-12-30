@@ -230,7 +230,14 @@ export class NominationJobScheduler implements JobScheduler {
         currentTime
       );
 
+      logger.debug(`CLEANUP to PAST check for ${nominee.name}:`, {
+        cleanupStart: nominee.cleanupStart?.toISOString(),
+        currentTime: currentTime.toISOString(),
+        shouldTransition
+      });
+
       if (shouldTransition) {
+        logger.info(`Transitioning ${nominee.name} from CLEANUP to PAST`);
         await this.transitionToPast(nominee);
       }
     }

@@ -146,6 +146,14 @@ export class TimeCalculationService {
         cleanupEndTime.getUTCMinutes() + NOMINATION_CONFIG.CLEANUP_DURATION_MINUTES
       );
       
+      logger.debug(`shouldTransitionToPast calculation for ${nominee.name}:`, {
+        cleanupStart: nominee.cleanupStart.toISOString(),
+        cleanupDurationMinutes: NOMINATION_CONFIG.CLEANUP_DURATION_MINUTES,
+        cleanupEndTime: cleanupEndTime.toISOString(),
+        currentTime: currentTime.toISOString(),
+        shouldTransition: currentTime >= cleanupEndTime
+      });
+      
       return currentTime >= cleanupEndTime;
     }
     
