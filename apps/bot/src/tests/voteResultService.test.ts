@@ -1,71 +1,24 @@
-import { describe, test, expect, mock, beforeEach } from 'bun:test';
+import { describe, test, expect, beforeEach, mock } from 'bun:test';
 import { NomineeState } from '@prisma/client';
-import type { Nominee } from '@prisma/client';
+import { setupStandardMocks, createMockNominee, createMockDiscordClient, createMockDiscordGuild } from './testUtils.js';
 
-// Simplified mock setup for testing business logic
-const mockGuild = {
-  id: 'test-guild-id',
-  memberCount: 25
-};
-
-const mockClient = {
-  guilds: {
-    fetch: mock(() => Promise.resolve(mockGuild))
-  }
-};
-
-const mockPrisma = {
-  nominee: {
-    update: mock(() => Promise.resolve())
-  }
-};
-
-mock.module('../lib/db.js', () => ({ prisma: mockPrisma }));
-
-mock.module('../lib/configService.js', () => ({
-  ConfigService: {
-    getVoteQuorumPercent: mock(() => 0.4), // 40% quorum
-    getGovernanceChannelId: mock(() => 'governance-123'),
-    getGeneralChannelId: mock(() => 'general-123'),
-    getModFlagChannelId: mock(() => 'mod-flag-123'),
-    getModCommsChannelId: mock(() => 'mod-comms-123'),
-    getNominationsCategoryId: mock(() => 'category-123')
-  }
-}));
+// Setup all standard mocks
+const { mockPrisma } = setupStandardMocks();
 
 const { VoteResultService } = await import('../lib/voteResultService.js');
 
-function createMockNominee(overrides: Partial<Nominee> = {}): Nominee {
-  return {
-    id: 'test-nominee-id',
-    name: 'Test Nominee',
-    state: NomineeState.VOTE,
-    nominator: 'nominator-user-id',
-    guildId: 'test-guild-id',
-    discussionStart: new Date(),
-    voteStart: new Date(),
-    cleanupStart: null,
-    createdAt: new Date(),
-    discussionChannelId: 'discussion-channel-id',
-    voteChannelId: 'vote-channel-id',
-    votePollMessageId: null,
-    voteYesCount: 0,
-    voteNoCount: 0,
-    votePassed: null,
-    botMessageIds: null,
-    voteGovernanceAnnounced: false,
-    announcementMessageIds: null,
-    ...overrides
-  };
-}
-
 describe('VoteResultService', () => {
   let voteResultService: VoteResultService;
+  let mockClient: any;
+  let mockGuild: any;
 
   beforeEach(() => {
-    voteResultService = new VoteResultService(mockClient as any);
+    mockClient = createMockDiscordClient();
+    mockGuild = createMockDiscordGuild();
     
-    // Reset essential mocks only
+    voteResultService = new VoteResultService(mockClient);
+    
+    // Reset essential mocks
     mockClient.guilds.fetch.mockReset();
     mockClient.guilds.fetch.mockReturnValue(Promise.resolve(mockGuild));
     mockPrisma.nominee.update.mockReset();

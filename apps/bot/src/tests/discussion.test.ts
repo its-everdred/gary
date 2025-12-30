@@ -1,14 +1,10 @@
 import { describe, test, expect, mock, beforeEach } from 'bun:test';
 import type { ChatInputCommandInteraction } from 'discord.js';
 import { NomineeState } from '@prisma/client';
+import { setupStandardMocks, createMockNominee, createMockInteraction } from './testUtils.js';
 
-const mockPrisma = {
-  nominee: {
-    findFirst: mock(() => Promise.resolve(null)),
-    findMany: mock(() => Promise.resolve([])),
-    update: mock(() => Promise.resolve())
-  }
-};
+// Setup all standard mocks
+const { mockPrisma } = setupStandardMocks();
 
 const mockJobScheduler = {
   transitionToVote: mock(() => Promise.resolve())
@@ -18,102 +14,19 @@ const mockNominationJobScheduler = {
   getInstance: mock(() => mockJobScheduler)
 };
 
-const mockMessage = {
-  author: { id: 'bot-id' },
-  embeds: [{ data: { title: 'test' } }],
-  content: 'Voting will commence at some time',
-  edit: mock(() => Promise.resolve())
-};
-
-const mockMessagesArray = [mockMessage];
-mockMessagesArray.find = mock(() => mockMessage);
-
-const mockChannel = {
-  isTextBased: () => true,
-  messages: {
-    fetchPinned: mock(() => Promise.resolve(new Map())),
-    fetch: mock(() => Promise.resolve(mockMessagesArray))
-  },
-  send: mock(() => Promise.resolve(mockMessage))
-};
-
-const mockInteraction = {
-  deferReply: mock(() => Promise.resolve()),
-  editReply: mock(() => Promise.resolve()),
-  options: {
-    getNumber: mock(() => 10)
-  },
-  guildId: 'test-guild-123',
-  client: {
-    channels: {
-      fetch: mock(() => Promise.resolve(mockChannel))
-    },
-    user: { id: 'bot-id' }
-  }
-} as any as ChatInputCommandInteraction;
-
-mock.module('../lib/db.js', () => ({ prisma: mockPrisma }));
 mock.module('../lib/jobScheduler.js', () => ({ NominationJobScheduler: mockNominationJobScheduler }));
-mock.module('pino', () => ({
-  default: () => ({
-    info: () => {},
-    error: () => {},
-    warn: () => {},
-    debug: () => {}
-  })
-}));
-
-mock.module('../lib/timeCalculation.js', () => ({
-  TimeCalculationService: {
-    getNextMondayAt9AM: mock(() => new Date())
-  }
-}));
-
-mock.module('../lib/timestampUtils.js', () => ({
-  TimestampUtils: {
-    formatDiscordTimestamp: mock(() => 'formatted-timestamp')
-  }
-}));
-
-mock.module('../lib/constants.js', () => ({
-  NOMINATION_CONFIG: {
-    VOTE_DURATION_MINUTES: 7200,
-    CLEANUP_DURATION_MINUTES: 1440,
-    DISCUSSION_DURATION_MINUTES: 2880
-  }
-}));
-
-mock.module('../lib/configService.js', () => ({
-  ConfigService: {
-    getGovernanceChannelId: mock(() => 'governance-123'),
-    getGeneralChannelId: mock(() => 'general-123'),
-    getModFlagChannelId: mock(() => 'mod-flag-123'),
-    getModCommsChannelId: mock(() => 'mod-comms-123'),
-    getNominationsCategoryId: mock(() => 'category-123')
-  }
-}));
-
-mock.module('discord.js', () => ({
-  EmbedBuilder: {
-    from: mock(() => ({
-      setFields: mock(() => ({
-        setTimestamp: mock(() => ({}))
-      }))
-    }))
-  }
-}));
 
 const { handleDiscussionCommand } = await import('../commands/nominate/discussion.js');
 
 describe('discussion command', () => {
+  let mockInteraction: any;
+
   beforeEach(() => {
+    mockInteraction = createMockInteraction();
     mockPrisma.nominee.findFirst.mockReset();
     mockPrisma.nominee.findMany.mockReset();
     mockPrisma.nominee.update.mockReset();
     mockJobScheduler.transitionToVote.mockReset();
-    mockInteraction.deferReply.mockClear();
-    mockInteraction.editReply.mockClear();
-    mockInteraction.options.getNumber.mockClear();
   });
 
   test('rejects negative hours', async () => {
@@ -139,21 +52,18 @@ describe('discussion command', () => {
     const discussionStart = new Date();
     const voteStart = new Date(discussionStart.getTime() + 48 * 60 * 60 * 1000);
     
-    mockPrisma.nominee.findFirst.mockResolvedValue({
+    const nominee = createMockNominee({
       id: 'nominee-1',
       name: 'Test User',
       state: NomineeState.DISCUSSION,
-      guildId: 'test-guild-id',
       nominator: 'user-123',
       discussionStart,
       voteStart,
       cleanupStart: new Date(),
-      discussionChannelId: 'channel-123',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      voteChannelId: null,
-      announcementMessageIds: null
+      discussionChannelId: 'channel-123'
     });
+    
+    mockPrisma.nominee.findFirst.mockResolvedValue(nominee);
 
     mockInteraction.options.getNumber.mockReturnValue(10); // Set to 10 hours
 
@@ -176,21 +86,18 @@ describe('discussion command', () => {
     const discussionStart = new Date(Date.now() - 5 * 60 * 60 * 1000); // Started 5 hours ago
     const voteStart = new Date(discussionStart.getTime() + 48 * 60 * 60 * 1000);
     
-    mockPrisma.nominee.findFirst.mockResolvedValue({
+    const nominee = createMockNominee({
       id: 'nominee-1',
       name: 'Test User',
       state: NomineeState.DISCUSSION,
-      guildId: 'test-guild-id',
       nominator: 'user-123',
       discussionStart,
       voteStart,
       cleanupStart: new Date(),
-      discussionChannelId: 'channel-123',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      voteChannelId: null,
-      announcementMessageIds: null
+      discussionChannelId: 'channel-123'
     });
+    
+    mockPrisma.nominee.findFirst.mockResolvedValue(nominee);
 
     mockInteraction.options.getNumber.mockReturnValue(2); // Set to 2 hours (already passed)
 
