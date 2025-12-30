@@ -218,10 +218,7 @@ export class NomineeDisplayUtils {
         : `**${nomineeName}** has been nominated by ${nominatorName}.`,
       color: 0x3498db,
       fields: [],
-      timestamp: new Date().toISOString(),
-      footer: {
-        text: 'Governance • Nomination Queue'
-      }
+      timestamp: new Date().toISOString()
     };
 
     if (nominees.length > 0) {
@@ -244,10 +241,7 @@ export class NomineeDisplayUtils {
       title: '📊 Current Nominations',
       color: 0x3498db,
       fields: [],
-      timestamp: new Date().toISOString(),
-      footer: {
-        text: 'Governance • Nomination Queue'
-      }
+      timestamp: new Date().toISOString()
     };
 
     const queueValue = await this.formatQueueForEmbed(nominees);

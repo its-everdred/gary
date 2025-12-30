@@ -399,9 +399,8 @@ export class ChannelManagementService {
 
       // Moderator role lookup removed - using direct moderators role in mod comms
 
-      // Get vote start and end times
+      // Get vote start time
       const voteStart = nominee.voteStart ? new Date(nominee.voteStart) : new Date();
-      const voteEnd = nominee.certifyStart ? new Date(nominee.certifyStart) : new Date(voteStart.getTime() + NOMINATION_CONFIG.VOTE_DURATION_MINUTES * 60 * 1000);
 
       const infoEmbed = {
         title: `🗳️ Vote: ${nominee.name}`,
@@ -428,10 +427,7 @@ export class ChannelManagementService {
           },
         ],
         color: 0x3498db,
-        timestamp: new Date().toISOString(),
-        footer: {
-          text: TimestampUtils.createTimeRangeFooter(voteStart, voteEnd),
-        },
+        timestamp: voteStart.toISOString(),
       };
 
       // Send the message with moderator ping
