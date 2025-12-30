@@ -260,6 +260,22 @@ export class NomineeStateManager {
   }
 
   /**
+   * Finds an active nominee by name in a guild (case-insensitive)
+   */
+  static async findActiveNomineeByName(guildId: string, name: string): Promise<Nominee | null> {
+    return await prisma.nominee.findFirst({
+      where: {
+        guildId,
+        state: NomineeState.ACTIVE,
+        name: {
+          equals: name,
+          mode: 'insensitive'
+        }
+      }
+    });
+  }
+
+  /**
    * Gets the current nominee in any progress state (DISCUSSION, VOTE, CERTIFY)
    */
   static async getCurrentNomineeInProgress(guildId: string): Promise<Nominee | null> {

@@ -54,21 +54,12 @@ export async function handleStartCommand(interaction: ChatInputCommandInteractio
     }
 
     if (nomineeName) {
-      // Specific nominee requested
-      nominee = await NomineeStateManager.findNomineeByName(guildId, nomineeName);
+      // Specific nominee requested - only look for ACTIVE nominees
+      nominee = await NomineeStateManager.findActiveNomineeByName(guildId, nomineeName);
       
       if (!nominee) {
         await interaction.reply({
-          content: `❌ **Nominee Not Found**\n\nNo nominee named "${nomineeName}" found in this server.`,
-          ephemeral: true
-        });
-        return;
-      }
-
-      // Check if nominee is in ACTIVE state
-      if (nominee.state !== NomineeState.ACTIVE) {
-        await interaction.reply({
-          content: `❌ **Invalid State**\n\nNominee "${nomineeName}" is currently in ${nominee.state} state. Only ACTIVE nominees can be manually started.`,
+          content: `❌ **Active Nominee Not Found**\n\nNo active nominee named "${nomineeName}" found. Only nominees in ACTIVE state can be started.`,
           ephemeral: true
         });
         return;
