@@ -3,13 +3,13 @@ import { ConfigService } from './configService.js';
 export const NOMINATION_CONFIG = {
   DISCUSSION_DURATION_MINUTES: parseInt(
     process.env.NOMINATE_DISCUSSION_PERIOD_MINUTES || '2880'
-  ),
+  ) || 2880, // Extra fallback in case parseInt fails
   VOTE_DURATION_MINUTES: parseInt(
     process.env.NOMINATE_VOTE_PERIOD_MINUTES || '7200'
-  ),
+  ) || 7200,
   CLEANUP_DURATION_MINUTES: parseInt(
     process.env.NOMINATE_CLEANUP_PERIOD_MINUTES || '1440'
-  ), // 24 hours default
+  ) || 1440, // 24 hours default
 
   DISCUSSION_START_DAY: 1, // Monday = 1
   DISCUSSION_START_HOUR: 9, // 9 AM

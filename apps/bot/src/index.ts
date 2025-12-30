@@ -6,6 +6,15 @@ import { nominateCommand, nominateHandler } from './commands/nominate/index.js';
 import { modCommand, modHandler } from './commands/mod.js';
 import { NominationJobScheduler } from './lib/jobScheduler.js';
 import { ChannelFinderService } from './lib/channelFinderService.js';
+import { validateEnvironment } from './lib/envValidator.js';
+
+// Validate environment variables before anything else
+try {
+  validateEnvironment();
+} catch (error) {
+  console.error('Environment validation failed:', error);
+  process.exit(1);
+}
 
 const logger = pino({
   level: process.env.LOG_LEVEL || 'info',
