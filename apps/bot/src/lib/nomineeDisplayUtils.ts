@@ -99,11 +99,14 @@ export class NomineeDisplayUtils {
           }
         }
       } catch {
-        // Fall back to original value if guild access fails
+        // Fall back to mention format if guild access fails
       }
+      
+      // Return mention format if member not found
+      return `<@${nominee.nominator}>`;
     }
     
-    // Return original value (either username or user ID as fallback)
+    // Return original value (username)
     return nominee.nominator;
   }
 
