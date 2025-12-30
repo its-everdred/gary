@@ -330,16 +330,6 @@ export class ChannelManagementService {
         embeds: [embed],
       });
 
-      // Then send nominator ping as separate message
-      const content = nominatorMember
-        ? `${nominatorMention}, please kick us off and let us know why you nominated ${nominee.name}.`
-        : `The discussion period for **${nominee.name}** has begun.`;
-
-
-      await channel.send({
-        content,
-      });
-
       // Send vote start notification with timezone-aware timestamp
       const voteStartMessage = `Voting will commence at ${TimestampUtils.formatDiscordTimestamp(
         discussionEnd,
@@ -347,6 +337,15 @@ export class ChannelManagementService {
       )}`;
       await channel.send({
         content: voteStartMessage,
+      });
+
+      // Then send nominator ping as separate message
+      const content = nominatorMember
+        ? `${nominatorMention}, please kick us off and let us know why you nominated ${nominee.name}.`
+        : `The discussion period for **${nominee.name}** has begun.`;
+
+      await channel.send({
+        content,
       });
     } catch (error) {
       logger.error(
