@@ -1,12 +1,12 @@
-import type { Client, TextChannel } from 'discord.js';
-import { ChannelType as DJSChannelType } from 'discord.js';
-import pino from 'pino';
-import { prisma } from './db.js';
-import type { Nominee } from '@prisma/client';
-import { NOMINATION_CONFIG } from './constants.js';
-import { NomineeDisplayUtils } from './nomineeDisplayUtils.js';
-import { ConfigService } from './configService.js';
-import { TimestampUtils } from './timestampUtils.js';
+import type { Client, TextChannel } from "discord.js";
+import { ChannelType as DJSChannelType } from "discord.js";
+import pino from "pino";
+import { prisma } from "./db.js";
+import type { Nominee } from "@prisma/client";
+import { NOMINATION_CONFIG } from "./constants.js";
+import { NomineeDisplayUtils } from "./nomineeDisplayUtils.js";
+import { ConfigService } from "./configService.js";
+import { TimestampUtils } from "./timestampUtils.js";
 
 const logger = pino();
 
@@ -81,12 +81,12 @@ export class ChannelManagementService {
           nomineeId: nominee.id,
           nomineeName: nominee.name,
         },
-        'Failed to create discussion channel'
+        "Failed to create discussion channel"
       );
 
       return {
         success: false,
-        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        errorMessage: error instanceof Error ? error.message : "Unknown error",
       };
     }
   }
@@ -159,7 +159,7 @@ export class ChannelManagementService {
             channelId: channel.id,
             nomineeName: nominee.name,
           },
-          'Failed to restrict @everyone permissions'
+          "Failed to restrict @everyone permissions"
         );
       }
 
@@ -184,12 +184,12 @@ export class ChannelManagementService {
           nomineeId: nominee.id,
           nomineeName: nominee.name,
         },
-        'Failed to create vote channel'
+        "Failed to create vote channel"
       );
 
       return {
         success: false,
-        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        errorMessage: error instanceof Error ? error.message : "Unknown error",
       };
     }
   }
@@ -225,7 +225,7 @@ export class ChannelManagementService {
 
       return true;
     } catch (error) {
-      logger.error({ error, channelId, reason }, 'Failed to archive channel');
+      logger.error({ error, channelId, reason }, "Failed to archive channel");
       return false;
     }
   }
@@ -244,7 +244,7 @@ export class ChannelManagementService {
 
       return true;
     } catch (error) {
-      logger.error({ error, channelId, reason }, 'Failed to delete channel');
+      logger.error({ error, channelId, reason }, "Failed to delete channel");
       return false;
     }
   }
@@ -255,8 +255,8 @@ export class ChannelManagementService {
   private generateDiscussionChannelName(nomineeName: string): string {
     const sanitized = nomineeName
       .toLowerCase()
-      .replace(/[^\w\s-]/g, '')
-      .replace(/\s+/g, '-')
+      .replace(/[^\w\s-]/g, "")
+      .replace(/\s+/g, "-")
       .substring(0, 88); // 100 - "discussion-".length = 88
 
     return `discussion-${sanitized}`;
@@ -268,8 +268,8 @@ export class ChannelManagementService {
   private generateVoteChannelName(nomineeName: string): string {
     const sanitized = nomineeName
       .toLowerCase()
-      .replace(/[^\w\s-]/g, '')
-      .replace(/\s+/g, '-')
+      .replace(/[^\w\s-]/g, "")
+      .replace(/\s+/g, "-")
       .substring(0, 95); // 100 - "vote-".length = 95
 
     return `vote-${sanitized}`;
@@ -284,7 +284,9 @@ export class ChannelManagementService {
   ): Promise<void> {
     try {
       // Try to find the nominator by user ID to ping them (using cached members only)
-      const nominatorMember = channel.guild.members.cache.get(nominee.nominator);
+      const nominatorMember = channel.guild.members.cache.get(
+        nominee.nominator
+      );
 
       const nominatorMention = nominatorMember
         ? nominatorMember.toString()
@@ -309,12 +311,12 @@ export class ChannelManagementService {
         description: `Discussion period has begun for nominee **${nominee.name}**.`,
         fields: [
           {
-            name: '👤 Nominator',
+            name: "👤 Nominator",
             value: nominatorDisplay,
             inline: true,
           },
           {
-            name: '⏰ Duration',
+            name: "⏰ Duration",
             value: NomineeDisplayUtils.formatDuration(
               NOMINATION_CONFIG.DISCUSSION_DURATION_MINUTES
             ),
@@ -331,9 +333,9 @@ export class ChannelManagementService {
       });
 
       // Send vote start notification with timezone-aware timestamp
-      const voteStartMessage = `Voting will commence at ${TimestampUtils.formatDiscordTimestamp(
+      const voteStartMessage = `Voting will commence ${TimestampUtils.formatDiscordTimestamp(
         discussionEnd,
-        'F'
+        "F"
       )}`;
       await channel.send({
         content: voteStartMessage,
@@ -356,7 +358,7 @@ export class ChannelManagementService {
           nomineeName: nominee.name,
           nominator: nominee.nominator,
         },
-        'Failed to send discussion start message'
+        "Failed to send discussion start message"
       );
       throw error; // Re-throw so the calling function knows it failed
     }
@@ -398,21 +400,21 @@ export class ChannelManagementService {
         description: `Voting period has begun for nominee **${nominee.name}**.`,
         fields: [
           {
-            name: '⏰ Duration',
+            name: "⏰ Duration",
             value: NomineeDisplayUtils.formatDuration(
               NOMINATION_CONFIG.VOTE_DURATION_MINUTES
             ),
             inline: true,
           },
           {
-            name: '📊 Quorum',
+            name: "📊 Quorum",
             value: `${requiredQuorum} vote minimum (${Math.round(
               ConfigService.getVoteQuorumPercent() * 100
             )}% of ${memberCount} members)`,
             inline: true,
           },
           {
-            name: '✅ Threshold',
+            name: "✅ Threshold",
             value: `${NOMINATION_CONFIG.VOTE_PASS_PERCENT}% yes votes`,
             inline: true,
           },
@@ -438,11 +440,11 @@ export class ChannelManagementService {
           if (modCommsChannel?.isTextBased()) {
             // Find moderators role specifically
             const moderatorsRole = channel.guild.roles.cache.find(
-              (r) => r.name.toLowerCase() === 'moderators'
+              (r) => r.name.toLowerCase() === "moderators"
             );
             const moderatorsMention = moderatorsRole
               ? `<@&${moderatorsRole.id}>`
-              : '@moderators';
+              : "@moderators";
 
             // Send main notification and store message IDs for later deletion
             const modCommMessages: string[] = [];
@@ -460,13 +462,13 @@ export class ChannelManagementService {
 
             // Send reaction instruction
             const msg3 = await modCommsChannel.send(
-              '**2️⃣ Copy/Paste Emoji React:**'
+              "**2️⃣ Copy/Paste Emoji React:**"
             );
             modCommMessages.push(msg3.id);
 
             // Send the actual text to copy in a code block
             const msg4 = await modCommsChannel.send(
-              '```\nOptionally, react to this message with :PepeVoted: so we can estimate quorum.\n```'
+              "```\nOptionally, react to this message with :PepeVoted: so we can estimate quorum.\n```"
             );
             modCommMessages.push(msg4.id);
 
@@ -474,7 +476,7 @@ export class ChannelManagementService {
             await prisma.nominee.update({
               where: { id: nominee.id },
               data: {
-                botMessageIds: modCommMessages.join(','),
+                botMessageIds: modCommMessages.join(","),
               },
             });
           }
@@ -490,7 +492,7 @@ export class ChannelManagementService {
                   : error,
               nomineeId: nominee.id,
             },
-            'Failed to send notification to mod comms channel'
+            "Failed to send notification to mod comms channel"
           );
         }
       }
@@ -509,7 +511,7 @@ export class ChannelManagementService {
           nomineeId: nominee.id,
           nomineeName: nominee.name,
         },
-        'Failed to send vote start message'
+        "Failed to send vote start message"
       );
     }
   }
