@@ -7,6 +7,7 @@ import { NomineeStateManager } from '../../lib/nomineeService.js';
 import { NOMINATION_CONFIG } from '../../lib/constants.js';
 import { TimeCalculationService } from '../../lib/timeCalculation.js';
 import { TimestampUtils } from '../../lib/timestampUtils.js';
+import { NominationJobScheduler } from '../../lib/jobScheduler.js';
 
 const logger = pino();
 
@@ -47,17 +48,20 @@ export async function handleDiscussionCommand(interaction: ChatInputCommandInter
     
     // Check if the new duration has already passed
     if (newVoteStart <= currentTime) {
-      // Transition to VOTE state immediately
-      const transitionResult = await NomineeStateManager.transitionNominee(nominee.id, NomineeState.VOTE);
+      // Use shared vote transition logic (DRY)
+      const jobScheduler = NominationJobScheduler.getInstance(interaction.client);
       
-      if (transitionResult.success) {
+      try {
+        await jobScheduler.transitionToVote(nominee);
+        
         await interaction.editReply(
           `Discussion duration set to ${hours} hour${hours !== 1 ? 's' : ''}, which has already elapsed. ` +
-          `**${nominee.name}** has been transitioned to VOTE state.`
+          `**${nominee.name}** has been transitioned to VOTE state and vote channel created.`
         );
-      } else {
+      } catch (error) {
+        logger.error({ error, nomineeId: nominee.id }, 'Failed to transition nominee to VOTE state');
         await interaction.editReply(
-          `Failed to transition nominee to VOTE state: ${transitionResult.errorMessage || 'Unknown error'}`
+          `Failed to transition nominee to VOTE state: ${error instanceof Error ? error.message : 'Unknown error'}`
         );
       }
       return;

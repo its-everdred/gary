@@ -316,7 +316,7 @@ export class NominationJobScheduler implements JobScheduler {
   /**
    * Transitions a nominee from DISCUSSION to VOTE
    */
-  private async transitionToVote(nominee: Nominee): Promise<void> {
+  public async transitionToVote(nominee: Nominee): Promise<void> {
     // Calculate new certify time based on current time
     const now = new Date();
     const certifyStart = new Date(now);
