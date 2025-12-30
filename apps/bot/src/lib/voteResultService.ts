@@ -392,14 +392,7 @@ export class VoteResultService {
         }
       ],
       color: voteResults.passed ? 0x00ff00 : 0xff0000,
-      timestamp: new Date().toISOString(),
-      footer: {
-        text: TimestampUtils.createVoteResultFooter(
-          nominee.voteStart ? new Date(nominee.voteStart) : null,
-          nominee.certifyStart ? new Date(nominee.certifyStart) : null,
-          voteResults.passed
-        )
-      }
+      timestamp: new Date().toISOString()
     };
   }
 
