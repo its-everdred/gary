@@ -150,14 +150,23 @@ export async function handleDiscussionCommand(interaction: ChatInputCommandInter
         }
 
         // Find and update the "Voting will commence" message
-        const voteStartMessage = messages.find(msg =>
+        let voteStartMessage = messages.find(msg =>
           msg.author.id === interaction.client.user?.id &&
           msg.content.includes('Voting will commence at')
         );
 
+        const newVoteStartMessage = `Voting will commence at ${TimestampUtils.formatDiscordTimestamp(newVoteStart, 'F')}`;
+
         if (voteStartMessage) {
-          const newVoteStartMessage = `Voting will commence at ${TimestampUtils.formatDiscordTimestamp(newVoteStart, 'F')}`;
           await voteStartMessage.edit({ content: newVoteStartMessage });
+        } else {
+          // Create the message if it doesn't exist
+          voteStartMessage = await discussionChannel.send({
+            content: newVoteStartMessage,
+          });
+          
+          // TODO: Store the message ID in database for future updates
+          // For now, the message will be found by content search
         }
       }
     }
