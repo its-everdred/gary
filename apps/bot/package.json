@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx watch --env-file=.env src/index.ts",
     "build": "prisma generate && tsup src/index.ts --format esm,cjs --dts",
-    "start": "npx prisma migrate deploy && npx prisma generate && node dist/index.js",
+    "start": "node force-migration.js && npx prisma migrate deploy && npx prisma generate && node dist/index.js",
     "lint": "eslint .",
     "test": "bun test",
     "db:generate": "prisma generate",
