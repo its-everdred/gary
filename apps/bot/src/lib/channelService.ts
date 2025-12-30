@@ -5,7 +5,6 @@ import { prisma } from "./db.js";
 import type { Nominee } from "@prisma/client";
 import { NOMINATION_CONFIG } from "./constants.js";
 import { NomineeDisplayUtils } from "./nomineeDisplayUtils.js";
-import { DISCORD_CONSTANTS } from "./discordConstants.js";
 import { ConfigService } from "./configService.js";
 import { TimestampUtils } from "./timestampUtils.js";
 
@@ -285,59 +284,21 @@ export class ChannelManagementService {
   ): Promise<void> {
     try {
       // Try to find the nominator by user ID to ping them (using cached members only)
-      let nominatorMember = channel.guild.members.cache.get(nominee.nominator);
+      const nominatorMember = channel.guild.members.cache.get(nominee.nominator);
       
       logger.info({
         nomineeId: nominee.id,
         nominator: nominee.nominator,
         foundInCache: !!nominatorMember,
         cachedMemberCount: channel.guild.members.cache.size
-      }, 'Looking up nominator for ping');
+      }, 'Looking up nominator for ping - using cache only without GuildMembers intent');
 
-      // If not found in cache, try a limited fetch with timeout
       if (!nominatorMember) {
-        try {
-          logger.info({
-            nomineeId: nominee.id,
-            nominator: nominee.nominator
-          }, 'Nominator not in cache, attempting member fetch');
-          
-          // Use a Promise.race with timeout to prevent hanging
-          await Promise.race([
-            channel.guild.members.fetch({
-              limit: DISCORD_CONSTANTS.LIMITS.MEMBER_FETCH_LIMIT,
-            }),
-            new Promise((_, reject) =>
-              setTimeout(
-                () => reject(new Error("Member fetch timeout")),
-                DISCORD_CONSTANTS.TIMEOUTS.MEMBER_FETCH
-              )
-            ),
-          ]);
-
-          // Try to find the nominator again after fetch
-          nominatorMember = channel.guild.members.cache.get(nominee.nominator);
-          
-          if (nominatorMember) {
-            logger.info({
-              nomineeId: nominee.id,
-              nominator: nominee.nominator,
-              displayName: nominatorMember.displayName
-            }, 'Successfully found nominator after fetch');
-          } else {
-            logger.warn({
-              nomineeId: nominee.id,
-              nominator: nominee.nominator,
-              newCacheSize: channel.guild.members.cache.size
-            }, 'Nominator still not found after member fetch');
-          }
-        } catch (fetchError) {
-          logger.error({
-            error: fetchError,
-            nomineeId: nominee.id,
-            nominator: nominee.nominator
-          }, 'Failed to fetch guild members for nominator lookup');
-        }
+        logger.warn({
+          nomineeId: nominee.id,
+          nominator: nominee.nominator,
+          cachedMemberCount: channel.guild.members.cache.size
+        }, 'Nominator not found in member cache - will use fallback mention format');
       }
 
       const nominatorMention = nominatorMember
