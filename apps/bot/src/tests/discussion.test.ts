@@ -1,10 +1,6 @@
 import { describe, test, expect, mock, beforeEach } from 'bun:test';
-import type { ChatInputCommandInteraction } from 'discord.js';
 import { NomineeState } from '@prisma/client';
 import { setupStandardMocks, createMockNominee, createMockInteraction } from './testUtils.js';
-
-// Setup all standard mocks
-const { mockPrisma } = setupStandardMocks();
 
 const mockJobScheduler = {
   transitionToVote: mock(() => Promise.resolve())
@@ -14,6 +10,10 @@ const mockNominationJobScheduler = {
   getInstance: mock(() => mockJobScheduler)
 };
 
+// Setup all standard mocks first
+const { mockPrisma } = setupStandardMocks();
+
+// Override the jobScheduler mock for this specific test
 mock.module('../lib/jobScheduler.js', () => ({ NominationJobScheduler: mockNominationJobScheduler }));
 
 const { handleDiscussionCommand } = await import('../commands/nominate/discussion.js');

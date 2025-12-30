@@ -156,15 +156,29 @@ export const createMockNominee = (overrides: Partial<Nominee> = {}): Nominee => 
   ...overrides
 });
 
+// Mock JobScheduler
+export const createMockJobScheduler = () => ({
+  start: mock(() => {}),
+  stop: mock(() => {}),
+  isRunning: mock(() => false),
+  transitionToVote: mock(() => Promise.resolve()),
+  transitionToCleanup: mock(() => Promise.resolve()),
+  transitionToPast: mock(() => Promise.resolve())
+});
+
 // Utility to setup module mocks - call this in test files
 export const setupStandardMocks = () => {
   const mockPrisma = createMockPrisma();
   const mockConfigService = createMockConfigService();
   const mockConstants = createMockConstants();
+  const mockJobScheduler = createMockJobScheduler();
 
   mock.module('../lib/db.js', () => ({ prisma: mockPrisma }));
   mock.module('../lib/configService.js', () => mockConfigService);
   mock.module('../lib/constants.js', () => mockConstants);
+  mock.module('../lib/jobScheduler.js', () => ({ 
+    NominationJobScheduler: mock(() => mockJobScheduler)
+  }));
   
   // Common utility mocks
   mock.module('../lib/timeCalculation.js', () => ({
@@ -198,5 +212,5 @@ export const setupStandardMocks = () => {
     })
   }));
 
-  return { mockPrisma, mockConfigService, mockConstants };
+  return { mockPrisma, mockConfigService, mockConstants, mockJobScheduler };
 };

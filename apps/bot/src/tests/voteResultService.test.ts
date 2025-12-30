@@ -1,5 +1,4 @@
 import { describe, test, expect, beforeEach, mock } from 'bun:test';
-import { NomineeState } from '@prisma/client';
 import { setupStandardMocks, createMockNominee, createMockDiscordClient, createMockDiscordGuild } from './testUtils.js';
 
 // Setup all standard mocks
