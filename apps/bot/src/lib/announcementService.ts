@@ -71,10 +71,7 @@ export class AnnouncementService {
         title: '🗳️ New Vote Started',
         description,
         color: 0x00ff00,
-        timestamp: new Date().toISOString(),
-        footer: {
-          text: TimestampUtils.createTimeRangeFooter(voteStart, voteEnd)
-        }
+        timestamp: voteStart.toISOString()
       };
 
       const governanceMessage = await governanceChannel.send({
@@ -306,14 +303,7 @@ export class AnnouncementService {
           }
         ],
         color: embedColor,
-        timestamp: new Date().toISOString(),
-        footer: {
-          text: TimestampUtils.createVoteResultFooter(
-            nominee.voteStart ? new Date(nominee.voteStart) : null,
-            nominee.certifyStart ? new Date(nominee.certifyStart) : null,
-            passed
-          )
-        }
+        timestamp: new Date().toISOString()
       };
 
       await governanceChannel.send({ embeds: [embed] });
