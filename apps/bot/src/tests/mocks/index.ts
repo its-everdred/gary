@@ -7,8 +7,7 @@ import {
   createMockInteraction, 
   createMockChannel,
   createMockMessage,
-  mockDiscordJS,
-  resetDiscordMocks 
+  mockDiscordJS
 } from './discord.mock';
 import { 
   mockJobScheduler, 
@@ -16,7 +15,6 @@ import {
   resetJobSchedulerMocks 
 } from './jobScheduler.mock';
 import { 
-  mockTimeCalculationService,
   mockTimestampUtils,
   mockChannelFinderService,
   mockPino,

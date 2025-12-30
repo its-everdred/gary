@@ -2,13 +2,11 @@ import { describe, test, expect, beforeEach, mock, afterEach } from 'bun:test';
 import type { Client, Guild, TextChannel, Message } from 'discord.js';
 import { AnnouncementService } from '../lib/announcementService.js';
 import { NominationJobScheduler } from '../lib/jobScheduler.js';
-import { ChannelFinderService } from '../lib/channelFinderService.js';
 import { prisma } from '../lib/db.js';
 import { NomineeState } from '@prisma/client';
 import {
   setupModuleMocks,
   resetAllMocks,
-  mockPrisma,
   mockChannelFinderService
 } from './mocks';
 
@@ -220,7 +218,7 @@ describe('Announcement Message Cleanup', () => {
     };
 
     // Set up mock to throw error when trying to fetch invalid message
-    const mockFetch = mock(async (messageId: string) => {
+    const mockFetch = mock(async () => {
       throw new Error('Message not found');
     });
     

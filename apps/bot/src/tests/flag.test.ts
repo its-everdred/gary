@@ -1,5 +1,5 @@
 import { describe, test, expect, mock, beforeEach, afterEach } from 'bun:test';
-import type { ChatInputCommandInteraction, Guild } from 'discord.js';
+import type { ChatInputCommandInteraction } from 'discord.js';
 import {
   setupModuleMocks,
   resetAllMocks,
