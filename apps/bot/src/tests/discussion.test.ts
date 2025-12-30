@@ -5,6 +5,7 @@ import { NomineeState } from '@prisma/client';
 const mockPrisma = {
   nominee: {
     findFirst: mock(() => Promise.resolve(null)),
+    findMany: mock(() => Promise.resolve([])),
     update: mock(() => Promise.resolve())
   }
 };
@@ -17,11 +18,23 @@ const mockNominationJobScheduler = {
   getInstance: mock(() => mockJobScheduler)
 };
 
+const mockMessage = {
+  author: { id: 'bot-id' },
+  embeds: [{ data: { title: 'test' } }],
+  content: 'Voting will commence at some time',
+  edit: mock(() => Promise.resolve())
+};
+
+const mockMessagesArray = [mockMessage];
+mockMessagesArray.find = mock(() => mockMessage);
+
 const mockChannel = {
   isTextBased: () => true,
   messages: {
-    fetchPinned: mock(() => Promise.resolve(new Map()))
-  }
+    fetchPinned: mock(() => Promise.resolve(new Map())),
+    fetch: mock(() => Promise.resolve(mockMessagesArray))
+  },
+  send: mock(() => Promise.resolve(mockMessage))
 };
 
 const mockInteraction = {
@@ -39,8 +52,8 @@ const mockInteraction = {
   }
 } as any as ChatInputCommandInteraction;
 
-mock.module('../../lib/db.js', () => ({ prisma: mockPrisma }));
-mock.module('../../lib/jobScheduler.js', () => ({ NominationJobScheduler: mockNominationJobScheduler }));
+mock.module('../lib/db.js', () => ({ prisma: mockPrisma }));
+mock.module('../lib/jobScheduler.js', () => ({ NominationJobScheduler: mockNominationJobScheduler }));
 mock.module('pino', () => ({
   default: () => ({
     info: () => {},
@@ -50,15 +63,43 @@ mock.module('pino', () => ({
   })
 }));
 
-mock.module('../../lib/timeCalculation.js', () => ({
+mock.module('../lib/timeCalculation.js', () => ({
   TimeCalculationService: {
     getNextMondayAt9AM: mock(() => new Date())
   }
 }));
 
-mock.module('../../lib/timestampUtils.js', () => ({
+mock.module('../lib/timestampUtils.js', () => ({
   TimestampUtils: {
     formatDiscordTimestamp: mock(() => 'formatted-timestamp')
+  }
+}));
+
+mock.module('../lib/constants.js', () => ({
+  NOMINATION_CONFIG: {
+    VOTE_DURATION_MINUTES: 7200,
+    CLEANUP_DURATION_MINUTES: 1440,
+    DISCUSSION_DURATION_MINUTES: 2880
+  }
+}));
+
+mock.module('../lib/configService.js', () => ({
+  ConfigService: {
+    getGovernanceChannelId: mock(() => 'governance-123'),
+    getGeneralChannelId: mock(() => 'general-123'),
+    getModFlagChannelId: mock(() => 'mod-flag-123'),
+    getModCommsChannelId: mock(() => 'mod-comms-123'),
+    getNominationsCategoryId: mock(() => 'category-123')
+  }
+}));
+
+mock.module('discord.js', () => ({
+  EmbedBuilder: {
+    from: mock(() => ({
+      setFields: mock(() => ({
+        setTimestamp: mock(() => ({}))
+      }))
+    }))
   }
 }));
 
@@ -67,6 +108,7 @@ const { handleDiscussionCommand } = await import('../commands/nominate/discussio
 describe('discussion command', () => {
   beforeEach(() => {
     mockPrisma.nominee.findFirst.mockReset();
+    mockPrisma.nominee.findMany.mockReset();
     mockPrisma.nominee.update.mockReset();
     mockJobScheduler.transitionToVote.mockReset();
     mockInteraction.deferReply.mockClear();
@@ -89,7 +131,7 @@ describe('discussion command', () => {
     await handleDiscussionCommand(mockInteraction);
 
     expect(mockInteraction.editReply).toHaveBeenCalledWith(
-      "There is no nominee currently in discussion."
+      'There is no nominee currently in discussion.'
     );
   });
 
@@ -102,9 +144,15 @@ describe('discussion command', () => {
       name: 'Test User',
       state: NomineeState.DISCUSSION,
       guildId: 'test-guild-id',
+      nominator: 'user-123',
       discussionStart,
       voteStart,
-      discussionChannelId: 'channel-123'
+      cleanupStart: new Date(),
+      discussionChannelId: 'channel-123',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      voteChannelId: null,
+      announcementMessageIds: null
     });
 
     mockInteraction.options.getNumber.mockReturnValue(10); // Set to 10 hours
@@ -133,9 +181,15 @@ describe('discussion command', () => {
       name: 'Test User',
       state: NomineeState.DISCUSSION,
       guildId: 'test-guild-id',
+      nominator: 'user-123',
       discussionStart,
       voteStart,
-      discussionChannelId: 'channel-123'
+      cleanupStart: new Date(),
+      discussionChannelId: 'channel-123',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      voteChannelId: null,
+      announcementMessageIds: null
     });
 
     mockInteraction.options.getNumber.mockReturnValue(2); // Set to 2 hours (already passed)

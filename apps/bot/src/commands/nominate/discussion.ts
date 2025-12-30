@@ -1,12 +1,12 @@
-import type { ChatInputCommandInteraction } from "discord.js";
-import { EmbedBuilder } from "discord.js";
-import pino from "pino";
-import { prisma } from "../../lib/db.js";
-import { NomineeState } from "@prisma/client";
-import { NOMINATION_CONFIG } from "../../lib/constants.js";
-import { TimeCalculationService } from "../../lib/timeCalculation.js";
-import { TimestampUtils } from "../../lib/timestampUtils.js";
-import { NominationJobScheduler } from "../../lib/jobScheduler.js";
+import type { ChatInputCommandInteraction } from 'discord.js';
+import { EmbedBuilder } from 'discord.js';
+import pino from 'pino';
+import { prisma } from '../../lib/db.js';
+import { NomineeState } from '@prisma/client';
+import { NOMINATION_CONFIG } from '../../lib/constants.js';
+import { TimeCalculationService } from '../../lib/timeCalculation.js';
+import { TimestampUtils } from '../../lib/timestampUtils.js';
+import { NominationJobScheduler } from '../../lib/jobScheduler.js';
 
 const logger = pino();
 
@@ -15,11 +15,11 @@ export async function handleDiscussionCommand(
 ): Promise<void> {
   await interaction.deferReply({ flags: 64 });
 
-  const hours = interaction.options.getNumber("hours", true);
+  const hours = interaction.options.getNumber('hours', true);
 
   // Validate input
   if (hours < 0) {
-    await interaction.editReply("Hours must be a positive number.");
+    await interaction.editReply('Hours must be a positive number.');
     return;
   }
 
@@ -34,14 +34,14 @@ export async function handleDiscussionCommand(
 
     if (!nominee) {
       await interaction.editReply(
-        "There is no nominee currently in discussion."
+        'There is no nominee currently in discussion.'
       );
       return;
     }
 
     if (!nominee.discussionStart || !nominee.voteStart) {
       await interaction.editReply(
-        "Discussion period data is incomplete for this nominee."
+        'Discussion period data is incomplete for this nominee.'
       );
       return;
     }
@@ -65,18 +65,18 @@ export async function handleDiscussionCommand(
 
         await interaction.editReply(
           `Discussion duration set to ${hours} hour${
-            hours !== 1 ? "s" : ""
+            hours !== 1 ? 's' : ''
           }, which has already elapsed. ` +
             `**${nominee.name}** has been transitioned to VOTE state and vote channel created.`
         );
       } catch (error) {
         logger.error(
           { error, nomineeId: nominee.id },
-          "Failed to transition nominee to VOTE state"
+          'Failed to transition nominee to VOTE state'
         );
         await interaction.editReply(
           `Failed to transition nominee to VOTE state: ${
-            error instanceof Error ? error.message : "Unknown error"
+            error instanceof Error ? error.message : 'Unknown error'
           }`
         );
       }
@@ -106,7 +106,7 @@ export async function handleDiscussionCommand(
           guildId: interaction.guildId!,
           state: NomineeState.ACTIVE,
         },
-        orderBy: { createdAt: "asc" },
+        orderBy: { createdAt: 'asc' },
       });
 
       if (nextNominee) {
@@ -122,7 +122,7 @@ export async function handleDiscussionCommand(
             guildId: interaction.guildId!,
             state: NomineeState.ACTIVE,
           },
-          orderBy: { createdAt: "asc" },
+          orderBy: { createdAt: 'asc' },
         });
 
         for (let i = 0; i < queuedNominees.length; i++) {
@@ -176,12 +176,12 @@ export async function handleDiscussionCommand(
           const updatedEmbed = EmbedBuilder.from(embedMessage.embeds[0])
             .setFields([
               {
-                name: "👤 Nominator",
+                name: '👤 Nominator',
                 value: `<@${nominee.nominator}>`,
                 inline: true,
               },
               {
-                name: "⏰ Duration",
+                name: '⏰ Duration',
                 value: `${totalHours} hours`,
                 inline: true,
               },
@@ -195,12 +195,12 @@ export async function handleDiscussionCommand(
         let voteStartMessage = messages.find(
           (msg) =>
             msg.author.id === interaction.client.user?.id &&
-            msg.content.includes("Voting will commence")
+            msg.content.includes('Voting will commence')
         );
 
         const newVoteStartMessage = `Voting will commence ${TimestampUtils.formatDiscordTimestamp(
           newVoteStart,
-          "F"
+          'F'
         )}`;
 
         if (voteStartMessage) {
@@ -220,10 +220,10 @@ export async function handleDiscussionCommand(
     await interaction.editReply(
       `Discussion duration for **${
         nominee.name
-      }** has been set to ${hours} hour${hours !== 1 ? "s" : ""}. ` +
+      }** has been set to ${hours} hour${hours !== 1 ? 's' : ''}. ` +
         `Vote will start: ${TimestampUtils.formatDiscordTimestamp(
           newVoteStart,
-          "F"
+          'F'
         )}`
     );
 
@@ -233,12 +233,12 @@ export async function handleDiscussionCommand(
         newDuration: hours,
         newVoteStart: newVoteStart.toISOString(),
       },
-      "Discussion duration updated"
+      'Discussion duration updated'
     );
   } catch (error) {
-    logger.error({ error }, "Failed to adjust discussion period");
+    logger.error({ error }, 'Failed to adjust discussion period');
     await interaction.editReply(
-      "An error occurred while adjusting the discussion period."
+      'An error occurred while adjusting the discussion period.'
     );
   }
 }
