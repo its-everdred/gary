@@ -4,6 +4,8 @@
 
 ### Flag
 
+![Flag Demo](public/flag.gif)
+
 - `/flag target:<@user> message:<text>` - Flag a user anonymously to moderators
 
   - Sends anonymous notification to mod channel
