@@ -5,25 +5,15 @@ import { NominationJobScheduler } from '../lib/jobScheduler.js';
 import { ChannelFinderService } from '../lib/channelFinderService.js';
 import { prisma } from '../lib/db.js';
 import { NomineeState } from '@prisma/client';
+import {
+  setupModuleMocks,
+  resetAllMocks,
+  mockPrisma,
+  mockChannelFinderService
+} from './mocks';
 
-// Mock the database
-mock.module('../lib/db.js', () => ({
-  prisma: {
-    nominee: {
-      findUnique: mock(),
-      update: mock(),
-    },
-  },
-}));
-
-// Mock the channel finder service
-mock.module('../lib/channelFinderService.js', () => ({
-  ChannelFinderService: {
-    governance: mock(),
-    general: mock(),
-    modComms: mock(),
-  },
-}));
+// Setup module mocks
+setupModuleMocks();
 
 describe('Announcement Message Cleanup', () => {
   let mockClient: Client;
@@ -35,8 +25,8 @@ describe('Announcement Message Cleanup', () => {
   let jobScheduler: NominationJobScheduler;
 
   beforeEach(() => {
-    // Reset all mocks
-    mock.restore();
+    // Reset all mocks to baseline state
+    resetAllMocks();
 
     // Create mock message
     mockMessage = {
@@ -79,13 +69,13 @@ describe('Announcement Message Cleanup', () => {
     jobScheduler = NominationJobScheduler.getInstance(mockClient);
 
     // Setup channel finder mocks
-    (ChannelFinderService.governance as any).mockResolvedValue(mockGovernanceChannel);
-    (ChannelFinderService.general as any).mockResolvedValue(mockGeneralChannel);
-    (ChannelFinderService.modComms as any).mockResolvedValue(null);
+    mockChannelFinderService.ChannelFinderService.governance.mockResolvedValue(mockGovernanceChannel);
+    mockChannelFinderService.ChannelFinderService.general.mockResolvedValue(mockGeneralChannel);
+    mockChannelFinderService.ChannelFinderService.modComms.mockResolvedValue(null);
   });
 
   afterEach(() => {
-    mock.restore();
+    resetAllMocks();
   });
 
   test('should store message IDs when announcing discussion start', async () => {
@@ -229,9 +219,13 @@ describe('Announcement Message Cleanup', () => {
       votePassed: true,
     };
 
-    // Mock message fetch to throw error (message not found)
-    (mockGovernanceChannel.messages.fetch as any).mockRejectedValue(new Error('Message not found'));
-    (mockGeneralChannel.messages.fetch as any).mockRejectedValue(new Error('Message not found'));
+    // Set up mock to throw error when trying to fetch invalid message
+    const mockFetch = mock(async (messageId: string) => {
+      throw new Error('Message not found');
+    });
+    
+    mockGovernanceChannel.messages.fetch = mockFetch;
+    mockGeneralChannel.messages.fetch = mockFetch;
 
     // Test the private method directly
     const deleteAnnouncementMessages = (jobScheduler as any).deleteAnnouncementMessages;
@@ -241,10 +235,10 @@ describe('Announcement Message Cleanup', () => {
       try {
         await deleteAnnouncementMessages.call(jobScheduler, nominee);
         // If we reach here, the method handled the error gracefully
-        expect(mockGovernanceChannel.messages.fetch).toHaveBeenCalledWith('invalid-message-id');
+        expect(mockFetch).toHaveBeenCalledWith('invalid-message-id');
       } catch (error) {
         // The method should not throw, but if it does, we can still verify the behavior
-        expect(mockGovernanceChannel.messages.fetch).toHaveBeenCalledWith('invalid-message-id');
+        expect(mockFetch).toHaveBeenCalledWith('invalid-message-id');
       }
     } else {
       // Fallback: just test that the functionality exists

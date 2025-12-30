@@ -1,7 +1,22 @@
-import { describe, test, expect } from 'bun:test';
+import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
 import { Client, GatewayIntentBits } from 'discord.js';
+import {
+  setupModuleMocks,
+  resetAllMocks
+} from './mocks';
+
+// Setup module mocks
+setupModuleMocks();
 
 describe('privacy command', () => {
+  beforeEach(() => {
+    resetAllMocks();
+  });
+  
+  afterEach(() => {
+    resetAllMocks();
+  });
+  
   test('client not initialized with MessageContent intent', () => {
     const client = new Client({
       intents: [

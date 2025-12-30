@@ -1,20 +1,16 @@
-import { describe, test, expect, mock, beforeEach } from 'bun:test';
+import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
 import { NomineeState } from '@prisma/client';
-import { setupStandardMocks, createMockNominee, createMockInteraction } from './testUtils.js';
+import {
+  setupModuleMocks,
+  resetAllMocks,
+  mockPrisma,
+  mockJobScheduler,
+  createMockInteraction,
+  createMockNominee
+} from './mocks';
 
-const mockJobScheduler = {
-  transitionToVote: mock(() => Promise.resolve())
-};
-
-const mockNominationJobScheduler = {
-  getInstance: mock(() => mockJobScheduler)
-};
-
-// Setup all standard mocks first
-const { mockPrisma } = setupStandardMocks();
-
-// Override the jobScheduler mock for this specific test
-mock.module('../lib/jobScheduler.js', () => ({ NominationJobScheduler: mockNominationJobScheduler }));
+// Setup module mocks
+setupModuleMocks();
 
 const { handleDiscussionCommand } = await import('../commands/nominate/discussion.js');
 
@@ -22,11 +18,16 @@ describe('discussion command', () => {
   let mockInteraction: any;
 
   beforeEach(() => {
+    // Reset all mocks to baseline state
+    resetAllMocks();
+    
+    // Create fresh interaction for each test
     mockInteraction = createMockInteraction();
-    mockPrisma.nominee.findFirst.mockReset();
-    mockPrisma.nominee.findMany.mockReset();
-    mockPrisma.nominee.update.mockReset();
-    mockJobScheduler.transitionToVote.mockReset();
+  });
+
+  afterEach(() => {
+    // Clean up after each test
+    resetAllMocks();
   });
 
   test('rejects negative hours', async () => {

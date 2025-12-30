@@ -1,8 +1,14 @@
-import { describe, test, expect, beforeEach, mock } from 'bun:test';
-import { setupStandardMocks, createMockNominee, createMockDiscordClient, createMockDiscordGuild } from './testUtils.js';
+import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test';
+import {
+  setupModuleMocks,
+  resetAllMocks,
+  mockPrisma,
+  mockConfigService,
+  createMockNominee
+} from './mocks';
 
-// Setup all standard mocks
-const { mockPrisma } = setupStandardMocks();
+// Setup module mocks
+setupModuleMocks();
 
 const { VoteResultService } = await import('../lib/voteResultService.js');
 
@@ -12,16 +18,33 @@ describe('VoteResultService', () => {
   let mockGuild: any;
 
   beforeEach(() => {
-    mockClient = createMockDiscordClient();
-    mockGuild = createMockDiscordGuild();
+    // Reset all mocks to baseline state
+    resetAllMocks();
+    
+    // Create fresh client and guild for each test
+    mockGuild = {
+      id: 'test-guild-id',
+      memberCount: 25
+    };
+
+    mockClient = {
+      guilds: {
+        fetch: mock(() => Promise.resolve(mockGuild))
+      }
+    };
     
     voteResultService = new VoteResultService(mockClient);
     
-    // Reset essential mocks
-    mockClient.guilds.fetch.mockReset();
+    // Set default return values
     mockClient.guilds.fetch.mockReturnValue(Promise.resolve(mockGuild));
-    mockPrisma.nominee.update.mockReset();
     mockPrisma.nominee.update.mockReturnValue(Promise.resolve());
+    mockConfigService.ConfigService.getVoteQuorumPercent.mockReturnValue(0.4);
+  });
+
+  afterEach(() => {
+    // Clean up after each test - reset all mocks
+    resetAllMocks();
+    mockClient?.guilds?.fetch?.mockReset?.();
   });
 
   describe('checkVoteCompletion', () => {

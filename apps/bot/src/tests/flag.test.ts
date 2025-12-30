@@ -1,5 +1,15 @@
-import { describe, test, expect, mock, beforeEach } from 'bun:test';
+import { describe, test, expect, mock, beforeEach, afterEach } from 'bun:test';
 import type { ChatInputCommandInteraction, Guild } from 'discord.js';
+import {
+  setupModuleMocks,
+  resetAllMocks,
+  mockPrisma,
+  mockConfigService,
+  createMockInteraction
+} from './mocks';
+
+// Setup module mocks
+setupModuleMocks();
 
 const mockUtils = {
   createWarning: mock(() => Promise.resolve()),
@@ -12,55 +22,29 @@ const mockUtils = {
   hmac: mock(() => 'hashed-voter-id')
 };
 
-const mockPrisma = {
-  flag: {
-    create: mock(() => Promise.resolve({ id: '1' })),
-    findUnique: mock(() => Promise.resolve({ id: 'flag-id' })),
-    delete: mock(() => Promise.resolve())
-  }
-};
-
 mock.module('../lib/utils.js', () => mockUtils);
-mock.module('../lib/db.js', () => ({ prisma: mockPrisma }));
 
 const { flagHandler } = await import('../commands/flag.js');
 const { unflagHandler } = await import('../commands/unflag.js');
 
-function createMockInteraction(targetUserId: string, message: string): ChatInputCommandInteraction {
-  return {
-    deferReply: mock(() => Promise.resolve()),
-    editReply: mock(() => Promise.resolve()),
-    options: {
-      getUser: mock(() => ({ id: targetUserId })),
-      getString: mock(() => message)
-    },
-    user: { id: 'voter-user-123' },
-    client: {
-      guilds: {
-        fetch: mock(() => Promise.resolve({} as Guild))
-      }
-    }
-  } as any;
+function createFlagInteraction(targetUserId: string, message: string): ChatInputCommandInteraction {
+  const interaction = createMockInteraction();
+  interaction.options.getUser.mockReturnValue({ id: targetUserId });
+  interaction.options.getString.mockReturnValue(message);
+  interaction.user = { id: 'voter-user-123' };
+  return interaction as any;
 }
 
-function createMockUnflagInteraction(targetUserId: string): ChatInputCommandInteraction {
-  return {
-    deferReply: mock(() => Promise.resolve()),
-    editReply: mock(() => Promise.resolve()),
-    options: {
-      getUser: mock(() => ({ id: targetUserId }))
-    },
-    user: { id: 'voter-user-123' },
-    client: {
-      guilds: {
-        fetch: mock(() => Promise.resolve({} as Guild))
-      }
-    }
-  } as any;
+function createUnflagInteraction(targetUserId: string): ChatInputCommandInteraction {
+  const interaction = createMockInteraction();
+  interaction.options.getUser.mockReturnValue({ id: targetUserId });
+  interaction.user = { id: 'voter-user-123' };
+  return interaction as any;
 }
 
 describe('flag command', () => {
   beforeEach(() => {
+    // Reset individual mocks first
     mockUtils.createWarning.mockReset();
     mockUtils.countWarnings.mockReset();
     mockUtils.getEligibleCount.mockReset();
@@ -70,13 +54,25 @@ describe('flag command', () => {
     mockUtils.checkExistingWarning.mockReset();
     mockUtils.hmac.mockReset();
     
+    // Then reset shared mocks
+    resetAllMocks();
+    
+    // Set up ConfigService mocks
+    mockConfigService.ConfigService.getGuildId.mockReturnValue('test-guild-123');
+    mockConfigService.ConfigService.getGuildSalt.mockReturnValue('test-salt');
+    mockConfigService.ConfigService.getKickQuorumPercent.mockReturnValue(0.4);
+    
     process.env.GUILD_ID = 'test-guild-123';
     process.env.GUILD_SALT = 'test-salt';
     process.env.KICK_QUORUM_PERCENT = '40';
   });
+  
+  afterEach(() => {
+    resetAllMocks();
+  });
 
   test('successful flag creates database entry', async () => {
-    const mockInteraction = createMockInteraction('flag-user-123', 'This is a test flag');
+    const mockInteraction = createFlagInteraction('flag-user-123', 'This is a test flag');
     
     mockUtils.validateGuildMember.mockReturnValue(Promise.resolve({ isValid: true }));
     mockUtils.validateTargetMember.mockReturnValue(Promise.resolve({ isValid: true }));
@@ -99,7 +95,7 @@ describe('flag command', () => {
   });
 
   test('prevents duplicate flags from same voter', async () => {
-    const mockInteraction = createMockInteraction('flag-user-123', 'Another flag');
+    const mockInteraction = createFlagInteraction('flag-user-123', 'Another flag');
     
     mockUtils.validateGuildMember.mockReturnValue(Promise.resolve({ isValid: true }));
     mockUtils.validateTargetMember.mockReturnValue(Promise.resolve({ isValid: true }));
@@ -112,7 +108,7 @@ describe('flag command', () => {
   });
 
   test('rejects flag from invalid guild member', async () => {
-    const mockInteraction = createMockInteraction('flag-user-123', 'Test flag');
+    const mockInteraction = createFlagInteraction('flag-user-123', 'Test flag');
     
     mockUtils.validateGuildMember.mockReturnValue(Promise.resolve({
       isValid: false,
@@ -125,7 +121,7 @@ describe('flag command', () => {
   });
 
   test('rejects flag for invalid target', async () => {
-    const mockInteraction = createMockInteraction('invalid-user', 'Test flag');
+    const mockInteraction = createFlagInteraction('invalid-user', 'Test flag');
     
     mockUtils.validateGuildMember.mockReturnValue(Promise.resolve({ isValid: true }));
     mockUtils.validateTargetMember.mockReturnValue(Promise.resolve({
@@ -141,19 +137,29 @@ describe('flag command', () => {
 
 describe('unflag command', () => {
   beforeEach(() => {
-    mockPrisma.flag.findUnique.mockReset();
-    mockPrisma.flag.delete.mockReset();
+    // Reset individual mocks first
     mockUtils.validateGuildMember.mockReset();
     mockUtils.validateTargetMember.mockReset();
     mockUtils.sendToModChannel.mockReset();
     mockUtils.hmac.mockReset();
     
+    // Then reset shared mocks
+    resetAllMocks();
+    
+    // Set up ConfigService mocks
+    mockConfigService.ConfigService.getGuildId.mockReturnValue('test-guild-123');
+    mockConfigService.ConfigService.getGuildSalt.mockReturnValue('test-salt');
+    
     process.env.GUILD_ID = 'test-guild-123';
     process.env.GUILD_SALT = 'test-salt';
   });
+  
+  afterEach(() => {
+    resetAllMocks();
+  });
 
   test('successfully removes existing flag', async () => {
-    const mockInteraction = createMockUnflagInteraction('flag-user-123');
+    const mockInteraction = createUnflagInteraction('flag-user-123');
     
     mockPrisma.flag.findUnique.mockReturnValue(Promise.resolve({ id: 'flag-id-123' }));
     mockPrisma.flag.delete.mockReturnValue(Promise.resolve());
@@ -177,7 +183,7 @@ describe('unflag command', () => {
   });
 
   test('handles attempt to remove non-existent flag', async () => {
-    const mockInteraction = createMockUnflagInteraction('flag-user-123');
+    const mockInteraction = createUnflagInteraction('flag-user-123');
     
     mockPrisma.flag.findUnique.mockReturnValue(Promise.resolve(null));
     mockUtils.validateGuildMember.mockReturnValue(Promise.resolve({ isValid: true }));

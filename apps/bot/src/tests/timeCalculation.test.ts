@@ -1,7 +1,10 @@
-import { describe, test, expect } from 'bun:test';
-import { TimeCalculationService } from '../lib/timeCalculation.js';
+import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
 import { NomineeState } from '@prisma/client';
 import type { Nominee } from '@prisma/client';
+
+// NOTE: This test file tests the ACTUAL TimeCalculationService implementation
+// Import directly without any mocking to ensure we get the real implementation
+import { TimeCalculationService } from '../lib/timeCalculation.js';
 
 function createMockNominee(overrides: Partial<Nominee> = {}): Nominee {
   return {
@@ -14,8 +17,16 @@ function createMockNominee(overrides: Partial<Nominee> = {}): Nominee {
     voteStart: null,
     cleanupStart: null,
     createdAt: new Date(),
+    updatedAt: new Date(),
     discussionChannelId: null,
     voteChannelId: null,
+    votePollMessageId: null,
+    voteYesCount: 0,
+    voteNoCount: 0,
+    votePassed: null,
+    botMessageIds: null,
+    voteGovernanceAnnounced: false,
+    announcementMessageIds: null,
     ...overrides
   };
 }
