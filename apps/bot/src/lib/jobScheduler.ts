@@ -205,10 +205,17 @@ export class NominationJobScheduler implements JobScheduler {
       const readyWithBuffer =
         nominee.cleanupStart && nominee.cleanupStart <= bufferTime;
 
-      // Checking vote completion for nominee
+      logger.debug(`Vote completion check for ${nominee.name}:`, {
+        voteResults: !!voteResults,
+        cleanupStart: nominee.cleanupStart?.toISOString(),
+        currentTime: currentTime.toISOString(),
+        bufferTime: bufferTime.toISOString(),
+        readyWithBuffer
+      });
 
       if (voteResults || readyWithBuffer) {
-        await this.transitionToCleanup(nominee, voteResults);
+        logger.info(`Transitioning ${nominee.name} to CLEANUP - voteResults: ${!!voteResults}, timeExpired: ${readyWithBuffer}`);
+        await this.transitionToCleanup(nominee, voteResults || undefined);
       }
     }
 

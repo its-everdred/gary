@@ -148,6 +148,13 @@ export class VoteResultService {
       // Check if poll has final results in embed
       const hasFinalResults = embed?.description?.includes('Final Result');
       
+      logger.debug('EasyPoll message analysis:', {
+        messageId: message.id,
+        hasEmbed: !!embed,
+        embedDescription: embed?.description?.substring(0, 200) + '...',
+        hasFinalResults
+      });
+      
       if (!hasFinalResults) return null;
       
       // EasyPoll results are always in the embed description
