@@ -475,9 +475,9 @@ export class ChannelManagementService {
             );
             modCommMessages.push(msg3.id);
 
-            // Send the actual text to copy
+            // Send the actual text to copy in a code block
             const msg4 = await modCommsChannel.send(
-              'Optionally, react to this message with :PepeVoted: so we can estimate quorum.'
+              '```\nOptionally, react to this message with :PepeVoted: so we can estimate quorum.\n```'
             );
             modCommMessages.push(msg4.id);
 
