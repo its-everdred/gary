@@ -22,6 +22,17 @@ const mockPrisma = {
 
 mock.module('../lib/db.js', () => ({ prisma: mockPrisma }));
 
+mock.module('../lib/configService.js', () => ({
+  ConfigService: {
+    getVoteQuorumPercent: mock(() => 0.4), // 40% quorum
+    getGovernanceChannelId: mock(() => 'governance-123'),
+    getGeneralChannelId: mock(() => 'general-123'),
+    getModFlagChannelId: mock(() => 'mod-flag-123'),
+    getModCommsChannelId: mock(() => 'mod-comms-123'),
+    getNominationsCategoryId: mock(() => 'category-123')
+  }
+}));
+
 const { VoteResultService } = await import('../lib/voteResultService.js');
 
 function createMockNominee(overrides: Partial<Nominee> = {}): Nominee {
