@@ -67,14 +67,14 @@ export async function handleDiscussionCommand(interaction: ChatInputCommandInter
       return;
     }
 
-    // Update nominee with new vote start time and adjust certify start accordingly
-    const newCertifyStart = new Date(newVoteStart.getTime() + NOMINATION_CONFIG.VOTE_DURATION_MINUTES * 60 * 1000);
+    // Update nominee with new vote start time and adjust cleanup start accordingly
+    const newCleanupStart = new Date(newVoteStart.getTime() + NOMINATION_CONFIG.VOTE_DURATION_MINUTES * 60 * 1000);
     
     await prisma.nominee.update({
       where: { id: nominee.id },
       data: { 
         voteStart: newVoteStart,
-        certifyStart: newCertifyStart
+        cleanupStart: newCleanupStart
       }
     });
 
@@ -92,7 +92,7 @@ export async function handleDiscussionCommand(interaction: ChatInputCommandInter
 
       if (nextNominee) {
         // Calculate new base time for next nominee (after current one completes)
-        const baseTime = new Date(newCertifyStart.getTime() + NOMINATION_CONFIG.CERTIFY_DURATION_MINUTES * 60 * 1000);
+        const baseTime = new Date(newCleanupStart.getTime() + NOMINATION_CONFIG.CLEANUP_DURATION_MINUTES * 60 * 1000);
         
         // Update all queued nominees
         const queuedNominees = await prisma.nominee.findMany({
@@ -109,14 +109,14 @@ export async function handleDiscussionCommand(interaction: ChatInputCommandInter
           
           const newDiscussionStart = TimeCalculationService.getNextMondayAt9AM(new Date(baseTime.getTime() + weekOffset));
           const newQueuedVoteStart = new Date(newDiscussionStart.getTime() + NOMINATION_CONFIG.DISCUSSION_DURATION_MINUTES * 60 * 1000);
-          const newQueuedCertifyStart = new Date(newQueuedVoteStart.getTime() + NOMINATION_CONFIG.VOTE_DURATION_MINUTES * 60 * 1000);
+          const newQueuedCleanupStart = new Date(newQueuedVoteStart.getTime() + NOMINATION_CONFIG.VOTE_DURATION_MINUTES * 60 * 1000);
           
           await prisma.nominee.update({
             where: { id: queuedNominee.id },
             data: {
               discussionStart: newDiscussionStart,
               voteStart: newQueuedVoteStart,
-              certifyStart: newQueuedCertifyStart
+              cleanupStart: newQueuedCleanupStart
             }
           });
         }

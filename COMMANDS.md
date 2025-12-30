@@ -27,7 +27,7 @@ Demo:
   - Automatically schedules discussion/vote periods
 
 - `/nominate list` - List all current nominations and their state
-  - Shows ACTIVE, DISCUSSION, VOTE, CERTIFY nominees
+  - Shows ACTIVE, DISCUSSION, VOTE, CLEANUP nominees
   - Displays scheduled times for queued nominees
 
 ## Mod Commands
@@ -57,7 +57,7 @@ Demo:
   - Automatically transitions to VOTE if duration already elapsed
   - Reschedules queued nominees if extending
 
-- `/mod nominate cleanup` - Complete certification early and cleanup channels
-  - Only works for nominees in CERTIFY state
+- `/mod nominate cleanup` - Complete cleanup early and cleanup channels
+  - Only works for nominees in CLEANUP state
   - Removes discussion and vote channels
   - Transitions nominee to PAST state

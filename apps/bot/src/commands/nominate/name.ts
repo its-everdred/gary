@@ -14,7 +14,7 @@ import pino from 'pino';
 
 const logger = pino();
 
-async function calculateNomineeSchedule(guildId: string): Promise<{ discussionStart: Date; voteStart: Date; certifyStart: Date }> {
+async function calculateNomineeSchedule(guildId: string): Promise<{ discussionStart: Date; voteStart: Date; cleanupStart: Date }> {
   // Get all active nominees to determine queue position
   const activeNominees = await NomineeStateManager.getActiveNominees(guildId);
   const queuePosition = activeNominees.length + 1; // New nominee goes to end of queue
@@ -102,7 +102,7 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
           guildId,
           discussionStart: schedule.discussionStart,
           voteStart: schedule.voteStart,
-          certifyStart: schedule.certifyStart
+          cleanupStart: schedule.cleanupStart
         }
       });
 
@@ -164,7 +164,7 @@ export async function handleNameCommand(interaction: ChatInputCommandInteraction
         guildId,
         discussionStart: schedule.discussionStart,
         voteStart: schedule.voteStart,
-        certifyStart: schedule.certifyStart
+        cleanupStart: schedule.cleanupStart
       }
     });
 

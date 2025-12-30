@@ -56,7 +56,7 @@ export const modCommand = new SlashCommandBuilder()
       .addSubcommand(subcommand =>
         subcommand
           .setName('cleanup')
-          .setDescription('Complete certification early and cleanup channels for nominee in CERTIFY state')
+          .setDescription('Complete cleanup early and cleanup channels for nominee in CLEANUP state')
       )
       .addSubcommand(subcommand =>
         subcommand

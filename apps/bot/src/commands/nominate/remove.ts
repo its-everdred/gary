@@ -55,7 +55,7 @@ export async function handleRemoveCommand(interaction: ChatInputCommandInteracti
     if (hasChannels) {
       // Perform full cleanup using existing job scheduler logic
       const jobScheduler = NominationJobScheduler.getInstance(interaction.client);
-      const result = await jobScheduler.performPostCertifyCleanup(nominee);
+      const result = await jobScheduler.performPostCleanupCleanup(nominee);
 
       if (result.success) {
         await interaction.editReply({

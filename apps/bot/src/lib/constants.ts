@@ -7,8 +7,8 @@ export const NOMINATION_CONFIG = {
   VOTE_DURATION_MINUTES: parseInt(
     process.env.NOMINATE_VOTE_PERIOD_MINUTES || '7200'
   ),
-  CERTIFY_DURATION_MINUTES: parseInt(
-    process.env.NOMINATE_CERTIFY_PERIOD_MINUTES || '1440'
+  CLEANUP_DURATION_MINUTES: parseInt(
+    process.env.NOMINATE_CLEANUP_PERIOD_MINUTES || '1440'
   ), // 24 hours default
 
   DISCUSSION_START_DAY: 1, // Monday = 1
@@ -22,9 +22,9 @@ export const NOMINATION_CONFIG = {
     return Math.round(this.VOTE_PASS_THRESHOLD * 100);
   },
 
-  // Helper to get certify period as human readable string
-  get CERTIFY_PERIOD_TEXT(): string {
-    const minutes = this.CERTIFY_DURATION_MINUTES;
+  // Helper to get cleanup period as human readable string
+  get CLEANUP_PERIOD_TEXT(): string {
+    const minutes = this.CLEANUP_DURATION_MINUTES;
     if (minutes >= 1440) {
       const days = Math.round(minutes / 1440);
       return days === 1 ? '24 hours' : `${days} days`;
@@ -109,5 +109,5 @@ export const ERROR_MESSAGES = {
 } as const;
 
 export const createPassedMessage = (name: string, yesVotes: number, noVotes: number, nominator: string): string => {
-  return `The vote to invite ${name} PASSED with ${yesVotes} Yes votes, ${noVotes} No votes. An invite link will be sent to ${nominator} in ${NOMINATION_CONFIG.CERTIFY_PERIOD_TEXT}.`;
+  return `The vote to invite ${name} PASSED with ${yesVotes} Yes votes, ${noVotes} No votes. An invite link will be sent to ${nominator} in ${NOMINATION_CONFIG.CLEANUP_PERIOD_TEXT}.`;
 };

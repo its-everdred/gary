@@ -19,7 +19,7 @@ See [COMMANDS.md](COMMANDS.md) for detailed command reference.
 - `/mod nominate remove name:<text>` - Moderator: Remove a nominee
 - `/mod nominate start [name:<text>]` - Moderator: Start discussion for specific nominee or next in queue
 - `/mod nominate discussion hours:<number>` - Moderator: Set discussion duration for current nominee
-- `/mod nominate cleanup` - Moderator: Complete certification early and cleanup channels for nominee in CERTIFY state
+- `/mod nominate cleanup` - Moderator: Complete cleanup early and cleanup channels for nominee in CLEANUP state
 
 ## Features
 
@@ -29,7 +29,7 @@ See [COMMANDS.md](COMMANDS.md) for detailed command reference.
   - Vote channels with EasyPoll integration (48 hours)
   - Automatic quorum calculation (40% of members)
   - Pass threshold (80% yes votes)
-  - Certification period (7 days)
+  - Cleanup period (7 days)
 
 ## EasyPoll Integration
 

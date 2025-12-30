@@ -112,13 +112,13 @@ describe('Message Access Security Tests', () => {
     discussionChannelId: 'discussion-channel-456',
     discussionStart: new Date(),
     voteStart: new Date(),
-    certifyStart: new Date(),
+    cleanupStart: new Date(),
     createdAt: new Date(),
     updatedAt: new Date(),
     failureReason: null,
     passed: null,
     voteGovernanceAnnounced: false,
-    certifyGovernanceAnnounced: false,
+    cleanupGovernanceAnnounced: false,
     ...overrides
   });
 
@@ -316,7 +316,7 @@ describe('Message Access Security Tests', () => {
         createMockNominee({ state: NomineeState.ACTIVE }),
         createMockNominee({ state: NomineeState.DISCUSSION }), 
         createMockNominee({ state: NomineeState.VOTE }),
-        createMockNominee({ state: NomineeState.CERTIFY })
+        createMockNominee({ state: NomineeState.CLEANUP })
       ];
       
       // Reset access log

@@ -355,7 +355,7 @@ export class VoteResultService {
   private async getVoteResultDescription(nominee: Nominee, voteResults: VoteResults): Promise<string> {
     if (voteResults.passed) {
       const nominatorName = await NomineeDisplayUtils.resolveNominatorName(nominee);
-      return `🗳️ ${nominee.name} met quorum and succeeded! ${nominatorName} will receive an invite to send them in ${NOMINATION_CONFIG.CERTIFY_PERIOD_TEXT}.`;
+      return `🗳️ ${nominee.name} met quorum and succeeded! ${nominatorName} will receive an invite to send them in ${NOMINATION_CONFIG.CLEANUP_PERIOD_TEXT}.`;
     }
     
     // Failed - determine the reason
@@ -397,10 +397,10 @@ export class VoteResultService {
   }
 
   /**
-   * Formats the certify duration for display
+   * Formats the cleanup duration for display
    */
-  private formatCertifyDuration(): string {
-    return NomineeDisplayUtils.formatDuration(NOMINATION_CONFIG.CERTIFY_DURATION_MINUTES);
+  private formatCleanupDuration(): string {
+    return NomineeDisplayUtils.formatDuration(NOMINATION_CONFIG.CLEANUP_DURATION_MINUTES);
   }
 
 

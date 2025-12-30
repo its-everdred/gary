@@ -16,12 +16,12 @@ export async function handleCleanupCommand(interaction: ChatInputCommandInteract
       return;
     }
 
-    // Find nominee in CERTIFY state
-    const nominee = await NomineeStateManager.getCurrentNomineeInState(guildId, NomineeState.CERTIFY);
+    // Find nominee in CLEANUP state
+    const nominee = await NomineeStateManager.getCurrentNomineeInState(guildId, NomineeState.CLEANUP);
     
     if (!nominee) {
       await interaction.reply({
-        content: '❌ No nominee found in CERTIFY state. Cleanup command only works during the certification period.',
+        content: '❌ No nominee found in CLEANUP state. Cleanup command only works during the cleanup period.',
         flags: DISCORD_CONSTANTS.MESSAGE_FLAGS.EPHEMERAL
       });
       return;
@@ -31,7 +31,7 @@ export async function handleCleanupCommand(interaction: ChatInputCommandInteract
 
     // Perform cleanup using existing job scheduler logic
     const jobScheduler = NominationJobScheduler.getInstance(interaction.client);
-    const result = await jobScheduler.performPostCertifyCleanup(nominee);
+    const result = await jobScheduler.performPostCleanupCleanup(nominee);
 
     if (result.success) {
       await interaction.editReply({

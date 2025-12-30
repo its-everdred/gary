@@ -33,7 +33,7 @@ function createMockNominee(overrides: Partial<Nominee> = {}): Nominee {
     guildId: 'test-guild-id',
     discussionStart: new Date(),
     voteStart: new Date(),
-    certifyStart: null,
+    cleanupStart: null,
     createdAt: new Date(),
     discussionChannelId: 'discussion-channel-id',
     voteChannelId: 'vote-channel-id',

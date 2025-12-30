@@ -203,21 +203,21 @@ export class NominationJobScheduler implements JobScheduler {
       const bufferTime = new Date(currentTime);
       bufferTime.setMinutes(bufferTime.getMinutes() - 1);
       const readyWithBuffer =
-        nominee.certifyStart && nominee.certifyStart <= bufferTime;
+        nominee.cleanupStart && nominee.cleanupStart <= bufferTime;
 
       // Checking vote completion for nominee
 
       if (voteResults || readyWithBuffer) {
-        await this.transitionToCertify(nominee, voteResults);
+        await this.transitionToCleanup(nominee, voteResults);
       }
     }
 
     // Check for nominees that should transition to PAST
-    const certifyNominees = activeNominees.filter(
-      (n) => n.state === NomineeState.CERTIFY
+    const cleanupNominees = activeNominees.filter(
+      (n) => n.state === NomineeState.CLEANUP
     );
 
-    for (const nominee of certifyNominees) {
+    for (const nominee of cleanupNominees) {
       const shouldTransition = TimeCalculationService.shouldTransitionToPast(
         nominee,
         currentTime
@@ -367,11 +367,11 @@ export class NominationJobScheduler implements JobScheduler {
    * Transitions a nominee from DISCUSSION to VOTE
    */
   public async transitionToVote(nominee: Nominee): Promise<void> {
-    // Calculate new certify time based on current time
+    // Calculate new cleanup time based on current time
     const now = new Date();
-    const certifyStart = new Date(now);
-    certifyStart.setUTCMinutes(
-      certifyStart.getUTCMinutes() + NOMINATION_CONFIG.VOTE_DURATION_MINUTES
+    const cleanupStart = new Date(now);
+    cleanupStart.setUTCMinutes(
+      cleanupStart.getUTCMinutes() + NOMINATION_CONFIG.VOTE_DURATION_MINUTES
     );
 
     const result = await NomineeStateManager.transitionNominee(
@@ -379,7 +379,7 @@ export class NominationJobScheduler implements JobScheduler {
       NomineeState.VOTE,
       {
         voteStart: now,
-        certifyStart: certifyStart,
+        cleanupStart: cleanupStart,
       }
     );
 
@@ -414,17 +414,17 @@ export class NominationJobScheduler implements JobScheduler {
   }
 
   /**
-   * Transitions a nominee from VOTE to CERTIFY
+   * Transitions a nominee from VOTE to CLEANUP
    */
-  private async transitionToCertify(
+  private async transitionToCleanup(
     nominee: Nominee,
     voteResults?: VoteResults
   ): Promise<void> {
     const result = await NomineeStateManager.transitionNominee(
       nominee.id,
-      NomineeState.CERTIFY,
+      NomineeState.CLEANUP,
       {
-        certifyStart: new Date(),
+        cleanupStart: new Date(),
       }
     );
 
@@ -476,15 +476,15 @@ export class NominationJobScheduler implements JobScheduler {
           nomineeId: nominee.id,
           error: result.errorMessage,
         },
-        "Failed to transition nominee to CERTIFY"
+        "Failed to transition nominee to CLEANUP"
       );
     }
   }
 
   /**
-   * Performs post-certify cleanup: transitions to PAST, deletes channels, sends instructions
+   * Performs post-cleanup cleanup: transitions to PAST, deletes channels, sends instructions
    */
-  async performPostCertifyCleanup(
+  async performPostCleanupCleanup(
     nominee: Nominee
   ): Promise<{ success: boolean; errorMessage?: string }> {
     const result = await NomineeStateManager.transitionNominee(
@@ -547,10 +547,10 @@ export class NominationJobScheduler implements JobScheduler {
   }
 
   /**
-   * Transitions a nominee from CERTIFY to PAST
+   * Transitions a nominee from CLEANUP to PAST
    */
   private async transitionToPast(nominee: Nominee): Promise<void> {
-    await this.performPostCertifyCleanup(nominee);
+    await this.performPostCleanupCleanup(nominee);
   }
 
   /**
@@ -606,7 +606,7 @@ export class NominationJobScheduler implements JobScheduler {
         data: {
           discussionStart: result.scheduledTimes.discussionStart,
           voteStart: result.scheduledTimes.voteStart,
-          certifyStart: result.scheduledTimes.certifyStart,
+          cleanupStart: result.scheduledTimes.cleanupStart,
         },
       });
     }

@@ -30,8 +30,8 @@ export class NomineeStateManager {
     const validTransitions: Record<NomineeState, NomineeState[]> = {
       [NomineeState.ACTIVE]: [NomineeState.DISCUSSION, NomineeState.PAST],
       [NomineeState.DISCUSSION]: [NomineeState.VOTE, NomineeState.PAST],
-      [NomineeState.VOTE]: [NomineeState.CERTIFY, NomineeState.PAST],
-      [NomineeState.CERTIFY]: [NomineeState.PAST],
+      [NomineeState.VOTE]: [NomineeState.CLEANUP, NomineeState.PAST],
+      [NomineeState.CLEANUP]: [NomineeState.PAST],
       [NomineeState.PAST]: [] // No transitions from PAST
     };
 
@@ -50,8 +50,8 @@ export class NomineeStateManager {
       case NomineeState.VOTE:
         return await this.validateVoteStart(nominee);
       
-      case NomineeState.CERTIFY:
-        return await this.validateCertifyStart(nominee);
+      case NomineeState.CLEANUP:
+        return await this.validateCleanupStart(nominee);
       
       default:
         return { isValid: true };
@@ -62,12 +62,12 @@ export class NomineeStateManager {
    * Validates if discussion can start for a nominee
    */
   private static async validateDiscussionStart(nominee: Nominee): Promise<NomineeValidationResult> {
-    // Check if there's already another nominee in DISCUSSION, VOTE, or CERTIFY state
+    // Check if there's already another nominee in DISCUSSION, VOTE, or CLEANUP state
     const existingInProgress = await prisma.nominee.findFirst({
       where: {
         guildId: nominee.guildId,
         state: {
-          in: [NomineeState.DISCUSSION, NomineeState.VOTE, NomineeState.CERTIFY]
+          in: [NomineeState.DISCUSSION, NomineeState.VOTE, NomineeState.CLEANUP]
         },
         id: {
           not: nominee.id
@@ -107,20 +107,20 @@ export class NomineeStateManager {
   }
 
   /**
-   * Validates if certification can start for a nominee
+   * Validates if cleanup can start for a nominee
    */
-  private static async validateCertifyStart(nominee: Nominee): Promise<NomineeValidationResult> {
+  private static async validateCleanupStart(nominee: Nominee): Promise<NomineeValidationResult> {
     if (nominee.state !== NomineeState.VOTE) {
       return {
         isValid: false,
-        errorMessage: 'Nominee must be in VOTE state to start certification'
+        errorMessage: 'Nominee must be in VOTE state to start cleanup'
       };
     }
 
     if (!nominee.voteStart) {
       return {
         isValid: false,
-        errorMessage: 'Vote start time must be set before starting certification'
+        errorMessage: 'Vote start time must be set before starting cleanup'
       };
     }
 
@@ -219,7 +219,7 @@ export class NomineeStateManager {
       where: {
         guildId,
         state: {
-          in: [NomineeState.DISCUSSION, NomineeState.VOTE, NomineeState.CERTIFY]
+          in: [NomineeState.DISCUSSION, NomineeState.VOTE, NomineeState.CLEANUP]
         }
       }
     });
@@ -276,10 +276,10 @@ export class NomineeStateManager {
   }
 
   /**
-   * Gets the current nominee in any progress state (DISCUSSION, VOTE, CERTIFY)
+   * Gets the current nominee in any progress state (DISCUSSION, VOTE, CLEANUP)
    */
   static async getCurrentNomineeInProgress(guildId: string): Promise<Nominee | null> {
-    const inProgressStates: NomineeState[] = [NomineeState.DISCUSSION, NomineeState.VOTE, NomineeState.CERTIFY];
+    const inProgressStates: NomineeState[] = [NomineeState.DISCUSSION, NomineeState.VOTE, NomineeState.CLEANUP];
     
     return await prisma.nominee.findFirst({
       where: {

@@ -96,7 +96,7 @@ describe('discussion command', () => {
       where: { id: 'nominee-1' },
       data: expect.objectContaining({
         voteStart: expect.any(Date),
-        certifyStart: expect.any(Date)
+        cleanupStart: expect.any(Date)
       })
     });
 

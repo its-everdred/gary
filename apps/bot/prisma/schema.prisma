@@ -27,7 +27,7 @@ model Nominee {
   guildId             String
   discussionStart     DateTime?
   voteStart           DateTime?
-  certifyStart        DateTime?
+  cleanupStart        DateTime?
   createdAt           DateTime     @default(now())
   discussionChannelId String?
   voteChannelId       String?
@@ -42,14 +42,14 @@ model Nominee {
   @@index([guildId, state])
   @@index([guildId, discussionStart])
   @@index([guildId, voteStart])
-  @@index([guildId, certifyStart])
+  @@index([guildId, cleanupStart])
 }
 
 enum NomineeState {
   ACTIVE
   DISCUSSION
   VOTE
-  CERTIFY
+  CLEANUP
   PAST
 }
 

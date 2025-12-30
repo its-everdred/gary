@@ -84,8 +84,8 @@ export async function handleStartCommand(interaction: ChatInputCommandInteractio
     const voteStart = new Date(now);
     voteStart.setUTCMinutes(voteStart.getUTCMinutes() + NOMINATION_CONFIG.DISCUSSION_DURATION_MINUTES);
     
-    const certifyStart = new Date(voteStart);
-    certifyStart.setUTCMinutes(certifyStart.getUTCMinutes() + NOMINATION_CONFIG.VOTE_DURATION_MINUTES);
+    const cleanupStart = new Date(voteStart);
+    cleanupStart.setUTCMinutes(cleanupStart.getUTCMinutes() + NOMINATION_CONFIG.VOTE_DURATION_MINUTES);
     
     // Transition nominee to DISCUSSION state
     const transitionResult = await NomineeStateManager.transitionNominee(
@@ -94,7 +94,7 @@ export async function handleStartCommand(interaction: ChatInputCommandInteractio
       {
         discussionStart: now,
         voteStart: voteStart,
-        certifyStart: certifyStart
+        cleanupStart: cleanupStart
       }
     );
 

@@ -55,13 +55,13 @@ export class AnnouncementService {
         return false;
       }
 
-      if (!nominee.voteStart || !nominee.certifyStart) {
-        logger.warn({ nomineeId: nominee.id }, 'Vote start or certify start time not set');
+      if (!nominee.voteStart || !nominee.cleanupStart) {
+        logger.warn({ nomineeId: nominee.id }, 'Vote start or cleanup start time not set');
         return false;
       }
 
       const voteStart = new Date(nominee.voteStart);
-      const voteEnd = new Date(nominee.certifyStart);
+      const voteEnd = new Date(nominee.cleanupStart);
 
       const description = pollUrl 
         ? `Voting has begun for **${nominee.name}**'s nomination: [Vote Now](${pollUrl})`
@@ -345,7 +345,7 @@ export class AnnouncementService {
         footer: {
           text: TimestampUtils.createTimeRangeFooter(
             nominee.voteStart ? new Date(nominee.voteStart) : null,
-            nominee.certifyStart ? new Date(nominee.certifyStart) : null,
+            nominee.cleanupStart ? new Date(nominee.cleanupStart) : null,
             'Vote Expired'
           )
         }
