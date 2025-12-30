@@ -31,7 +31,8 @@ export const setupModuleMocks = () => {
   mock.module('../../lib/configService.js', () => mockConfigService);
   mock.module('../../lib/constants.js', () => mockConstants);
   mock.module('../../lib/jobScheduler.js', () => ({ NominationJobScheduler: mockNominationJobScheduler }));
-  mock.module('../../lib/timeCalculation.js', () => mockTimeCalculationService);
+  // NOTE: timeCalculation.js is intentionally NOT mocked here
+  // Only timeCalculation.test.ts uses it and needs the real implementation
   mock.module('../../lib/timestampUtils.js', () => mockTimestampUtils);
   mock.module('../../lib/channelFinderService.js', () => mockChannelFinderService);
   mock.module('discord.js', () => mockDiscordJS);
@@ -43,7 +44,7 @@ export const resetAllMocks = (...customMocks: any[]) => {
   resetDatabaseMocks();
   resetConfigMocks();
   resetJobSchedulerMocks();
-  resetServiceMocks();
+  resetServiceMocks(); // This resets timestampUtils, channelFinder, pino (NOT timeCalculation)
   
   // Reset any custom mocks passed in
   customMocks.forEach(mockObj => {
@@ -66,7 +67,6 @@ export {
   mockConstants,
   mockJobScheduler,
   mockNominationJobScheduler,
-  mockTimeCalculationService,
   mockTimestampUtils,
   mockChannelFinderService,
   createMockClient,

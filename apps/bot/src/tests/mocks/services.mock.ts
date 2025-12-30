@@ -30,7 +30,7 @@ export const mockPino = {
 };
 
 export const resetServiceMocks = () => {
-  mockTimeCalculationService.TimeCalculationService.getNextMondayAt9AM.mockReset();
+  // NOTE: timeCalculation is intentionally NOT reset here since it's not mocked
   mockTimestampUtils.TimestampUtils.formatDiscordTimestamp.mockReset();
   mockChannelFinderService.ChannelFinderService.governance.mockReset();
   mockChannelFinderService.ChannelFinderService.general.mockReset();

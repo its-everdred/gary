@@ -20,6 +20,10 @@ if [ $? -ne 0 ]; then
     echo "📝 Test 3: Run all tests at once (CI runs all together)"
     bun test --bail=1
     
+echo ""
+echo "📝 Test 4: Run timeCalculation test separately (needs real implementation)"
+bun test src/tests/timeCalculation.test.ts
+    
     exit 1
 else
     echo "✅ Tests pass in CI-like conditions"
