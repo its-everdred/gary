@@ -74,9 +74,12 @@ export class NomineeDisplayUtils {
   static formatDuration(minutes: number): string {
     if (minutes < 60) {
       return `${minutes} minute${minutes === 1 ? '' : 's'}`;
-    } else {
+    } else if (minutes < 1440) { // Less than 24 hours
       const hours = Math.round(minutes / 60);
       return `${hours} hour${hours === 1 ? '' : 's'}`;
+    } else { // 24 hours or more
+      const days = Math.round(minutes / 1440);
+      return `${days} day${days === 1 ? '' : 's'}`;
     }
   }
 
