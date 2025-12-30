@@ -342,13 +342,10 @@ export class ChannelManagementService {
         },
       };
 
-      // Send embed first and pin it
-      const embedMessage = await channel.send({
+      // Send embed 
+      await channel.send({
         embeds: [embed],
       });
-      
-      // Pin the embed message
-      await embedMessage.pin();
 
       // Then send nominator ping as separate message
       const content = nominatorMember
