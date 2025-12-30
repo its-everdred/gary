@@ -1,17 +1,17 @@
-import cron from 'node-cron';
-import type { Client } from 'discord.js';
-import pino from 'pino';
-import { NomineeStateManager } from './nomineeService.js';
-import { TimeCalculationService } from './timeCalculation.js';
-import { ChannelManagementService } from './channelService.js';
-import { AnnouncementService } from './announcementService.js';
-import { VoteResultService, type VoteResults } from './voteResultService.js';
-import { NomineeState } from '@prisma/client';
-import { prisma } from './db.js';
-import { NOMINATION_CONFIG } from './constants.js';
-import { ChannelFinderService } from './channelFinderService.js';
-import { DISCORD_CONSTANTS } from './discordConstants.js';
-import { NomineeDisplayUtils } from './nomineeDisplayUtils.js';
+import cron from "node-cron";
+import type { Client } from "discord.js";
+import pino from "pino";
+import { NomineeStateManager } from "./nomineeService.js";
+import { TimeCalculationService } from "./timeCalculation.js";
+import { ChannelManagementService } from "./channelService.js";
+import { AnnouncementService } from "./announcementService.js";
+import { VoteResultService, type VoteResults } from "./voteResultService.js";
+import { NomineeState } from "@prisma/client";
+import { prisma } from "./db.js";
+import { NOMINATION_CONFIG } from "./constants.js";
+import { ChannelFinderService } from "./channelFinderService.js";
+import { DISCORD_CONSTANTS } from "./discordConstants.js";
+import { NomineeDisplayUtils } from "./nomineeDisplayUtils.js";
 
 const logger = pino();
 
@@ -52,17 +52,15 @@ export class NominationJobScheduler implements JobScheduler {
     this.scheduleStateTransitionJob();
     this.scheduleScheduleRecalculationJob();
     this._isRunning = true;
-    
   }
 
   stop(): void {
     this.jobs.forEach((job) => {
       job.destroy();
     });
-    
+
     this.jobs.clear();
     this._isRunning = false;
-    
   }
 
   isRunning(): boolean {
@@ -74,25 +72,34 @@ export class NominationJobScheduler implements JobScheduler {
    * to check for nominees ready for state changes
    */
   private scheduleStateTransitionJob(): void {
-    const job = cron.schedule('* * * * *', async () => {
-      try {
-        await this.processStateTransitions();
-      } catch (error) {
-        logger.error({ 
-          error: error instanceof Error ? {
-            message: error.message,
-            stack: error.stack
-          } : error
-        }, 'State transition job failed');
+    const job = cron.schedule(
+      "* * * * *",
+      async () => {
+        try {
+          await this.processStateTransitions();
+        } catch (error) {
+          logger.error(
+            {
+              error:
+                error instanceof Error
+                  ? {
+                      message: error.message,
+                      stack: error.stack,
+                    }
+                  : error,
+            },
+            "State transition job failed"
+          );
+        }
+      },
+      {
+        scheduled: false,
+        timezone: "UTC",
       }
-    }, {
-      scheduled: false,
-      timezone: 'UTC'
-    });
+    );
 
     job.start();
-    this.jobs.set('state-transitions', job);
-    
+    this.jobs.set("state-transitions", job);
   }
 
   /**
@@ -100,20 +107,23 @@ export class NominationJobScheduler implements JobScheduler {
    * Runs every hour to ensure schedules stay accurate
    */
   private scheduleScheduleRecalculationJob(): void {
-    const job = cron.schedule('0 * * * *', async () => {
-      try {
-        await this.recalculateActiveSchedules();
-      } catch (error) {
-        logger.error({ error }, 'Schedule recalculation job failed');
+    const job = cron.schedule(
+      "0 * * * *",
+      async () => {
+        try {
+          await this.recalculateActiveSchedules();
+        } catch (error) {
+          logger.error({ error }, "Schedule recalculation job failed");
+        }
+      },
+      {
+        scheduled: false,
+        timezone: "UTC",
       }
-    }, {
-      scheduled: false,
-      timezone: 'UTC'
-    });
+    );
 
     job.start();
-    this.jobs.set('schedule-recalculation', job);
-    
+    this.jobs.set("schedule-recalculation", job);
   }
 
   /**
@@ -121,19 +131,25 @@ export class NominationJobScheduler implements JobScheduler {
    */
   private async processStateTransitions(): Promise<void> {
     const guilds = this.client.guilds.cache;
-    
+
     for (const [guildId] of guilds) {
       try {
         await this.processGuildTransitions(guildId);
       } catch (error) {
-        logger.error({ 
-          error: error instanceof Error ? {
-            message: error.message,
-            stack: error.stack,
-            name: error.name
-          } : error,
-          guildId 
-        }, 'Guild state transition processing failed');
+        logger.error(
+          {
+            error:
+              error instanceof Error
+                ? {
+                    message: error.message,
+                    stack: error.stack,
+                    name: error.name,
+                  }
+                : error,
+            guildId,
+          },
+          "Guild state transition processing failed"
+        );
       }
     }
   }
@@ -168,22 +184,27 @@ export class NominationJobScheduler implements JobScheduler {
     }
 
     // Check for nominees in VOTE state - either ready by time or poll completed
-    const voteNominees = activeNominees.filter(n => n.state === NomineeState.VOTE);
+    const voteNominees = activeNominees.filter(
+      (n) => n.state === NomineeState.VOTE
+    );
 
     for (const nominee of voteNominees) {
       // Check if governance announcement needs to be sent (poll posted but not announced yet)
       if (!nominee.voteGovernanceAnnounced && nominee.voteChannelId) {
         await this.checkAndAnnounceVoteToGovernance(nominee);
       }
-      
+
       // Check if vote has completed (either by time or poll closure)
-      const voteResults = await this.voteResultService.checkVoteCompletion(nominee);
-      
+      const voteResults = await this.voteResultService.checkVoteCompletion(
+        nominee
+      );
+
       // Add 1-minute buffer after vote expiration to allow EasyPoll to finalize results
       const bufferTime = new Date(currentTime);
       bufferTime.setMinutes(bufferTime.getMinutes() - 1);
-      const readyWithBuffer = nominee.certifyStart && nominee.certifyStart <= bufferTime;
-      
+      const readyWithBuffer =
+        nominee.certifyStart && nominee.certifyStart <= bufferTime;
+
       // Checking vote completion for nominee
 
       if (voteResults || readyWithBuffer) {
@@ -192,10 +213,15 @@ export class NominationJobScheduler implements JobScheduler {
     }
 
     // Check for nominees that should transition to PAST
-    const certifyNominees = activeNominees.filter(n => n.state === NomineeState.CERTIFY);
+    const certifyNominees = activeNominees.filter(
+      (n) => n.state === NomineeState.CERTIFY
+    );
 
     for (const nominee of certifyNominees) {
-      const shouldTransition = TimeCalculationService.shouldTransitionToPast(nominee, currentTime);
+      const shouldTransition = TimeCalculationService.shouldTransitionToPast(
+        nominee,
+        currentTime
+      );
 
       if (shouldTransition) {
         await this.transitionToPast(nominee);
@@ -206,24 +232,32 @@ export class NominationJobScheduler implements JobScheduler {
   /**
    * Checks if EasyPoll has been posted in vote channel and announces to governance if so
    */
-  private async checkAndAnnounceVoteToGovernance(nominee: Nominee): Promise<void> {
+  private async checkAndAnnounceVoteToGovernance(
+    nominee: Nominee
+  ): Promise<void> {
     try {
       if (!nominee.voteChannelId) {
         return;
       }
 
       const guild = await this.client.guilds.fetch(nominee.guildId);
-      const voteChannel = guild.channels.cache.get(nominee.voteChannelId) as TextChannel;
-      
+      const voteChannel = guild.channels.cache.get(
+        nominee.voteChannelId
+      ) as TextChannel;
+
       if (!voteChannel) {
         return;
       }
 
       // Check for EasyPoll messages in the channel
-      const messages = await voteChannel.messages.fetch({ limit: 10, force: true });
-      const easyPollMessage = messages.find(msg => 
-        msg.author.id === DISCORD_CONSTANTS.BOT_IDS.EASYPOLL &&
-        msg.embeds.length > 0
+      const messages = await voteChannel.messages.fetch({
+        limit: 10,
+        force: true,
+      });
+      const easyPollMessage = messages.find(
+        (msg) =>
+          msg.author.id === DISCORD_CONSTANTS.BOT_IDS.EASYPOLL &&
+          msg.embeds.length > 0
       );
 
       if (easyPollMessage) {
@@ -238,7 +272,7 @@ export class NominationJobScheduler implements JobScheduler {
           // Mark as announced in database
           await prisma.nominee.update({
             where: { id: nominee.id },
-            data: { voteGovernanceAnnounced: true }
+            data: { voteGovernanceAnnounced: true },
           });
 
           // Delete bot tracking messages (mod-comm instructions)
@@ -246,10 +280,12 @@ export class NominationJobScheduler implements JobScheduler {
             try {
               const modCommsChannel = await ChannelFinderService.modComms();
               if (modCommsChannel) {
-                const messageIds = nominee.botMessageIds.split(',');
+                const messageIds = nominee.botMessageIds.split(",");
                 for (const messageId of messageIds) {
                   try {
-                    const message = await modCommsChannel.messages.fetch(messageId);
+                    const message = await modCommsChannel.messages.fetch(
+                      messageId
+                    );
                     await message.delete();
                   } catch {
                     // Message already deleted or not found, continue
@@ -258,21 +294,27 @@ export class NominationJobScheduler implements JobScheduler {
               }
             } catch (error) {
               // Log but don't fail the whole process
-              logger.error({
-                error,
-                nomineeId: nominee.id,
-                botMessageIds: nominee.botMessageIds
-              }, 'Failed to delete bot messages');
+              logger.error(
+                {
+                  error,
+                  nomineeId: nominee.id,
+                  botMessageIds: nominee.botMessageIds,
+                },
+                "Failed to delete bot messages"
+              );
             }
           }
         }
       }
     } catch (error) {
-      logger.error({
-        error,
-        nomineeId: nominee.id,
-        nomineeName: nominee.name
-      }, 'Failed to check for EasyPoll and announce to governance');
+      logger.error(
+        {
+          error,
+          nomineeId: nominee.id,
+          nomineeName: nominee.name,
+        },
+        "Failed to check for EasyPoll and announce to governance"
+      );
     }
   }
 
@@ -284,32 +326,40 @@ export class NominationJobScheduler implements JobScheduler {
       nominee.id,
       NomineeState.DISCUSSION,
       {
-        discussionStart: new Date()
+        discussionStart: new Date(),
       }
     );
 
     if (result.success) {
       logger.info(`Discussion started: ${nominee.name}`);
-      
+
       // Create discussion channel
-      const channelResult = await this.channelService.createDiscussionChannel(result.nominee);
+      const channelResult = await this.channelService.createDiscussionChannel(
+        result.nominee
+      );
       if (!channelResult.success) {
-        logger.error({
-          nomineeId: nominee.id,
-          error: channelResult.errorMessage
-        }, 'Failed to create discussion channel');
+        logger.error(
+          {
+            nomineeId: nominee.id,
+            error: channelResult.errorMessage,
+          },
+          "Failed to create discussion channel"
+        );
       } else {
         // Send announcement to governance channel
         await this.announcementService.announceDiscussionStart(
-          result.nominee, 
+          result.nominee,
           channelResult.channel!.id
         );
       }
     } else {
-      logger.error({
-        nomineeId: nominee.id,
-        error: result.errorMessage
-      }, 'Failed to transition nominee to DISCUSSION');
+      logger.error(
+        {
+          nomineeId: nominee.id,
+          error: result.errorMessage,
+        },
+        "Failed to transition nominee to DISCUSSION"
+      );
     }
   }
 
@@ -320,60 +370,82 @@ export class NominationJobScheduler implements JobScheduler {
     // Calculate new certify time based on current time
     const now = new Date();
     const certifyStart = new Date(now);
-    certifyStart.setUTCMinutes(certifyStart.getUTCMinutes() + NOMINATION_CONFIG.VOTE_DURATION_MINUTES);
-    
+    certifyStart.setUTCMinutes(
+      certifyStart.getUTCMinutes() + NOMINATION_CONFIG.VOTE_DURATION_MINUTES
+    );
+
     const result = await NomineeStateManager.transitionNominee(
       nominee.id,
       NomineeState.VOTE,
       {
         voteStart: now,
-        certifyStart: certifyStart
+        certifyStart: certifyStart,
       }
     );
 
     if (result.success) {
       logger.info(`Vote started: ${nominee.name}`);
-      
+
       // Create vote channel
-      const channelResult = await this.channelService.createVoteChannel(result.nominee);
+      const channelResult = await this.channelService.createVoteChannel(
+        result.nominee
+      );
       if (!channelResult.success) {
-        logger.error({
-          nomineeId: nominee.id,
-          error: channelResult.errorMessage
-        }, 'Failed to create vote channel');
+        logger.error(
+          {
+            nomineeId: nominee.id,
+            error: channelResult.errorMessage,
+          },
+          "Failed to create vote channel"
+        );
       } else {
-        // Note: Governance announcement will be sent automatically 
+        // Note: Governance announcement will be sent automatically
         // once the moderator posts the EasyPoll in the vote channel
       }
     } else {
-      logger.error({
-        nomineeId: nominee.id,
-        error: result.errorMessage
-      }, 'Failed to transition nominee to VOTE');
+      logger.error(
+        {
+          nomineeId: nominee.id,
+          error: result.errorMessage,
+        },
+        "Failed to transition nominee to VOTE"
+      );
     }
   }
 
   /**
    * Transitions a nominee from VOTE to CERTIFY
    */
-  private async transitionToCertify(nominee: Nominee, voteResults?: VoteResults): Promise<void> {
+  private async transitionToCertify(
+    nominee: Nominee,
+    voteResults?: VoteResults
+  ): Promise<void> {
     const result = await NomineeStateManager.transitionNominee(
       nominee.id,
       NomineeState.CERTIFY,
       {
-        certifyStart: new Date()
+        certifyStart: new Date(),
       }
     );
 
     if (result.success) {
-      logger.info(`Vote completed: ${nominee.name}${voteResults ? (voteResults.passed ? ' - PASSED' : ' - FAILED') : ''}`);
-      
+      logger.info(
+        `Vote completed: ${nominee.name}${
+          voteResults ? (voteResults.passed ? " - PASSED" : " - FAILED") : ""
+        }`
+      );
+
       // Post detailed results to both vote and governance channels if we have vote results
       if (voteResults) {
         // Post results to all channels (vote, governance, general, mod-comms)
-        this.voteResultService.postVoteResults(nominee, voteResults).catch(error => {
-          logger.error({ error, nomineeId: nominee.id }, 'Failed to post vote results');
-        });
+        this.voteResultService
+          .postVoteResults(nominee, voteResults)
+          .catch((error) => {
+            logger.error(
+              { error, nomineeId: nominee.id },
+              "Failed to post vote results"
+            );
+          });
       } else {
         // Vote period expired without results - create default failed results
         const expiredResults: VoteResults = {
@@ -385,26 +457,36 @@ export class NominationJobScheduler implements JobScheduler {
           passThresholdMet: false,
           memberCount: 0,
           requiredQuorum: 0,
-          requiredPassVotes: 0
+          requiredPassVotes: 0,
         };
-        
+
         // Post expired results to all channels
-        this.voteResultService.postVoteResults(nominee, expiredResults).catch(error => {
-          logger.error({ error, nomineeId: nominee.id }, 'Failed to post expired vote results');
-        });
+        this.voteResultService
+          .postVoteResults(nominee, expiredResults)
+          .catch((error) => {
+            logger.error(
+              { error, nomineeId: nominee.id },
+              "Failed to post expired vote results"
+            );
+          });
       }
     } else {
-      logger.error({
-        nomineeId: nominee.id,
-        error: result.errorMessage
-      }, 'Failed to transition nominee to CERTIFY');
+      logger.error(
+        {
+          nomineeId: nominee.id,
+          error: result.errorMessage,
+        },
+        "Failed to transition nominee to CERTIFY"
+      );
     }
   }
 
   /**
    * Performs post-certify cleanup: transitions to PAST, deletes channels, sends instructions
    */
-  async performPostCertifyCleanup(nominee: Nominee): Promise<{ success: boolean; errorMessage?: string }> {
+  async performPostCertifyCleanup(
+    nominee: Nominee
+  ): Promise<{ success: boolean; errorMessage?: string }> {
     const result = await NomineeStateManager.transitionNominee(
       nominee.id,
       NomineeState.PAST
@@ -412,42 +494,54 @@ export class NominationJobScheduler implements JobScheduler {
 
     if (result.success) {
       logger.info(`Nomination completed: ${nominee.name}`);
-      
+
       // Cleanup: Delete discussion and vote channels
       try {
         const channelService = new ChannelManagementService(this.client);
-        
+
         // Delete discussion channel
         if (nominee.discussionChannelId) {
-          await channelService.deleteChannel(nominee.discussionChannelId, 'Nomination completed');
+          await channelService.deleteChannel(
+            nominee.discussionChannelId,
+            "Nomination completed"
+          );
         }
-        
+
         // Delete vote channel
         if (nominee.voteChannelId) {
-          await channelService.deleteChannel(nominee.voteChannelId, 'Nomination completed');
+          await channelService.deleteChannel(
+            nominee.voteChannelId,
+            "Nomination completed"
+          );
         }
 
         // Delete announcement messages from governance and general channels
         await this.deleteAnnouncementMessages(nominee);
-        
+
         // Send cleanup instructions to mod-comms
         await this.sendCleanupInstructions(nominee);
       } catch (error) {
-        logger.error({
-          error,
-          nomineeId: nominee.id
-        }, 'Failed to delete nomination channels');
-        return { success: false, errorMessage: 'Failed to cleanup channels' };
+        logger.error(
+          {
+            error,
+            nomineeId: nominee.id,
+          },
+          "Failed to delete nomination channels"
+        );
+        return { success: false, errorMessage: "Failed to cleanup channels" };
       }
-      
+
       // Start next nominee in queue if available
       await this.startNextNomineeIfReady(nominee.guildId);
       return { success: true };
     } else {
-      logger.error({
-        nomineeId: nominee.id,
-        error: result.errorMessage
-      }, 'Failed to transition nominee to PAST');
+      logger.error(
+        {
+          nomineeId: nominee.id,
+          error: result.errorMessage,
+        },
+        "Failed to transition nominee to PAST"
+      );
       return { success: false, errorMessage: result.errorMessage };
     }
   }
@@ -463,12 +557,20 @@ export class NominationJobScheduler implements JobScheduler {
    * Starts the next nominee in queue if no one else is in progress
    */
   private async startNextNomineeIfReady(guildId: string): Promise<void> {
-    const hasInProgress = await NomineeStateManager.hasNomineeInProgress(guildId);
-    
+    const hasInProgress = await NomineeStateManager.hasNomineeInProgress(
+      guildId
+    );
+
     if (!hasInProgress) {
-      const nextNominee = await NomineeStateManager.getNextNomineeForDiscussion(guildId);
-      
-      if (nextNominee && nextNominee.discussionStart && nextNominee.discussionStart <= new Date()) {
+      const nextNominee = await NomineeStateManager.getNextNomineeForDiscussion(
+        guildId
+      );
+
+      if (
+        nextNominee &&
+        nextNominee.discussionStart &&
+        nextNominee.discussionStart <= new Date()
+      ) {
         await this.transitionToDiscussion(nextNominee);
       }
     }
@@ -479,12 +581,12 @@ export class NominationJobScheduler implements JobScheduler {
    */
   private async recalculateActiveSchedules(): Promise<void> {
     const guilds = this.client.guilds.cache;
-    
+
     for (const [guildId] of guilds) {
       try {
         await this.recalculateGuildSchedules(guildId);
       } catch (error) {
-        logger.error({ error, guildId }, 'Guild schedule recalculation failed');
+        logger.error({ error, guildId }, "Guild schedule recalculation failed");
       }
     }
   }
@@ -494,8 +596,9 @@ export class NominationJobScheduler implements JobScheduler {
    */
   private async recalculateGuildSchedules(guildId: string): Promise<void> {
     const activeNominees = await NomineeStateManager.getActiveNominees(guildId);
-    const scheduleResults = await TimeCalculationService.recalculateAllSchedules(activeNominees);
-    
+    const scheduleResults =
+      await TimeCalculationService.recalculateAllSchedules(activeNominees);
+
     // Update database with new schedules
     for (const result of scheduleResults) {
       await prisma.nominee.update({
@@ -503,11 +606,11 @@ export class NominationJobScheduler implements JobScheduler {
         data: {
           discussionStart: result.scheduledTimes.discussionStart,
           voteStart: result.scheduledTimes.voteStart,
-          certifyStart: result.scheduledTimes.certifyStart
-        }
+          certifyStart: result.scheduledTimes.certifyStart,
+        },
       });
     }
-    
+
     // Schedule results processed
   }
 
@@ -521,7 +624,9 @@ export class NominationJobScheduler implements JobScheduler {
       const governanceChannel = await ChannelFinderService.governance();
       const generalChannel = await ChannelFinderService.general();
 
-      const messageIds = nominee.announcementMessageIds.split(',').filter(Boolean);
+      const messageIds = nominee.announcementMessageIds
+        .split(",")
+        .filter(Boolean);
 
       for (const messageId of messageIds) {
         try {
@@ -546,20 +651,25 @@ export class NominationJobScheduler implements JobScheduler {
             }
           }
         } catch (error) {
-          logger.error({
-            error,
-            nomineeId: nominee.id,
-            messageId
-          }, 'Failed to delete announcement message');
+          logger.error(
+            {
+              error,
+              nomineeId: nominee.id,
+              messageId,
+            },
+            "Failed to delete announcement message"
+          );
         }
       }
-
     } catch (error) {
-      logger.error({
-        error,
-        nomineeId: nominee.id,
-        announcementMessageIds: nominee.announcementMessageIds
-      }, 'Failed to delete announcement messages');
+      logger.error(
+        {
+          error,
+          nomineeId: nominee.id,
+          announcementMessageIds: nominee.announcementMessageIds,
+        },
+        "Failed to delete announcement messages"
+      );
     }
   }
 
@@ -570,59 +680,66 @@ export class NominationJobScheduler implements JobScheduler {
     try {
       const guild = await this.client.guilds.fetch(nominee.guildId);
       const modCommsChannel = await ChannelFinderService.modComms();
-      
+
       if (!modCommsChannel) return;
-      
+
       // Find moderators role
-      const moderatorsRole = guild.roles.cache.find(r => 
-        r.name.toLowerCase() === 'moderators'
+      const moderatorsRole = guild.roles.cache.find(
+        (r) => r.name.toLowerCase() === "moderators"
       );
-      const moderatorsMention = moderatorsRole ? `<@&${moderatorsRole.id}>` : '@moderators';
-      
+      const moderatorsMention = moderatorsRole
+        ? `<@&${moderatorsRole.id}>`
+        : "@moderators";
+
       // Determine if the nominee passed or failed
       const passed = nominee.votePassed === true;
-      
+
       // Only post cleanup instructions if the nominee passed
       if (passed) {
-        const nominatorName = await NomineeDisplayUtils.resolveNominatorName(nominee);
+        const nominatorName = await NomineeDisplayUtils.resolveNominatorName(
+          nominee
+        );
         const embed = {
-          title: '🔗 Cleanup and Send Invite',
+          title: "🔗 Cleanup and Send Invite",
           description: `Nomination channels have been deleted for **${nominee.name}**.`,
           fields: [
             {
-              name: '1️⃣ Clean up remaining discussion',
+              name: "1️⃣ Clean up remaining discussion",
               value: `Manually search for '${nominee.name}' and delete any discussion that occurred in other channels.`,
-              inline: false
+              inline: false,
             },
             {
-              name: '2️⃣ Send the invite link',
+              name: "2️⃣ Send the invite link",
               value: `Send invite link to **${nominatorName}**\n• Invite to Server → Edit invite link → Max number of uses → 1 use`,
-              inline: false
+              inline: false,
             },
             {
-              name: '3️⃣ Delete this message',
-              value: 'Delete this message to indicate to other mods that the invite link was sent',
-              inline: false
-            }
+              name: "3️⃣ Delete this message",
+              value:
+                "Delete this message to indicate to other mods that the invite link was sent",
+              inline: false,
+            },
           ],
           color: 0xff6600,
           timestamp: new Date().toISOString(),
           footer: {
-            text: 'Nomination System • Manual Action Required'
-          }
+            text: "Manual Action Required",
+          },
         };
-        
+
         await modCommsChannel.send({
           content: moderatorsMention,
-          embeds: [embed]
+          embeds: [embed],
         });
       }
-      
     } catch (error) {
-      logger.error({
-        error,
-        nomineeId: nominee.id
-      }, 'Failed to send cleanup instructions to mod-comms');
+      logger.error(
+        {
+          error,
+          nomineeId: nominee.id,
+        },
+        "Failed to send cleanup instructions to mod-comms"
+      );
     }
   }
 
