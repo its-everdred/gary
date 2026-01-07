@@ -131,9 +131,7 @@ export class NominationJobScheduler implements JobScheduler {
    * Processes all possible state transitions for all guilds
    */
   private async processStateTransitions(): Promise<void> {
-    logger.info('Running state transition check...');
     const guilds = this.client.guilds.cache;
-    logger.info(`Processing state transitions for ${guilds.size} guilds`);
 
     for (const [guildId] of guilds) {
       try {
@@ -191,24 +189,9 @@ export class NominationJobScheduler implements JobScheduler {
       (n) => n.state === NomineeState.VOTE
     );
 
-    logger.info(`Found ${voteNominees.length} nominees in VOTE state`, {
-      nominees: voteNominees.map(n => ({
-        id: n.id,
-        name: n.name,
-        voteGovernanceAnnounced: n.voteGovernanceAnnounced,
-        voteChannelId: n.voteChannelId
-      }))
-    });
-
     for (const nominee of voteNominees) {
-      logger.info(`Processing vote nominee: ${nominee.name}`, {
-        voteGovernanceAnnounced: nominee.voteGovernanceAnnounced,
-        voteChannelId: nominee.voteChannelId
-      });
-      
       // Check if governance announcement needs to be sent (poll posted but not announced yet)
       if (!nominee.voteGovernanceAnnounced && nominee.voteChannelId) {
-        logger.info(`Checking for poll announcement for nominee: ${nominee.name}`);
         await this.checkAndAnnounceVoteToGovernance(nominee);
       }
 
@@ -273,10 +256,7 @@ export class NominationJobScheduler implements JobScheduler {
     nominee: Nominee
   ): Promise<void> {
     try {
-      logger.info(`Checking for poll in vote channel for nominee: ${nominee.name}`);
-      
       if (!nominee.voteChannelId) {
-        logger.info(`No voteChannelId for nominee: ${nominee.name}`);
         return;
       }
 
@@ -291,36 +271,20 @@ export class NominationJobScheduler implements JobScheduler {
       );
 
       if (!voteChannel) {
-        logger.info(`Vote channel not found for nominee: ${nominee.name}, channelId: ${nominee.voteChannelId}`);
         return;
       }
 
-      logger.info(`Found vote channel: ${voteChannel.name} (${voteChannel.id}) for nominee: ${nominee.name}`);
-
       // Check for EasyPoll messages in the channel
-      logger.info(`Fetching messages from vote channel: ${voteChannel.name}`);
       const messages = await voteChannel.messages.fetch({
         limit: 10,
         force: true,
       });
-      logger.info(`Found ${messages.size} messages in vote channel`);
       
       const easyPollMessage = messages.find(
         (msg) =>
           msg.author.id === DISCORD_CONSTANTS.BOT_IDS.EASYPOLL &&
           msg.embeds.length > 0
       );
-
-      logger.info(`EasyPoll message found: ${!!easyPollMessage}`, {
-        expectedBotId: DISCORD_CONSTANTS.BOT_IDS.EASYPOLL,
-        messages: messages.map(msg => ({
-          id: msg.id,
-          authorId: msg.author.id,
-          author: msg.author.username,
-          embedCount: msg.embeds.length,
-          content: msg.content.substring(0, 100)
-        }))
-      });
 
       if (easyPollMessage) {
         // Check if this is the first time we're detecting the poll
