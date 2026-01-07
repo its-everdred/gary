@@ -205,16 +205,21 @@ export class NominationJobScheduler implements JobScheduler {
       const readyWithBuffer =
         nominee.cleanupStart && nominee.cleanupStart <= bufferTime;
 
+      // Check if we should transition based on time - only if poll was detected
+      const shouldTransitionByTime = readyWithBuffer && nominee.votePollDetectedAt;
+
       logger.debug(`Vote completion check for ${nominee.name}:`, {
         voteResults: !!voteResults,
         cleanupStart: nominee.cleanupStart?.toISOString(),
         currentTime: currentTime.toISOString(),
         bufferTime: bufferTime.toISOString(),
-        readyWithBuffer
+        readyWithBuffer,
+        votePollDetectedAt: nominee.votePollDetectedAt?.toISOString(),
+        shouldTransitionByTime
       });
 
-      if (voteResults || readyWithBuffer) {
-        logger.info(`Transitioning ${nominee.name} to CLEANUP - voteResults: ${!!voteResults}, timeExpired: ${readyWithBuffer}`);
+      if (voteResults || shouldTransitionByTime) {
+        logger.info(`Transitioning ${nominee.name} to CLEANUP - voteResults: ${!!voteResults}, timeExpired: ${shouldTransitionByTime}`);
         await this.transitionToCleanup(nominee, voteResults || undefined);
       }
     }
@@ -255,12 +260,22 @@ export class NominationJobScheduler implements JobScheduler {
       }
 
       const guild = await this.client.guilds.fetch(nominee.guildId);
-      const voteChannel = guild.channels.cache.get(
+      
+      // Try to get channel by ID first (99% of cases)
+      let voteChannel = guild.channels.cache.get(
         nominee.voteChannelId
       ) as TextChannel;
 
+      // Fallback: If channel not found by ID, try to find by name pattern
       if (!voteChannel) {
-        return;
+        const channelName = `vote-${nominee.name}`;
+        voteChannel = guild.channels.cache.find(
+          channel => channel.name === channelName && channel.isTextBased()
+        ) as TextChannel;
+        
+        if (!voteChannel) {
+          return;
+        }
       }
 
       // Check for EasyPoll messages in the channel
@@ -275,6 +290,40 @@ export class NominationJobScheduler implements JobScheduler {
       );
 
       if (easyPollMessage) {
+        // Check if this is the first time we're detecting the poll
+        if (!nominee.votePollDetectedAt) {
+          // First poll detection - adjust cleanupStart time
+          const now = new Date();
+          const newCleanupStart = new Date(now);
+          newCleanupStart.setUTCMinutes(
+            newCleanupStart.getUTCMinutes() + NOMINATION_CONFIG.VOTE_DURATION_MINUTES
+          );
+          
+          // Update the nominee with poll detection time and adjusted cleanup time
+          await prisma.nominee.update({
+            where: { id: nominee.id },
+            data: {
+              votePollDetectedAt: now,
+              cleanupStart: newCleanupStart,
+            },
+          });
+          
+          logger.info(
+            {
+              nomineeId: nominee.id,
+              nomineeName: nominee.name,
+              originalCleanupStart: nominee.cleanupStart,
+              newCleanupStart,
+              pollDetectedAt: now,
+            },
+            'Adjusted cleanup start time due to delayed poll posting'
+          );
+          
+          // Update local nominee object for subsequent operations
+          nominee.cleanupStart = newCleanupStart;
+          nominee.votePollDetectedAt = now;
+        }
+        
         // EasyPoll found! Send governance announcement with link to poll
         const announced = await this.announcementService.announceVoteStart(
           nominee,
