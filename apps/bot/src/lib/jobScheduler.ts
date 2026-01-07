@@ -131,9 +131,9 @@ export class NominationJobScheduler implements JobScheduler {
    * Processes all possible state transitions for all guilds
    */
   private async processStateTransitions(): Promise<void> {
-    logger.debug('Running state transition check...');
+    logger.info('Running state transition check...');
     const guilds = this.client.guilds.cache;
-    logger.debug(`Processing state transitions for ${guilds.size} guilds`);
+    logger.info(`Processing state transitions for ${guilds.size} guilds`);
 
     for (const [guildId] of guilds) {
       try {
@@ -191,7 +191,7 @@ export class NominationJobScheduler implements JobScheduler {
       (n) => n.state === NomineeState.VOTE
     );
 
-    logger.debug(`Found ${voteNominees.length} nominees in VOTE state`, {
+    logger.info(`Found ${voteNominees.length} nominees in VOTE state`, {
       nominees: voteNominees.map(n => ({
         id: n.id,
         name: n.name,
@@ -201,14 +201,14 @@ export class NominationJobScheduler implements JobScheduler {
     });
 
     for (const nominee of voteNominees) {
-      logger.debug(`Processing vote nominee: ${nominee.name}`, {
+      logger.info(`Processing vote nominee: ${nominee.name}`, {
         voteGovernanceAnnounced: nominee.voteGovernanceAnnounced,
         voteChannelId: nominee.voteChannelId
       });
       
       // Check if governance announcement needs to be sent (poll posted but not announced yet)
       if (!nominee.voteGovernanceAnnounced && nominee.voteChannelId) {
-        logger.debug(`Checking for poll announcement for nominee: ${nominee.name}`);
+        logger.info(`Checking for poll announcement for nominee: ${nominee.name}`);
         await this.checkAndAnnounceVoteToGovernance(nominee);
       }
 
