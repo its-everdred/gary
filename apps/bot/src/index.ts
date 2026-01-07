@@ -37,10 +37,12 @@ const commands = [flagCommand, unflagCommand, nominateCommand, modCommand];
 let jobScheduler: NominationJobScheduler | null = null;
 
 client.on('clientReady', async () => {
+  logger.info(`Gary bot is ready! Logged in as ${client.user?.tag}`);
   
   const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN!);
   
   try {
+    logger.info('Registering slash commands...');
     
     // Add timeout to catch hanging API calls
     const timeoutPromise = new Promise((_, reject) => {
@@ -53,6 +55,7 @@ client.on('clientReady', async () => {
     );
     
     await Promise.race([registrationPromise, timeoutPromise]);
+    logger.info('Slash commands registered successfully');
     
   } catch (error: any) {
     logger.error({ 
@@ -63,12 +66,15 @@ client.on('clientReady', async () => {
   }
 
   // Initialize ChannelFinderService
+  logger.info('Initializing ChannelFinderService...');
   ChannelFinderService.initialize(client);
   
   // Start nomination job scheduler
   try {
+    logger.info('Starting nomination job scheduler...');
     jobScheduler = NominationJobScheduler.getInstance(client);
     jobScheduler.start();
+    logger.info('Gary bot is fully operational!');
   } catch (error: any) {
     logger.error({ 
       error: error?.message || 'Unknown error',
@@ -126,7 +132,19 @@ const gracefulShutdown = () => {
 process.on('SIGTERM', () => gracefulShutdown());
 process.on('SIGINT', () => gracefulShutdown());
 
-client.login(process.env.DISCORD_TOKEN).catch((error) => {
-  logger.error(error, 'Failed to login');
+// Login with timeout
+const loginTimeout = setTimeout(() => {
+  logger.error('Discord login timed out after 30 seconds');
   process.exit(1);
-});
+}, 30000);
+
+client.login(process.env.DISCORD_TOKEN)
+  .then(() => {
+    clearTimeout(loginTimeout);
+    logger.info('Discord client logged in successfully');
+  })
+  .catch((error) => {
+    clearTimeout(loginTimeout);
+    logger.error(error, 'Failed to login');
+    process.exit(1);
+  });
