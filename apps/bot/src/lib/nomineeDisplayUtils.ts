@@ -259,7 +259,7 @@ export class NomineeDisplayUtils {
    */
   private static getStatusDisplay(nominee: Nominee): string {
     if (nominee.state === NomineeState.VOTE && nominee.cleanupStart) {
-      return `Vote active • Ends in ${this.formatDiscordTimestamp(nominee.cleanupStart)} 🗳️`;
+      return `Vote active • Ends ${this.formatDiscordTimestamp(nominee.cleanupStart)} 🗳️`;
     } else if (nominee.state === NomineeState.DISCUSSION && nominee.voteStart) {
       return `Currently in discussion ${this.formatDiscordTimestamp(nominee.voteStart)} 🗣️`;
     } else if (nominee.state === NomineeState.CLEANUP) {
