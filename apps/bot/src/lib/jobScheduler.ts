@@ -12,6 +12,7 @@ import { NOMINATION_CONFIG } from './constants.js';
 import { ChannelFinderService } from './channelFinderService.js';
 import { DISCORD_CONSTANTS } from './discordConstants.js';
 import { NomineeDisplayUtils } from './nomineeDisplayUtils.js';
+import { ChannelLookupService } from './channelLookupService.js';
 
 const logger = pino();
 
@@ -261,21 +262,16 @@ export class NominationJobScheduler implements JobScheduler {
 
       const guild = await this.client.guilds.fetch(nominee.guildId);
       
-      // Try to get channel by ID first (99% of cases)
-      let voteChannel = guild.channels.cache.get(
+      // Use the lookup service with fallback
+      const voteChannel = await ChannelLookupService.findVoteChannel(
+        guild,
+        nominee.id,
+        nominee.name,
         nominee.voteChannelId
-      ) as TextChannel;
+      );
 
-      // Fallback: If channel not found by ID, try to find by name pattern
       if (!voteChannel) {
-        const channelName = `vote-${nominee.name}`;
-        voteChannel = guild.channels.cache.find(
-          channel => channel.name === channelName && channel.isTextBased()
-        ) as TextChannel;
-        
-        if (!voteChannel) {
-          return;
-        }
+        return;
       }
 
       // Check for EasyPoll messages in the channel
@@ -561,19 +557,32 @@ export class NominationJobScheduler implements JobScheduler {
       // Cleanup: Delete discussion and vote channels
       try {
         const channelService = new ChannelManagementService(this.client);
+        const guild = await this.client.guilds.fetch(nominee.guildId);
 
-        // Delete discussion channel
-        if (nominee.discussionChannelId) {
+        // Delete discussion channel - try ID first, then fallback to name
+        const discussionChannel = await ChannelLookupService.findDiscussionChannel(
+          guild,
+          nominee.id,
+          nominee.name,
+          nominee.discussionChannelId
+        );
+        if (discussionChannel) {
           await channelService.deleteChannel(
-            nominee.discussionChannelId,
+            discussionChannel.id,
             'Nomination completed'
           );
         }
 
-        // Delete vote channel
-        if (nominee.voteChannelId) {
+        // Delete vote channel - try ID first, then fallback to name
+        const voteChannel = await ChannelLookupService.findVoteChannel(
+          guild,
+          nominee.id,
+          nominee.name,
+          nominee.voteChannelId
+        );
+        if (voteChannel) {
           await channelService.deleteChannel(
-            nominee.voteChannelId,
+            voteChannel.id,
             'Nomination completed'
           );
         }
