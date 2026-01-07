@@ -16,15 +16,24 @@ export class ChannelLookupService {
     channelId: string | null | undefined,
     namePattern: string
   ): Promise<TextChannel | null> {
+    logger.info(`Searching for channel - ID: ${channelId}, Name pattern: ${namePattern}`);
+    
     // Try to get channel by ID first (99% of cases)
     if (channelId) {
       const channelById = guild.channels.cache.get(channelId) as TextChannel;
       if (channelById && channelById.isTextBased()) {
+        logger.info(`Found channel by ID: ${channelById.name} (${channelById.id})`);
         return channelById;
       }
+      logger.info(`Channel not found by ID: ${channelId}`);
     }
 
     // Fallback: If channel not found by ID, try to find by name pattern
+    logger.info(`Looking for channel by name: ${namePattern}`);
+    logger.info(`Available channels:`, {
+      channels: guild.channels.cache.map(ch => ({ name: ch.name, id: ch.id, type: ch.type }))
+    });
+    
     const channelByName = guild.channels.cache.find(
       channel => channel.name === namePattern && channel.isTextBased()
     ) as TextChannel;
@@ -38,6 +47,7 @@ export class ChannelLookupService {
       return channelByName;
     }
 
+    logger.info(`Channel not found by name: ${namePattern}`);
     return null;
   }
 
