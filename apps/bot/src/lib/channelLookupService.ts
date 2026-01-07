@@ -52,6 +52,16 @@ export class ChannelLookupService {
   }
 
   /**
+   * Sanitizes nominee name for channel name (same logic as ChannelService)
+   */
+  private static sanitizeNomineeName(nomineeName: string): string {
+    return nomineeName
+      .toLowerCase()
+      .replace(/[^\w\s-]/g, '')
+      .replace(/\s+/g, '-');
+  }
+
+  /**
    * Finds a discussion channel for a nominee
    */
   static async findDiscussionChannel(
@@ -60,7 +70,8 @@ export class ChannelLookupService {
     nomineeName: string,
     discussionChannelId?: string | null
   ): Promise<TextChannel | null> {
-    const channelName = `discussion-${nomineeName}`;
+    const sanitized = this.sanitizeNomineeName(nomineeName).substring(0, 88);
+    const channelName = `discussion-${sanitized}`;
     return this.findChannelWithFallback(guild, discussionChannelId, channelName);
   }
 
@@ -73,7 +84,8 @@ export class ChannelLookupService {
     nomineeName: string,
     voteChannelId?: string | null
   ): Promise<TextChannel | null> {
-    const channelName = `vote-${nomineeName}`;
+    const sanitized = this.sanitizeNomineeName(nomineeName).substring(0, 95);
+    const channelName = `vote-${sanitized}`;
     return this.findChannelWithFallback(guild, voteChannelId, channelName);
   }
 }
