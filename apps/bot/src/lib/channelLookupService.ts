@@ -1,5 +1,7 @@
 import { Guild, TextChannel } from 'discord.js';
-import { logger } from './logger.js';
+import pino from 'pino';
+
+const logger = pino();
 
 export class ChannelLookupService {
   /**
