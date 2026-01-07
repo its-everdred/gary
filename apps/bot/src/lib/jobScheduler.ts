@@ -273,10 +273,10 @@ export class NominationJobScheduler implements JobScheduler {
     nominee: Nominee
   ): Promise<void> {
     try {
-      logger.debug(`Checking for poll in vote channel for nominee: ${nominee.name}`);
+      logger.info(`Checking for poll in vote channel for nominee: ${nominee.name}`);
       
       if (!nominee.voteChannelId) {
-        logger.debug(`No voteChannelId for nominee: ${nominee.name}`);
+        logger.info(`No voteChannelId for nominee: ${nominee.name}`);
         return;
       }
 
@@ -291,19 +291,19 @@ export class NominationJobScheduler implements JobScheduler {
       );
 
       if (!voteChannel) {
-        logger.debug(`Vote channel not found for nominee: ${nominee.name}, channelId: ${nominee.voteChannelId}`);
+        logger.info(`Vote channel not found for nominee: ${nominee.name}, channelId: ${nominee.voteChannelId}`);
         return;
       }
 
-      logger.debug(`Found vote channel: ${voteChannel.name} (${voteChannel.id}) for nominee: ${nominee.name}`);
+      logger.info(`Found vote channel: ${voteChannel.name} (${voteChannel.id}) for nominee: ${nominee.name}`);
 
       // Check for EasyPoll messages in the channel
-      logger.debug(`Fetching messages from vote channel: ${voteChannel.name}`);
+      logger.info(`Fetching messages from vote channel: ${voteChannel.name}`);
       const messages = await voteChannel.messages.fetch({
         limit: 10,
         force: true,
       });
-      logger.debug(`Found ${messages.size} messages in vote channel`);
+      logger.info(`Found ${messages.size} messages in vote channel`);
       
       const easyPollMessage = messages.find(
         (msg) =>
@@ -311,7 +311,7 @@ export class NominationJobScheduler implements JobScheduler {
           msg.embeds.length > 0
       );
 
-      logger.debug(`EasyPoll message found: ${!!easyPollMessage}`, {
+      logger.info(`EasyPoll message found: ${!!easyPollMessage}`, {
         expectedBotId: DISCORD_CONSTANTS.BOT_IDS.EASYPOLL,
         messages: messages.map(msg => ({
           id: msg.id,
