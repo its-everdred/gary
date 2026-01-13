@@ -75,17 +75,17 @@ export class AnnouncementService {
       };
 
       const governanceMessage = await governanceChannel.send({
+        content: '@everyone',
         embeds: [embed]
       });
 
       const messageIds = [governanceMessage.id];
 
-      // Also announce vote start in general channel with @everyone ping
+      // Also announce vote start in general channel
       try {
         const generalChannel = await ChannelFinderService.general();
         if (generalChannel) {
           const generalMessage = await generalChannel.send({
-            content: '@everyone',
             embeds: [embed]
           });
           messageIds.push(generalMessage.id);
