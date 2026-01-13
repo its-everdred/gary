@@ -7,7 +7,8 @@ import { NomineeState } from '@prisma/client';
 import {
   setupModuleMocks,
   resetAllMocks,
-  createMockNominee
+  createMockNominee,
+  mockChannelLookupService
 } from './mocks';
 
 // Setup module mocks
@@ -107,6 +108,20 @@ describe('Message Access Security Tests', () => {
         fetch: mock(async () => mockGuild)
       }
     };
+
+    // Setup ChannelLookupService mocks
+    mockChannelLookupService.ChannelLookupService.findVoteChannel.mockImplementation(async (guild, nomineeId, nomineeName, voteChannelId) => {
+      if (voteChannelId) {
+        return guild.channels.cache.get(voteChannelId) || null;
+      }
+      return null;
+    });
+    mockChannelLookupService.ChannelLookupService.findDiscussionChannel.mockImplementation(async (guild, nomineeId, nomineeName, discussionChannelId) => {
+      if (discussionChannelId) {
+        return guild.channels.cache.get(discussionChannelId) || null;
+      }
+      return null;
+    });
 
     // Initialize services
     voteResultService = new VoteResultService(mockClient);
