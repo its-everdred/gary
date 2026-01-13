@@ -207,7 +207,8 @@ export class NominationJobScheduler implements JobScheduler {
         nominee.cleanupStart && nominee.cleanupStart <= bufferTime;
 
       // Check if we should transition based on time - only if poll was detected
-      const shouldTransitionByTime = readyWithBuffer && nominee.votePollDetectedAt;
+      const shouldTransitionByTime =
+        readyWithBuffer && nominee.votePollDetectedAt;
 
       logger.debug(`Vote completion check for ${nominee.name}:`, {
         voteResults: !!voteResults,
@@ -216,11 +217,15 @@ export class NominationJobScheduler implements JobScheduler {
         bufferTime: bufferTime.toISOString(),
         readyWithBuffer,
         votePollDetectedAt: nominee.votePollDetectedAt?.toISOString(),
-        shouldTransitionByTime
+        shouldTransitionByTime,
       });
 
       if (voteResults || shouldTransitionByTime) {
-        logger.info(`Transitioning ${nominee.name} to CLEANUP - voteResults: ${!!voteResults}, timeExpired: ${shouldTransitionByTime}`);
+        logger.info(
+          `Transitioning ${
+            nominee.name
+          } to CLEANUP - voteResults: ${!!voteResults}, timeExpired: ${shouldTransitionByTime}`
+        );
         await this.transitionToCleanup(nominee, voteResults || undefined);
       }
     }
@@ -239,7 +244,7 @@ export class NominationJobScheduler implements JobScheduler {
       logger.debug(`CLEANUP to PAST check for ${nominee.name}:`, {
         cleanupStart: nominee.cleanupStart?.toISOString(),
         currentTime: currentTime.toISOString(),
-        shouldTransition
+        shouldTransition,
       });
 
       if (shouldTransition) {
@@ -261,7 +266,7 @@ export class NominationJobScheduler implements JobScheduler {
       }
 
       const guild = await this.client.guilds.fetch(nominee.guildId);
-      
+
       // Use the lookup service with fallback
       const voteChannel = await ChannelLookupService.findVoteChannel(
         guild,
@@ -279,7 +284,7 @@ export class NominationJobScheduler implements JobScheduler {
         limit: 10,
         force: true,
       });
-      
+
       const easyPollMessage = messages.find(
         (msg) =>
           msg.author.id === DISCORD_CONSTANTS.BOT_IDS.EASYPOLL &&
@@ -293,9 +298,10 @@ export class NominationJobScheduler implements JobScheduler {
           const now = new Date();
           const newCleanupStart = new Date(now);
           newCleanupStart.setUTCMinutes(
-            newCleanupStart.getUTCMinutes() + NOMINATION_CONFIG.VOTE_DURATION_MINUTES
+            newCleanupStart.getUTCMinutes() +
+              NOMINATION_CONFIG.VOTE_DURATION_MINUTES
           );
-          
+
           // Update the nominee with poll detection time and adjusted cleanup time
           await prisma.nominee.update({
             where: { id: nominee.id },
@@ -304,7 +310,7 @@ export class NominationJobScheduler implements JobScheduler {
               cleanupStart: newCleanupStart,
             },
           });
-          
+
           logger.info(
             {
               nomineeId: nominee.id,
@@ -315,12 +321,12 @@ export class NominationJobScheduler implements JobScheduler {
             },
             'Adjusted cleanup start time due to delayed poll posting'
           );
-          
+
           // Update local nominee object for subsequent operations
           nominee.cleanupStart = newCleanupStart;
           nominee.votePollDetectedAt = now;
         }
-        
+
         // EasyPoll found! Send governance announcement with link to poll
         const announced = await this.announcementService.announceVoteStart(
           nominee,
@@ -561,12 +567,13 @@ export class NominationJobScheduler implements JobScheduler {
         const guild = await this.client.guilds.fetch(nominee.guildId);
 
         // Delete discussion channel - try ID first, then fallback to name
-        const discussionChannel = await ChannelLookupService.findDiscussionChannel(
-          guild,
-          nominee.id,
-          nominee.name,
-          nominee.discussionChannelId
-        );
+        const discussionChannel =
+          await ChannelLookupService.findDiscussionChannel(
+            guild,
+            nominee.id,
+            nominee.name,
+            nominee.discussionChannelId
+          );
         if (discussionChannel) {
           await channelService.deleteChannel(
             discussionChannel.id,
@@ -789,7 +796,7 @@ export class NominationJobScheduler implements JobScheduler {
             {
               name: '3️⃣ Delete this message',
               value:
-                'Delete this message to indicate to other mods that the invite link was sent',
+                'Delete this message and tell the other mods that the invite link was sent',
               inline: false,
             },
           ],
