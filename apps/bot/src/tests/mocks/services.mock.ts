@@ -20,6 +20,14 @@ export const mockChannelFinderService = {
   }
 };
 
+export const mockChannelLookupService = {
+  ChannelLookupService: {
+    findChannelWithFallback: mock(() => Promise.resolve()),
+    findDiscussionChannel: mock(() => Promise.resolve()),
+    findVoteChannel: mock(() => Promise.resolve())
+  }
+};
+
 export const mockPino = {
   default: () => ({
     info: () => {},
@@ -35,4 +43,7 @@ export const resetServiceMocks = () => {
   mockChannelFinderService.ChannelFinderService.governance.mockReset();
   mockChannelFinderService.ChannelFinderService.general.mockReset();
   mockChannelFinderService.ChannelFinderService.modComms.mockReset();
+  mockChannelLookupService.ChannelLookupService.findChannelWithFallback.mockReset();
+  mockChannelLookupService.ChannelLookupService.findDiscussionChannel.mockReset();
+  mockChannelLookupService.ChannelLookupService.findVoteChannel.mockReset();
 };

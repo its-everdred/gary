@@ -14,9 +14,10 @@ import {
   mockNominationJobScheduler, 
   resetJobSchedulerMocks 
 } from './jobScheduler.mock';
-import { 
+import {
   mockTimestampUtils,
   mockChannelFinderService,
+  mockChannelLookupService,
   mockPino,
   resetServiceMocks
 } from './services.mock';
@@ -33,6 +34,7 @@ export const setupModuleMocks = () => {
   // Only timeCalculation.test.ts uses it and needs the real implementation
   mock.module('../../lib/timestampUtils.js', () => mockTimestampUtils);
   mock.module('../../lib/channelFinderService.js', () => mockChannelFinderService);
+  mock.module('../../lib/channelLookupService.js', () => mockChannelLookupService);
   mock.module('discord.js', () => mockDiscordJS);
   mock.module('pino', () => mockPino);
 };
@@ -67,6 +69,7 @@ export {
   mockNominationJobScheduler,
   mockTimestampUtils,
   mockChannelFinderService,
+  mockChannelLookupService,
   createMockClient,
   createMockInteraction,
   createMockChannel,

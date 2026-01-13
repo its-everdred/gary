@@ -7,6 +7,7 @@ import { ChannelFinderService } from './channelFinderService.js';
 import { DISCORD_CONSTANTS } from './discordConstants.js';
 import { ConfigService } from './configService.js';
 import { NomineeDisplayUtils } from './nomineeDisplayUtils.js';
+import { ChannelLookupService } from './channelLookupService.js';
 
 const logger = pino();
 
@@ -62,9 +63,15 @@ export class VoteResultService {
       }
 
       const guild = await this.client.guilds.fetch(nominee.guildId);
-      const voteChannel = guild.channels.cache.get(nominee.voteChannelId) as TextChannel;
-      
+      const voteChannel = await ChannelLookupService.findVoteChannel(
+        guild,
+        nominee.id,
+        nominee.name,
+        nominee.voteChannelId
+      );
+
       if (!voteChannel) {
+        logger.warn({ nomineeId: nominee.id, nomineeName: nominee.name }, 'Vote channel not found');
         return null;
       }
 

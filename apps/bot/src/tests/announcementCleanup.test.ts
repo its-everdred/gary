@@ -7,7 +7,8 @@ import { NomineeState } from '@prisma/client';
 import {
   setupModuleMocks,
   resetAllMocks,
-  mockChannelFinderService
+  mockChannelFinderService,
+  mockChannelLookupService
 } from './mocks';
 
 // Setup module mocks
@@ -70,6 +71,10 @@ describe('Announcement Message Cleanup', () => {
     mockChannelFinderService.ChannelFinderService.governance.mockResolvedValue(mockGovernanceChannel);
     mockChannelFinderService.ChannelFinderService.general.mockResolvedValue(mockGeneralChannel);
     mockChannelFinderService.ChannelFinderService.modComms.mockResolvedValue(null);
+
+    // Setup channel lookup mocks
+    mockChannelLookupService.ChannelLookupService.findDiscussionChannel.mockResolvedValue(mockGovernanceChannel);
+    mockChannelLookupService.ChannelLookupService.findVoteChannel.mockResolvedValue(mockGovernanceChannel);
   });
 
   afterEach(() => {

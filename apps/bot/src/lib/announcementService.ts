@@ -8,6 +8,7 @@ import { ChannelFinderService } from './channelFinderService.js';
 import { prisma } from './db.js';
 import { ConfigService } from './configService.js';
 import { TimestampUtils } from './timestampUtils.js';
+import { ChannelLookupService } from './channelLookupService.js';
 
 const logger = pino();
 
@@ -117,13 +118,18 @@ export class AnnouncementService {
     try {
       const guild = await this.client.guilds.fetch(nominee.guildId);
       const governanceChannel = await ChannelFinderService.governance();
-      
+
       if (!governanceChannel) {
         return false;
       }
 
-      const discussionChannel = guild.channels.cache.get(discussionChannelId);
-      const discussionChannelMention = discussionChannel ? `<#${discussionChannelId}>` : '#discussion-channel';
+      const discussionChannel = await ChannelLookupService.findDiscussionChannel(
+        guild,
+        nominee.id,
+        nominee.name,
+        discussionChannelId
+      );
+      const discussionChannelMention = discussionChannel ? `<#${discussionChannel.id}>` : '#discussion-channel';
 
       if (!nominee.discussionStart || !nominee.voteStart) {
         logger.warn({ nomineeId: nominee.id }, 'Discussion start or vote start time not set');
