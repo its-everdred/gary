@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  gary:
+    build: .
+    container_name: gary-bot
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql://gary:gary@postgres:5432/gary
+      # Discord Configuration (required)
+      - DISCORD_TOKEN=${DISCORD_TOKEN}
+      - DISCORD_APP_ID=${DISCORD_APP_ID}
+      - GUILD_ID=${GUILD_ID}
+      # Channel IDs (required)
+      - GOVERNANCE_CHANNEL_ID=${GOVERNANCE_CHANNEL_ID}
+      - GENERAL_CHANNEL_ID=${GENERAL_CHANNEL_ID}
+      - MOD_FLAG_CHANNEL_ID=${MOD_FLAG_CHANNEL_ID}
+      - MOD_COMMS_CHANNEL_ID=${MOD_COMMS_CHANNEL_ID}
+      - NOMINATIONS_CHANNEL_CATEGORY_ID=${NOMINATIONS_CHANNEL_CATEGORY_ID:-}
+      # Voting Configuration
+      - KICK_QUORUM_PERCENT=${KICK_QUORUM_PERCENT:-40}
+      - VOTE_QUORUM_PERCENT=${VOTE_QUORUM_PERCENT:-40}
+      - VOTE_PASS_PERCENT=${VOTE_PASS_PERCENT:-80}
+      # Security
+      - GUILD_SALT=${GUILD_SALT}
+      # Nomination Timing (in minutes)
+      - NOMINATE_DISCUSSION_PERIOD_MINUTES=${NOMINATE_DISCUSSION_PERIOD_MINUTES:-2880}
+      - NOMINATE_VOTE_PERIOD_MINUTES=${NOMINATE_VOTE_PERIOD_MINUTES:-7200}
+      - NOMINATE_CLEANUP_PERIOD_MINUTES=${NOMINATE_CLEANUP_PERIOD_MINUTES:-1440}
+      # Optional
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: gary-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=gary
+      - POSTGRES_PASSWORD=gary
+      - POSTGRES_DB=gary
+    volumes:
+      - gary_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gary -d gary"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  gary_postgres_data:
