@@ -1,79 +1,49 @@
 # Purge Feature Summary
 
-**TL;DR**: Automated message cleanup for Discord channels with configurable retention policies and progressive rollout (notify → manual → auto-delete).
+**TL;DR**: Automated message cleanup for Discord channels with configurable retention policies. Progressive build: notify → manual → auto-delete.
 
-## What It Does
-
-- Configure per-channel message retention windows (e.g., "delete messages older than 30 days")
-- Scheduled checks identify channels with messages past threshold
-- Phase 1: Notify mods
-- Phase 2: Allow manual purge
-- Phase 3: Auto-delete with mod notifications
-
-## Key Commands
+## Commands
 
 ```
-/mod purge view                                    # View all channel configs
-/mod purge set channel:#general days:30            # Set 30-day retention
-/mod purge set channel:#off-topic days:7 autodelete:true  # Enable auto-delete
-/mod purge execute channel:#general                # Manual purge (Phase 2+)
-/mod purge disable channel:#important              # Disable purge
+/mod purge view                                          # View all configs
+/mod purge set channel:#general days:30                  # Set retention
+/mod purge set channel:#off-topic days:7 autodelete:true # Enable auto-delete
+/mod purge execute channel:#general                      # Manual purge
+/mod purge disable channel:#important                    # Disable
 ```
 
-## Build Order (Recommended)
+## Build Order
 
-The phases represent recommended implementation order, not separate deployments:
+**Phase 1: Notification Only** (Build first)
+- Scheduled checks find old messages
+- Notify mods via mod-comms
+- No deletion
+- Monitor 2-4 weeks
 
-### Phase 1: Notification Only ✅ (Build first)
-- Implement scheduled checks
-- Post notifications to mod-comms about messages past threshold
-- **No deletion occurs**
-- Deploy and monitor for 2-4 weeks to verify accuracy
+**Phase 2: Manual Execution** (Build second)
+- Add `/mod purge execute` command
+- Mods trigger purge manually
+- Verify deletion works
+- Run 2-4 weeks
 
-### Phase 2: Manual Execution (Build second)
-- Implement `/mod purge execute` command
-- Mods can manually trigger purge after reviewing notifications
-- Verify deletion mechanics work as expected
-- Run for 2-4 weeks with spot checks
+**Phase 3: Auto-Delete** (Build last)
+- Add `autodelete:true` flag
+- Auto-delete on schedule
+- Start with low-risk channels
 
-### Phase 3: Auto-Delete (Build last)
-- Implement `autodelete:true` flag per channel
-- Bot automatically deletes qualifying messages on schedule
-- Posts summary to mod-comms after each purge
-- Start with low-risk channels (#off-topic), expand gradually
-
-## Configuration Example
+## Configuration
 
 ```bash
-# Environment variables
-PURGE_SCHEDULE_CRON="0 9 * * 0"  # Every Sunday 9 AM UTC
-PURGE_MOD_CHANNEL_ID="123456789" # Where to post notifications
-PURGE_BATCH_SIZE="100"           # Messages per batch
-PURGE_BATCH_DELAY_MS="1000"      # Delay between batches
+PURGE_SCHEDULE_CRON="0 9 * * 0"      # Every Sunday 9 AM UTC
+PURGE_MOD_CHANNEL_ID="123456789"     # Notification channel
+PURGE_BATCH_SIZE="100"               # Messages per batch
+PURGE_BATCH_DELAY_MS="1000"          # Delay between batches
 ```
-
-## Safety Features
-
-- **Progressive rollout**: Three phases ensure safe deployment
-- **Confirmation prompts**: Required for manual execution
-- **Audit log**: All purges tracked with timestamp, user, count
-- **Rate limit handling**: Respects Discord API limits
-- **Error recovery**: Continues on failure, posts error summary
-
-## Privacy & Security
-
-**Message content is never accessed.**
-
-- Bot only reads message ID and timestamp (metadata)
-- Message content, author, attachments are never accessed
-- No message data stored in database (only counts and timestamp ranges)
-- Audit log contains no message content or user data
-- Implementation extracts metadata immediately and discards full message objects
 
 ## Database Schema
 
 ```sql
--- Channel retention policies
+-- Channel configs
 CREATE TABLE purge_config (
   channel_id TEXT PRIMARY KEY,
   retention_days INTEGER NOT NULL,
@@ -91,74 +61,53 @@ CREATE TABLE purge_history (
 );
 ```
 
-## Discord Permissions Required
+## Privacy
+
+**Message content is never accessed.**
+- Bot only reads message ID and timestamp
+- No message content, author, or attachments accessed
+- Audit log contains only counts and timestamp ranges
+
+## Discord Permissions
 
 - `MANAGE_MESSAGES` - Delete messages
-- `READ_MESSAGE_HISTORY` - Fetch message metadata (timestamp, ID)
+- `READ_MESSAGE_HISTORY` - Fetch metadata (ID, timestamp only)
 - `VIEW_CHANNEL` - Access channels
-
-**Privacy Note**: While `READ_MESSAGE_HISTORY` allows access to message content, the purge feature **only uses message metadata** (ID and timestamp). Message content is never read, stored, or processed.
 
 ## Discord API Limits
 
 - **Bulk delete**: Max 100 messages, must be < 14 days old
-- **Individual delete**: 5 messages/second for messages > 14 days old
-- Purge uses bulk delete when possible, falls back to individual delete for older messages
+- **Individual delete**: 5 messages/sec for older messages
+- Bot uses bulk when possible, falls back to individual
 
-## Example Notification (Phase 1)
+## Safety Features
 
-```
-🧹 Purge Alert
+- Progressive 3-phase rollout
+- Confirmation prompts for manual execution
+- Audit log for all purges
+- Rate limit handling
+- Error recovery (continues on failure)
 
-Channel: #general
-Retention: 30 days
-Messages past threshold: 1,247
-Oldest message: 2025-11-10 14:32 UTC
+## Quick Start
 
-Use `/mod purge execute channel:#general` to purge manually.
-```
-
-## Example Summary (Phase 3)
-
-```
-✅ Auto-Purge Complete
-
-Channel: #general
-Retention: 30 days
-Messages deleted: 1,247
-Oldest remaining: 2025-12-10 09:15 UTC
-Next check: 2026-01-19 09:00 UTC
-```
-
-## Quick Start (Phase 1 Implementation)
-
-1. Set environment variables:
+1. Set env vars:
    ```bash
    PURGE_SCHEDULE_CRON="0 9 * * 0"
    PURGE_MOD_CHANNEL_ID="your-mod-channel-id"
    ```
 
-2. Configure a test channel:
+2. Configure test channel:
    ```
-   /mod purge set channel:#test-channel days:30
+   /mod purge set channel:#test days:30
    ```
 
-3. Wait for next scheduled check (or trigger manually for testing)
+3. Wait for scheduled check or test manually
 
-4. Verify notification appears in mod-comms with accurate message count
+4. Verify notification accuracy
 
-5. Monitor for 2-4 weeks, then proceed to Phase 2
-
-## Future Enhancements
-
-- Whitelist specific users (preserve bot announcements)
-- Exempt pinned messages
-- Reaction-based protection (keep messages with specific reactions)
-- Export messages before deletion (archive to S3/disk)
-- Web dashboard for configuration
+5. Monitor 2-4 weeks, then build Phase 2
 
 ## References
 
 - Full spec: [PurgeFeatureSpec.md](./PurgeFeatureSpec.md)
-- Discord Bulk Delete API: https://discord.com/developers/docs/resources/channel#bulk-delete-messages
-- Discord Rate Limits: https://discord.com/developers/docs/topics/rate-limits
+- Discord Bulk Delete: https://discord.com/developers/docs/resources/channel#bulk-delete-messages
