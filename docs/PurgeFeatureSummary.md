@@ -60,6 +60,16 @@ PURGE_BATCH_DELAY_MS="1000"      # Delay between batches
 - **Rate limit handling**: Respects Discord API limits
 - **Error recovery**: Continues on failure, posts error summary
 
+## Privacy & Security
+
+**Message content is never accessed.**
+
+- Bot only reads message ID and timestamp (metadata)
+- Message content, author, attachments are never accessed
+- No message data stored in database (only counts and timestamp ranges)
+- Audit log contains no message content or user data
+- Implementation extracts metadata immediately and discards full message objects
+
 ## Database Schema
 
 ```sql
@@ -84,8 +94,10 @@ CREATE TABLE purge_history (
 ## Discord Permissions Required
 
 - `MANAGE_MESSAGES` - Delete messages
-- `READ_MESSAGE_HISTORY` - Fetch old messages
+- `READ_MESSAGE_HISTORY` - Fetch message metadata (timestamp, ID)
 - `VIEW_CHANNEL` - Access channels
+
+**Privacy Note**: While `READ_MESSAGE_HISTORY` allows access to message content, the purge feature **only uses message metadata** (ID and timestamp). Message content is never read, stored, or processed.
 
 ## Discord API Limits
 

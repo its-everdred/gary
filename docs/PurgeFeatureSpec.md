@@ -181,6 +181,45 @@ PURGE_BATCH_SIZE="100"               # Messages to delete per batch (Discord rat
 PURGE_BATCH_DELAY_MS="1000"          # Delay between batches (rate limit safety)
 ```
 
+## Privacy & Security
+
+### Message Content Access
+**The purge feature MUST NOT access message content.**
+
+While Discord's `READ_MESSAGE_HISTORY` permission grants access to full message objects (including content), the purge implementation should:
+
+**✅ DO:**
+- Access message `id` (required for deletion)
+- Access message `timestamp` / `createdTimestamp` (required to determine age)
+- Count messages for reporting
+
+**❌ DO NOT:**
+- Read or process message `content`
+- Access message `author`, `mentions`, `embeds`, `attachments`
+- Log message data (even in errors)
+- Store any message information beyond counts and timestamps ranges
+
+### Implementation Pattern
+```javascript
+// ✅ CORRECT: Extract only metadata
+const messages = await channel.messages.fetch({ limit: 100 });
+const toDelete = messages
+  .filter(msg => Date.now() - msg.createdTimestamp > retentionMs)
+  .map(msg => msg.id);  // Only extract ID
+
+// ❌ WRONG: Accessing content
+const messages = await channel.messages.fetch({ limit: 100 });
+messages.forEach(msg => {
+  console.log(msg.content);  // NEVER do this
+  if (msg.content.includes('sensitive')) { /* ... */ }  // NEVER do this
+});
+```
+
+### Audit & Logging
+- Audit log stores: channel ID, timestamp range, message count, executor
+- Audit log NEVER stores: message content, author IDs, message snippets
+- Error logs reference messages by ID only, never log content
+
 ## Discord API Considerations
 
 ### Rate Limits
@@ -192,11 +231,25 @@ PURGE_BATCH_DELAY_MS="1000"          # Delay between batches (rate limit safety)
 - Fetch in batches of 100 using `before` parameter
 - Discord returns messages newest → oldest
 - Stop when reaching retention threshold
+- **Extract only `id` and `timestamp` from each message**
+- Immediately discard all other message data (content, author, etc.)
+
+**Example (pseudocode)**:
+```javascript
+const messages = await channel.messages.fetch({ limit: 100, before: lastId });
+const messageMetadata = messages.map(msg => ({
+  id: msg.id,
+  timestamp: msg.createdTimestamp
+}));
+// messages object is now discarded, content never accessed
+```
 
 ### Permissions Required
 - `MANAGE_MESSAGES` - Required for bulk delete
-- `READ_MESSAGE_HISTORY` - Required to fetch old messages
+- `READ_MESSAGE_HISTORY` - Required to fetch message metadata (timestamp, ID)
 - `VIEW_CHANNEL` - Required to access channel
+
+**Privacy Note**: While `READ_MESSAGE_HISTORY` technically allows access to message content, the purge feature **MUST NOT** read, store, or process message content. The bot should only access message metadata (ID, timestamp) to determine which messages to delete. Message content is never logged, stored, or inspected.
 
 ## Implementation Notes
 
@@ -228,16 +281,24 @@ The phases represent a recommended implementation order, not distinct deployment
 ### Deletion Logic
 ```
 For each message:
+  // ONLY access: message.id, message.timestamp
+  // DO NOT access: message.content, message.author, message.attachments, etc.
   message_age = now - message.timestamp
   if message_age > retention_days:
     if message.timestamp < 14_days_ago:
-      delete_individual(message)  # Slow path
+      delete_individual(message.id)  # Slow path - only ID needed
     else:
-      add_to_bulk_batch(message)  # Fast path
+      add_to_bulk_batch(message.id)  # Fast path - only ID needed
       if batch.size >= PURGE_BATCH_SIZE:
         bulk_delete(batch)
         sleep(PURGE_BATCH_DELAY_MS)
 ```
+
+**Privacy Implementation**:
+- When fetching messages via Discord API, immediately extract only `id` and `timestamp`
+- Discard all other message properties (content, author, embeds, attachments, etc.)
+- Never log message content, even in error cases
+- Database only stores message counts, not message data
 
 ### Error Handling
 - If deletion fails (permissions, rate limit), log error and skip
