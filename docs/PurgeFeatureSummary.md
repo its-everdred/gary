@@ -20,22 +20,24 @@
 /mod purge disable channel:#important              # Disable purge
 ```
 
-## Rollout Phases
+## Build Order (Recommended)
 
-### Phase 1: Notification Only ✅ (Start here)
-- Bot checks channels on schedule (e.g., every Sunday)
-- Posts notifications to mod-comms about messages past threshold
+The phases represent recommended implementation order, not separate deployments:
+
+### Phase 1: Notification Only ✅ (Build first)
+- Implement scheduled checks
+- Post notifications to mod-comms about messages past threshold
 - **No deletion occurs**
-- Run for 2-4 weeks to verify accuracy
+- Deploy and monitor for 2-4 weeks to verify accuracy
 
-### Phase 2: Manual Execution
-- Enable `/mod purge execute` command
+### Phase 2: Manual Execution (Build second)
+- Implement `/mod purge execute` command
 - Mods can manually trigger purge after reviewing notifications
 - Verify deletion mechanics work as expected
 - Run for 2-4 weeks with spot checks
 
-### Phase 3: Auto-Delete
-- Enable `autodelete:true` flag per channel
+### Phase 3: Auto-Delete (Build last)
+- Implement `autodelete:true` flag per channel
 - Bot automatically deletes qualifying messages on schedule
 - Posts summary to mod-comms after each purge
 - Start with low-risk channels (#off-topic), expand gradually
@@ -45,8 +47,9 @@
 ```bash
 # Environment variables
 PURGE_SCHEDULE_CRON="0 9 * * 0"  # Every Sunday 9 AM UTC
-PURGE_PHASE="1"                   # Start with Phase 1
 PURGE_MOD_CHANNEL_ID="123456789" # Where to post notifications
+PURGE_BATCH_SIZE="100"           # Messages per batch
+PURGE_BATCH_DELAY_MS="1000"      # Delay between batches
 ```
 
 ## Safety Features
@@ -115,12 +118,11 @@ Oldest remaining: 2025-12-10 09:15 UTC
 Next check: 2026-01-19 09:00 UTC
 ```
 
-## Quick Start (Phase 1 Deployment)
+## Quick Start (Phase 1 Implementation)
 
 1. Set environment variables:
    ```bash
    PURGE_SCHEDULE_CRON="0 9 * * 0"
-   PURGE_PHASE="1"
    PURGE_MOD_CHANNEL_ID="your-mod-channel-id"
    ```
 

@@ -59,7 +59,7 @@ Configure purge settings for a channel.
 **Validation:**
 - Channel must exist and be accessible by bot
 - Days must be between 1 and 365
-- Auto-delete only allowed if Phase 3 is enabled (env var)
+- Auto-delete only allowed if Phase 3 implementation is complete
 
 ### `/mod purge execute channel:<#channel>`
 Manually trigger purge for a specific channel.
@@ -68,10 +68,10 @@ Manually trigger purge for a specific channel.
 - `channel` (required): Channel to purge (mention)
 
 **Behavior:**
-- Only available in Phase 2+
 - Deletes messages older than configured retention window
 - Posts summary to mod-comms
 - Requires confirmation (button interaction)
+- Not available until Phase 2 implementation is complete
 
 **Example:**
 ```
@@ -176,7 +176,6 @@ CREATE TABLE purge_history (
 ```bash
 # Purge feature configuration
 PURGE_SCHEDULE_CRON="0 9 * * 0"      # Cron schedule for checks (default: Sundays 9 AM UTC)
-PURGE_PHASE="1"                       # Deployment phase (1, 2, or 3)
 PURGE_MOD_CHANNEL_ID="123456789"     # Channel ID for purge notifications
 PURGE_BATCH_SIZE="100"               # Messages to delete per batch (Discord rate limit: 100/bulk)
 PURGE_BATCH_DELAY_MS="1000"          # Delay between batches (rate limit safety)
@@ -201,19 +200,28 @@ PURGE_BATCH_DELAY_MS="1000"          # Delay between batches (rate limit safety)
 
 ## Implementation Notes
 
-### Phase Rollout Strategy
-1. **Phase 1**: Deploy with `PURGE_PHASE=1`
-   - Monitor notifications for 2-4 weeks
+### Build Order (Recommended)
+The phases represent a recommended implementation order, not distinct deployments:
+
+1. **Phase 1: Notification Only** (Build first)
+   - Implement scheduled checks
+   - Implement notification posting to mod-comms
+   - Deploy and monitor for 2-4 weeks
    - Verify message counts are accurate
    - Confirm no false positives
 
-2. **Phase 2**: Update to `PURGE_PHASE=2`
-   - Moderators manually test `/mod purge execute`
+2. **Phase 2: Manual Execution** (Build second)
+   - Implement `/mod purge execute` command
+   - Implement deletion logic (bulk + individual)
+   - Implement confirmation prompts
+   - Moderators manually test purge
    - Verify deletion only affects correct messages
    - Run for 2-4 weeks with spot checks
 
-3. **Phase 3**: Update to `PURGE_PHASE=3`
-   - Enable auto-delete for low-risk channels first (e.g., #off-topic)
+3. **Phase 3: Auto-Delete** (Build last)
+   - Add `autodelete` flag to `/mod purge set` command
+   - Implement auto-delete logic in scheduled checks
+   - Enable for low-risk channels first (e.g., #off-topic)
    - Monitor for 1-2 weeks
    - Gradually enable for more channels
 
