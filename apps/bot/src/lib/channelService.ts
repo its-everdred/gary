@@ -163,6 +163,30 @@ export class ChannelManagementService {
         );
       }
 
+      // Ensure bot has necessary permissions to read EasyPoll results
+      try {
+        const botMember = guild.members.me;
+        if (botMember) {
+          await channel.permissionOverwrites.edit(botMember.id, {
+            ViewChannel: true,
+            ReadMessageHistory: true,
+            SendMessages: true,
+          });
+          logger.info(
+            `Granted bot permissions in vote channel: ${nominee.name}`
+          );
+        }
+      } catch (error) {
+        logger.error(
+          {
+            error,
+            channelId: channel.id,
+            nomineeName: nominee.name,
+          },
+          'Failed to grant bot permissions in vote channel'
+        );
+      }
+
       // Send initial vote message with calculated quorum
       await this.sendVoteStartMessage(
         channel,
