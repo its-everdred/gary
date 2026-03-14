@@ -142,6 +142,7 @@ export class ChannelManagementService {
       });
 
       // Restrict @everyone from sending messages and adding reactions after channel inherits category permissions
+      // ReadMessageHistory is granted to @everyone so the bot (and all members) can read EasyPoll results
       try {
         await channel.permissionOverwrites.edit(guild.roles.everyone.id, {
           SendMessages: false,
@@ -150,7 +151,7 @@ export class ChannelManagementService {
           ReadMessageHistory: true,
         });
         logger.info(
-          `Restricted @everyone from sending messages and adding reactions in vote channel: ${nominee.name}`
+          `Set permissions for vote channel: ${nominee.name}`
         );
       } catch (error) {
         logger.error(
@@ -159,31 +160,7 @@ export class ChannelManagementService {
             channelId: channel.id,
             nomineeName: nominee.name,
           },
-          'Failed to restrict @everyone permissions'
-        );
-      }
-
-      // Ensure bot has necessary permissions to read EasyPoll results
-      try {
-        const botMember = guild.members.me;
-        if (botMember) {
-          await channel.permissionOverwrites.edit(botMember.id, {
-            ViewChannel: true,
-            ReadMessageHistory: true,
-            SendMessages: true,
-          });
-          logger.info(
-            `Granted bot permissions in vote channel: ${nominee.name}`
-          );
-        }
-      } catch (error) {
-        logger.error(
-          {
-            error,
-            channelId: channel.id,
-            nomineeName: nominee.name,
-          },
-          'Failed to grant bot permissions in vote channel'
+          'Failed to set vote channel permissions'
         );
       }
 
