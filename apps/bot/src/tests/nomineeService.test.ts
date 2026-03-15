@@ -244,7 +244,7 @@ describe('NomineeStateManager', () => {
         where: {
           guildId: 'test-guild',
           state: {
-            in: [NomineeState.DISCUSSION, NomineeState.VOTE, NomineeState.CLEANUP]
+            in: [NomineeState.DISCUSSION, NomineeState.VOTE]
           }
         }
       });
@@ -256,6 +256,22 @@ describe('NomineeStateManager', () => {
       const result = await NomineeStateManager.hasNomineeInProgress('test-guild');
 
       expect(result).toBe(false);
+    });
+
+    test('hasNomineeInProgress returns false when only CLEANUP nominees exist', async () => {
+      mockPrisma.nominee.count.mockReturnValue(Promise.resolve(0));
+
+      const result = await NomineeStateManager.hasNomineeInProgress('test-guild');
+
+      expect(result).toBe(false);
+      expect(mockPrisma.nominee.count).toHaveBeenCalledWith({
+        where: {
+          guildId: 'test-guild',
+          state: {
+            in: [NomineeState.DISCUSSION, NomineeState.VOTE]
+          }
+        }
+      });
     });
 
     test('getActiveNominees returns all non-past nominees', async () => {
