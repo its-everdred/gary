@@ -107,6 +107,26 @@ export class VoteResultService {
    */
   private async findPollInChannel(channel: TextChannel): Promise<PollData | null> {
     try {
+      // Check if bot has ReadMessageHistory permission
+      const botMember = channel.guild.members.me;
+      if (!botMember) {
+        logger.error({ channelId: channel.id }, 'Bot is not a member of this guild');
+        return null;
+      }
+      
+      const hasReadPermission = channel.permissionsFor(botMember)?.has('ReadMessageHistory');
+      if (!hasReadPermission) {
+        logger.error(
+          { 
+            channelId: channel.id, 
+            channelName: channel.name,
+            guildId: channel.guild.id 
+          }, 
+          'Bot lacks ReadMessageHistory permission in vote channel. Please grant this permission to read poll results.'
+        );
+        return null;
+      }
+      
       // Fetch recent messages to find the poll - force cache bypass
       const messages = await channel.messages.fetch({ limit: DISCORD_CONSTANTS.LIMITS.MESSAGE_FETCH_LIMIT, force: true });
       
