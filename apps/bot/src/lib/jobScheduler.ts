@@ -513,28 +513,12 @@ export class NominationJobScheduler implements JobScheduler {
             );
           });
       } else {
-        // Vote period expired without results - create default failed results
-        const expiredResults: VoteResults = {
-          passed: false,
-          yesVotes: 0,
-          noVotes: 0,
-          totalVotes: 0,
-          quorumMet: false,
-          passThresholdMet: false,
-          memberCount: 0,
-          requiredQuorum: 0,
-          requiredPassVotes: 0,
-        };
-
-        // Post expired results to all channels
-        this.voteResultService
-          .postVoteResults(nominee, expiredResults)
-          .catch((error) => {
-            logger.error(
-              { error, nomineeId: nominee.id },
-              'Failed to post expired vote results'
-            );
-          });
+        // Vote period expired without readable results - skip posting
+        // (Prevents posting misleading all-zero results when poll data can't be read)
+        logger.info(
+          { nomineeId: nominee.id, nomineeName: nominee.name },
+          'Vote period expired without readable poll results - skipping result posting'
+        );
       }
     } else {
       logger.error(
