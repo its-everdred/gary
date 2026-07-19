@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+apps/bot/node_modules/
+
+# Build output
+dist/
+apps/bot/dist/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Git
+.git/
+.github/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage/
+.nyc_output/
+
+# Misc
+*.md
+!README.md
+railway.json
+.claude_ignore

@@ -114,7 +114,68 @@ bunx prisma db push
 bun run dev
 ```
 
-### 5. Deploy to Railway
+### 5. Run with Docker
+
+The easiest way to run Gary with all dependencies.
+
+##### Prerequisites
+
+- Docker and Docker Compose installed
+
+##### Quick Start
+
+```bash
+# Copy example env and fill in your values
+cp apps/bot/.env.example .env
+
+# Start Gary with PostgreSQL
+docker compose up -d
+
+# View logs
+docker compose logs -f gary
+```
+
+##### Docker Commands
+
+```bash
+# Start services
+docker compose up -d
+
+# Stop services
+docker compose down
+
+# Rebuild after code changes
+docker compose up -d --build
+
+# View logs
+docker compose logs -f
+
+# Reset database (caution: deletes all data)
+docker compose down -v
+docker compose up -d
+```
+
+##### Using Pre-built Image
+
+You can also run Gary without building locally:
+
+```bash
+# Pull and run with your own PostgreSQL
+docker run -d \
+  --name gary-bot \
+  -e DATABASE_URL=postgresql://user:pass@host:5432/gary \
+  -e DISCORD_TOKEN=your_token \
+  -e DISCORD_APP_ID=your_app_id \
+  -e GUILD_ID=your_guild_id \
+  -e GOVERNANCE_CHANNEL_ID=channel_id \
+  -e GENERAL_CHANNEL_ID=channel_id \
+  -e MOD_FLAG_CHANNEL_ID=channel_id \
+  -e MOD_COMMS_CHANNEL_ID=channel_id \
+  -e GUILD_SALT=your_salt \
+  ghcr.io/its-everdred/gary:latest
+```
+
+### 6. Deploy to Railway
 
 Self-host or use a service like [Railway](https://railway.app).
 

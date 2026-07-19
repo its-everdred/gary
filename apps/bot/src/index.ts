@@ -22,6 +22,17 @@ const logger = pino({
   level: process.env.LOG_LEVEL || 'info',
 });
 
+logger.info({ pid: process.pid, port: process.env.PORT, nodeVersion: process.version }, 'Process starting');
+
+process.on('uncaughtException', (error) => {
+  logger.fatal({ error: error.message, stack: error.stack }, 'Uncaught exception');
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason) => {
+  logger.error({ reason }, 'Unhandled promise rejection');
+});
+
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -120,17 +131,19 @@ client.on('interactionCreate', async (interaction) => {
 });
 
 // Graceful shutdown handling
-const gracefulShutdown = () => {
+const gracefulShutdown = (signal: string) => {
+  logger.info({ signal, uptime: process.uptime() }, 'Received shutdown signal');
+
   if (jobScheduler?.isRunning()) {
     jobScheduler.stop();
   }
-  
+
   client.destroy();
   process.exit(0);
 };
 
-process.on('SIGTERM', () => gracefulShutdown());
-process.on('SIGINT', () => gracefulShutdown());
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 // Login with timeout
 const loginTimeout = setTimeout(() => {
