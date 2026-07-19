@@ -203,11 +203,12 @@ export class VoteResultService {
       // Check if poll has final results in embed
       const hasFinalResults = embed?.description?.includes('Final Result');
       
-      // Privacy: never log message/embed content — only non-content signals.
+      // EasyPoll is a bot, not a member — logging its poll embed is fine. The
+      // privacy rule is about *user* message content, which Gary never logs.
       logger.debug('EasyPoll message analysis:', {
         messageId: message.id,
         hasEmbed: !!embed,
-        hasDescription: !!embed?.description,
+        embedDescription: embed?.description?.substring(0, 200) + '...',
         hasFinalResults
       });
       
