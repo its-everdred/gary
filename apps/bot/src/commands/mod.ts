@@ -5,6 +5,8 @@ import { handleRemoveCommand } from './nominate/remove.js';
 import { handleStartCommand } from './nominate/start.js';
 import { handleCleanupCommand } from './nominate/cleanup.js';
 import { handleDiscussionCommand } from './nominate/discussion.js';
+import { handleNextStepCommand } from './nominate/nextStep.js';
+import { handlePurgeCheckCommand } from './purge/check.js';
 
 export const modCommand = new SlashCommandBuilder()
   .setName('mod')
@@ -69,6 +71,27 @@ export const modCommand = new SlashCommandBuilder()
               .setRequired(true)
           )
       )
+      .addSubcommand(subcommand =>
+        subcommand
+          .setName('next-step')
+          .setDescription('Advance the current nominee to the next phase (now, or in X hours)')
+          .addNumberOption(option =>
+            option
+              .setName('hours')
+              .setDescription('Delay the transition by this many hours instead of now (positive number)')
+              .setRequired(false)
+          )
+      )
+  )
+  .addSubcommandGroup(subcommandGroup =>
+    subcommandGroup
+      .setName('purge')
+      .setDescription('Membership pruning tools')
+      .addSubcommand(subcommand =>
+        subcommand
+          .setName('check')
+          .setDescription('Privately list members inactive for PRUNE_WEEKS weeks')
+      )
   )
   .toJSON();
 
@@ -92,6 +115,20 @@ export async function modHandler(interaction: ChatInputCommandInteraction): Prom
         break;
       case 'discussion':
         await handleDiscussionCommand(interaction);
+        break;
+      case 'next-step':
+        await handleNextStepCommand(interaction);
+        break;
+      default:
+        await interaction.reply({
+          content: 'This command is not yet implemented.',
+          flags: 64
+        });
+    }
+  } else if (subcommandGroup === 'purge') {
+    switch (subcommand) {
+      case 'check':
+        await handlePurgeCheckCommand(interaction);
         break;
       default:
         await interaction.reply({

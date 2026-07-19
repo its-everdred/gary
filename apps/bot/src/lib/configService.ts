@@ -73,4 +73,19 @@ export class ConfigService {
   static getLogLevel(): string {
     return process.env.LOG_LEVEL || 'info';
   }
+
+  static getPruneWeeks(): number {
+    const weeks = parseInt(process.env.PRUNE_WEEKS || '6');
+    return Number.isNaN(weeks) || weeks <= 0 ? 6 : weeks;
+  }
+
+  /**
+   * Whether to request the privileged Server Members Intent. Only enable this
+   * once the intent is also toggled on in the Discord Developer Portal — with
+   * it, `/mod purge check` can also flag members who have never posted.
+   * Default false so the bot runs without any privileged intent.
+   */
+  static getPruneMemberRoster(): boolean {
+    return process.env.PRUNE_MEMBER_ROSTER === 'true';
+  }
 }

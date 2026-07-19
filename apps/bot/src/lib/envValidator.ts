@@ -30,7 +30,11 @@ interface EnvConfig {
   NOMINATE_DISCUSSION_PERIOD_MINUTES: string;
   NOMINATE_VOTE_PERIOD_MINUTES: string;
   NOMINATE_CLEANUP_PERIOD_MINUTES: string;
-  
+
+  // Pruning
+  PRUNE_WEEKS?: string;
+  PRUNE_MEMBER_ROSTER?: string;
+
   // Logging
   LOG_LEVEL?: string;
 }
@@ -82,11 +86,12 @@ export function validateEnvironment(): void {
   // Validate numeric values
   const numericVars = [
     'KICK_QUORUM_PERCENT',
-    'VOTE_QUORUM_PERCENT', 
+    'VOTE_QUORUM_PERCENT',
     'VOTE_PASS_PERCENT',
     'NOMINATE_DISCUSSION_PERIOD_MINUTES',
     'NOMINATE_VOTE_PERIOD_MINUTES',
-    'NOMINATE_CLEANUP_PERIOD_MINUTES'
+    'NOMINATE_CLEANUP_PERIOD_MINUTES',
+    'PRUNE_WEEKS'
   ];
   
   for (const varName of numericVars) {

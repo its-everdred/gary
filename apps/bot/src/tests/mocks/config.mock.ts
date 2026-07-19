@@ -11,7 +11,14 @@ export const mockConfigService = {
     getNominationsCategoryId: mock(() => 'category-123'),
     getGuildId: mock(() => 'test-guild-123'),
     getGuildSalt: mock(() => 'test-salt'),
-    getLogLevel: mock(() => 'info')
+    getLogLevel: mock(() => 'info'),
+    // Plain functions (not resettable mocks) mirroring the real env parse,
+    // so they survive resetAllMocks and return usable values in-suite.
+    getPruneWeeks: () => {
+      const weeks = parseInt(process.env.PRUNE_WEEKS || '6');
+      return Number.isNaN(weeks) || weeks <= 0 ? 6 : weeks;
+    },
+    getPruneMemberRoster: () => process.env.PRUNE_MEMBER_ROSTER === 'true'
   }
 };
 

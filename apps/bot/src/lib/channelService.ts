@@ -163,6 +163,30 @@ export class ChannelManagementService {
         );
       }
 
+      // Explicitly grant Gary read access so tallying never depends on
+      // inherited category permissions or a denying bot role.
+      try {
+        const me = guild.members.me ?? (await guild.members.fetchMe());
+        await channel.permissionOverwrites.edit(me.id, {
+          ViewChannel: true,
+          ReadMessageHistory: true,
+          SendMessages: true,
+          EmbedLinks: true,
+        });
+        logger.info(
+          `Granted Gary read access in vote channel: ${nominee.name}`
+        );
+      } catch (error) {
+        logger.error(
+          {
+            error,
+            channelId: channel.id,
+            nomineeName: nominee.name,
+          },
+          'Failed to grant Gary read access to vote channel'
+        );
+      }
+
       // Send initial vote message with calculated quorum
       await this.sendVoteStartMessage(
         channel,
@@ -454,10 +478,8 @@ export class ChannelManagementService {
             );
             modCommMessages.push(msg1.id);
 
-            // Send command in its own message for easy copying
-            const msg2 = await modCommsChannel.send(
-              `\`\`\`\n${pollCommand}\n\`\`\``
-            );
+            // Send command as its own plain message for easy copying
+            const msg2 = await modCommsChannel.send(pollCommand);
             modCommMessages.push(msg2.id);
 
             // Send reaction instruction
@@ -466,9 +488,9 @@ export class ChannelManagementService {
             );
             modCommMessages.push(msg3.id);
 
-            // Send the actual text to copy in a code block
+            // Send the react text as its own plain message for easy copying
             const msg4 = await modCommsChannel.send(
-              '```\nOptionally, react to this message with :PepeVoted: so we can estimate quorum.\n```'
+              'Optionally, react to this message with :PepeVoted: so we can estimate quorum.'
             );
             modCommMessages.push(msg4.id);
 

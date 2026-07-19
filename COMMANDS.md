@@ -63,3 +63,23 @@ Demo:
   - Only works for nominees in CLEANUP state
   - Removes discussion and vote channels
   - Transitions nominee to PAST state
+
+- `/mod nominate next-step [hours:<number>]` - Advance the pipeline to the next phase
+
+  - No current nominee → starts discussion for the top queued nominee
+  - In discussion → starts the vote
+  - In vote → rejected (a live vote can't be advanced)
+  - In cleanup → finishes cleanup and starts whatever is next
+  - Without `hours`: transitions immediately
+  - With `hours`: overwrites the current phase's end time so the transition happens X hours from now
+
+### Membership Pruning
+
+- `/mod purge check` - Privately list inactive members (potential prune candidates)
+  - Replies only to the calling moderator (ephemeral)
+  - Flags members with no message in any channel for `PRUNE_WEEKS` weeks (default 6)
+  - Shows each member's last-message date and how long ago it was
+  - Read-only — does not kick or warn anyone
+  - By default reports only members who have posted. To also catch members who
+    never posted, enable the **Server Members Intent** in the Discord Developer
+    Portal and set `PRUNE_MEMBER_ROSTER=true`
