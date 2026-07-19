@@ -69,7 +69,7 @@ export function buildPruneReport(
  * Reports members inactive for at least PRUNE_WEEKS to the calling moderator,
  * silently (ephemeral). Read-only — never kicks or modifies anyone.
  */
-export async function handlePurgeCheckCommand(
+export async function handlePruneCheckCommand(
   interaction: ChatInputCommandInteraction
 ): Promise<void> {
   try {
@@ -102,7 +102,7 @@ export async function handlePurgeCheckCommand(
     await CommandUtils.handleCommandError(
       interaction,
       error,
-      'mod purge check',
+      'mod prune check',
       'checking for inactive members'
     );
   }

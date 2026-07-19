@@ -179,7 +179,7 @@ async function loginWithTimeout(client: Client): Promise<void> {
   }
 }
 
-// Prefer the privileged Server Members Intent so `/mod purge check` can see the
+// Prefer the privileged Server Members Intent so `/mod prune check` can see the
 // full roster (including members who never posted). If the portal toggle is
 // off, Discord rejects the login; we then reconnect without the intent and the
 // prune check degrades automatically to a message-author scan.
