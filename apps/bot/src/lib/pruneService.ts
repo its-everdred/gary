@@ -1,5 +1,5 @@
 import type { Client, Guild, TextChannel, Message } from 'discord.js';
-import { ChannelType } from 'discord.js';
+import { ChannelType, GatewayIntentBits } from 'discord.js';
 import pino from 'pino';
 import { ConfigService } from './configService.js';
 
@@ -106,13 +106,16 @@ export class PruneService {
   }
 
   /**
-   * Fetches the member roster when opted in via PRUNE_MEMBER_ROSTER. Returns
-   * null (fallback mode) when disabled or the fetch fails.
+   * Fetches the member roster when the Server Members Intent is active on the
+   * gateway connection. Returns null (fallback mode) when the intent is absent
+   * or the fetch fails. The intent is negotiated at login, so no env var is
+   * needed — the bot connects with it when the Developer Portal toggle is on
+   * and degrades automatically when it is off.
    */
   private async tryFetchRoster(
     guild: Guild
   ): Promise<Map<string, { displayName: string; bot: boolean }> | null> {
-    if (!ConfigService.getPruneMemberRoster()) {
+    if (!this.client.options.intents.has(GatewayIntentBits.GuildMembers)) {
       return null;
     }
 

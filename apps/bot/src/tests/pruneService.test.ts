@@ -50,7 +50,9 @@ function makeMember(
   };
 }
 
-function makeService(channels: any[], members: any[] = []) {
+// rosterIntent mirrors the gateway: true only when the bot connected with the
+// Server Members Intent, which is what PruneService keys roster mode off of.
+function makeService(channels: any[], members: any[] = [], rosterIntent = false) {
   const me = { id: 'gary' };
   const guild = {
     id: 'g',
@@ -61,11 +63,13 @@ function makeService(channels: any[], members: any[] = []) {
     },
     channels: { cache: new Map(channels.map((c) => [c.id, c])) },
   };
-  const client = { guilds: { fetch: async () => guild } } as any;
+  const client = {
+    guilds: { fetch: async () => guild },
+    options: { intents: { has: () => rosterIntent } },
+  } as any;
   return new PruneService(client);
 }
 
-const originalRoster = process.env.PRUNE_MEMBER_ROSTER;
 const originalWeeks = process.env.PRUNE_WEEKS;
 
 beforeEach(() => {
@@ -73,17 +77,11 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  if (originalRoster === undefined) delete process.env.PRUNE_MEMBER_ROSTER;
-  else process.env.PRUNE_MEMBER_ROSTER = originalRoster;
   if (originalWeeks === undefined) delete process.env.PRUNE_WEEKS;
   else process.env.PRUNE_WEEKS = originalWeeks;
 });
 
 describe('PruneService fallback mode (no member roster)', () => {
-  beforeEach(() => {
-    delete process.env.PRUNE_MEMBER_ROSTER;
-  });
-
   test('reports rosterAvailable = false', async () => {
     const service = makeService([makeChannel('c1', [])]);
     const result = await service.getInactiveMembers('g');
@@ -156,12 +154,8 @@ describe('PruneService fallback mode (no member roster)', () => {
 });
 
 describe('PruneService roster mode (Server Members Intent)', () => {
-  beforeEach(() => {
-    process.env.PRUNE_MEMBER_ROSTER = 'true';
-  });
-
   test('reports rosterAvailable = true', async () => {
-    const service = makeService([makeChannel('c1', [])], [makeMember('a')]);
+    const service = makeService([makeChannel('c1', [])], [makeMember('a')], true);
     const result = await service.getInactiveMembers('g');
     expect(result.rosterAvailable).toBe(true);
   });
@@ -169,7 +163,8 @@ describe('PruneService roster mode (Server Members Intent)', () => {
   test('includes members who never posted', async () => {
     const service = makeService(
       [makeChannel('c1', [msg('m1', 'active', RECENT)])],
-      [makeMember('active'), makeMember('lurker')]
+      [makeMember('active'), makeMember('lurker')],
+      true
     );
     const result = await service.getInactiveMembers('g');
     expect(result.members.map((m) => m.userId)).toEqual(['lurker']);
@@ -179,7 +174,8 @@ describe('PruneService roster mode (Server Members Intent)', () => {
   test('excludes bots from the roster', async () => {
     const service = makeService(
       [makeChannel('c1', [])],
-      [makeMember('botuser', { bot: true })]
+      [makeMember('botuser', { bot: true })],
+      true
     );
     const result = await service.getInactiveMembers('g');
     expect(result.members).toEqual([]);
@@ -188,7 +184,8 @@ describe('PruneService roster mode (Server Members Intent)', () => {
   test('uses the member display name from the roster', async () => {
     const service = makeService(
       [makeChannel('c1', [msg('m1', 'u1', OLD)])],
-      [makeMember('u1', { username: 'CoolName' })]
+      [makeMember('u1', { username: 'CoolName' })],
+      true
     );
     const result = await service.getInactiveMembers('g');
     expect(result.members[0].displayName).toBe('CoolName');
@@ -197,7 +194,8 @@ describe('PruneService roster mode (Server Members Intent)', () => {
   test('sorts never-posted first, then oldest last-message first', async () => {
     const service = makeService(
       [makeChannel('c1', [msg('m1', 'old', OLD), msg('m2', 'older', OLDER)])],
-      [makeMember('old'), makeMember('older'), makeMember('never')]
+      [makeMember('old'), makeMember('older'), makeMember('never')],
+      true
     );
     const result = await service.getInactiveMembers('g');
     expect(result.members.map((m) => m.userId)).toEqual([
