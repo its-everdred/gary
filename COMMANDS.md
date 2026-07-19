@@ -82,4 +82,4 @@ Demo:
   - Read-only — does not kick or warn anyone
   - By default reports only members who have posted. To also catch members who
     never posted, enable the **Server Members Intent** in the Discord Developer
-    Portal and set `PRUNE_MEMBER_ROSTER=true`
+    Portal — Gary picks it up automatically on the next restart, no env var needed

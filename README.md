@@ -45,9 +45,10 @@ The bot integrates with [EasyPoll](https://easypoll.bot) for anonymous voting in
 4. **Application ID**: General Information → Copy for `DISCORD_APP_ID`
 5. **Privileged Gateway Intents**:
    - ✅ Enable `MESSAGE CONTENT INTENT` (required to read EasyPoll embeds)
-   - ⬜ `SERVER MEMBERS INTENT` — optional. Enable it (and set `PRUNE_MEMBER_ROSTER=true`)
-     only if you want `/mod purge check` to also flag members who never posted. Leave both
-     off otherwise; the command still works and reports members who have posted.
+   - ⬜ `SERVER MEMBERS INTENT` — optional. Enable it only if you want `/mod purge check`
+     to also flag members who never posted. No env var needed: Gary connects with the
+     intent automatically when it's on, and falls back to a message-author scan when it's
+     off. Leave it off and the command still works, reporting members who have posted.
    - ❌ Keep `PRESENCE INTENT` disabled
 
 ### 2. Generate Invite Link
