@@ -79,4 +79,13 @@ export class ConfigService {
     return Number.isNaN(weeks) || weeks <= 0 ? 6 : weeks;
   }
 
+  /**
+   * ID of the role marking a paused ("frozen") account. Members with this role
+   * are excluded from the quorum denominator and from prune candidates. Returns
+   * undefined when unset (no exclusion).
+   */
+  static getAccountFrozenRoleId(): string | undefined {
+    return process.env.ACCOUNT_FROZEN_ROLE_ID || undefined;
+  }
+
 }

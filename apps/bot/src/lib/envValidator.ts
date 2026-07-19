@@ -34,6 +34,9 @@ interface EnvConfig {
   // Pruning
   PRUNE_WEEKS?: string;
 
+  // Roles
+  ACCOUNT_FROZEN_ROLE_ID?: string;
+
   // Logging
   LOG_LEVEL?: string;
 }

@@ -207,6 +207,68 @@ describe('VoteResultService', () => {
     });
   });
 
+  describe('eligible member count (quorum denominator)', () => {
+    const originalFrozen = process.env.ACCOUNT_FROZEN_ROLE_ID;
+
+    afterEach(() => {
+      if (originalFrozen === undefined) delete process.env.ACCOUNT_FROZEN_ROLE_ID;
+      else process.env.ACCOUNT_FROZEN_ROLE_ID = originalFrozen;
+    });
+
+    function member(id: string, { bot = false, roles = [] as string[] } = {}) {
+      return {
+        id,
+        displayName: id,
+        user: { bot, username: id },
+        roles: { cache: { has: (roleId: string) => roles.includes(roleId) } },
+      };
+    }
+
+    function serviceWithRoster(members: any[]) {
+      const guild = {
+        id: 'test-guild-id',
+        memberCount: members.length,
+        members: {
+          fetch: async () => new Map(members.map((m) => [m.id, m])),
+        },
+      };
+      const client = {
+        guilds: { fetch: async () => guild },
+        // Server Members Intent present -> roster-based eligible count.
+        options: { intents: { has: () => true } },
+      } as any;
+      return new VoteResultService(client);
+    }
+
+    test('excludes bots and frozen-role members from the denominator', async () => {
+      process.env.ACCOUNT_FROZEN_ROLE_ID = 'frozen-role';
+      const service = serviceWithRoster([
+        member('a'),
+        member('b'),
+        member('c'),
+        member('easypoll', { bot: true }),
+        member('paused', { roles: ['frozen-role'] }),
+      ]);
+
+      const result = await service.simulateVoteResults(createMockNominee(), 2, 0);
+
+      // 5 members - 1 bot - 1 frozen = 3 eligible
+      expect(result.memberCount).toBe(3);
+      expect(result.requiredQuorum).toBe(2); // ceil(3 * 0.4)
+    });
+
+    test('falls back to guild.memberCount when the intent is off', async () => {
+      // The default mockClient (no options.intents) simulates the intent being
+      // off; eligible count degrades to guild.memberCount.
+      const result = await voteResultService.simulateVoteResults(
+        createMockNominee(),
+        11,
+        0
+      );
+      expect(result.memberCount).toBe(25);
+    });
+  });
+
   describe('postVoteResults', () => {
     test('stores announcement message IDs for cleanup', async () => {
       const nominee = createMockNominee({ announcementMessageIds: 'existing-id' });
