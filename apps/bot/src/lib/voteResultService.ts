@@ -203,10 +203,11 @@ export class VoteResultService {
       // Check if poll has final results in embed
       const hasFinalResults = embed?.description?.includes('Final Result');
       
+      // Privacy: never log message/embed content — only non-content signals.
       logger.debug('EasyPoll message analysis:', {
         messageId: message.id,
         hasEmbed: !!embed,
-        embedDescription: embed?.description?.substring(0, 200) + '...',
+        hasDescription: !!embed?.description,
         hasFinalResults
       });
       
