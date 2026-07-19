@@ -35,7 +35,7 @@ export function buildPruneReport(
           member.lastMessageAt,
           now
         )})`
-      : 'Never';
+      : `No posts in ${pruneWeeks}+ weeks`;
     return `${number} ${name}  ${info}`;
   });
 

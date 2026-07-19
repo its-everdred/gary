@@ -47,14 +47,14 @@ describe('buildPruneReport', () => {
     expect(body).toContain('July 2, 2025 (12 months, 2 weeks)');
   });
 
-  test('renders never-posted members as "Never"', () => {
+  test('renders members with no recent posts as "No posts in N+ weeks"', () => {
     const messages = buildPruneReport(
       [{ userId: '3', displayName: 'lurker', lastMessageAt: null }],
       6,
       NOW
     );
     expect(messages[0]).toContain('lurker');
-    expect(messages[0]).toContain('Never');
+    expect(messages[0]).toContain('No posts in 6+ weeks');
   });
 
   test('returns a friendly message when nobody is inactive', () => {

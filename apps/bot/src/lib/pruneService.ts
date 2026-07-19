@@ -9,6 +9,11 @@ const SCAN_CONCURRENCY = 5;
 const MESSAGE_PAGE_SIZE = 100;
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
+// Fallback mode (no roster) has to page past the cutoff to find inactive
+// posters' last message, so it can't stop at the cutoff. Cap pages per channel
+// instead so a large server can't run the scan past the interaction deadline.
+const MAX_FALLBACK_PAGES = 30; // 30 * 100 = 3000 messages/channel
+
 export interface InactiveMember {
   userId: string;
   displayName: string;
@@ -25,6 +30,13 @@ export interface PruneResult {
 interface Activity {
   lastMessageAt: Date;
   displayName: string;
+}
+
+interface ScanOptions {
+  // Stop paging a channel once messages predate this timestamp.
+  stopBefore?: Date;
+  // Hard cap on pages fetched per channel.
+  maxPages?: number;
 }
 
 /**
@@ -45,16 +57,30 @@ export class PruneService {
   async getInactiveMembers(guildId: string): Promise<PruneResult> {
     const guild = await this.client.guilds.fetch(guildId);
     const cutoff = new Date(Date.now() - ConfigService.getPruneWeeks() * WEEK_MS);
-
-    const activity = await this.scanActivity(guild);
     const roster = await this.tryFetchRoster(guild);
 
-    const inactive: InactiveMember[] = roster
-      ? this.inactiveFromRoster(roster, activity, cutoff)
-      : this.inactiveFromActivity(activity, cutoff);
+    let inactive: InactiveMember[];
+    if (roster) {
+      // Roster mode: we only need to know who posted within the window. Stop
+      // paging each channel once it crosses the cutoff, so the scan is bounded
+      // by recent activity instead of full channel history.
+      const recent = await this.scanActivity(guild, { stopBefore: cutoff });
+      inactive = this.inactiveFromRoster(roster, recent);
+    } else {
+      // Fallback mode: no roster, so we must find posters whose last message is
+      // old. Page-capped to stay within the interaction deadline.
+      const activity = await this.scanActivity(guild, {
+        maxPages: MAX_FALLBACK_PAGES,
+      });
+      inactive = this.inactiveFromActivity(activity, cutoff);
+    }
 
     inactive.sort((a, b) => {
-      if (!a.lastMessageAt && !b.lastMessageAt) return 0;
+      // No-recent-post members (null) sort first, ordered by name for a stable
+      // list; dated members (fallback mode) sort oldest-first.
+      if (!a.lastMessageAt && !b.lastMessageAt) {
+        return a.displayName.localeCompare(b.displayName);
+      }
       if (!a.lastMessageAt) return -1;
       if (!b.lastMessageAt) return 1;
       return a.lastMessageAt.getTime() - b.lastMessageAt.getTime();
@@ -64,22 +90,21 @@ export class PruneService {
   }
 
   /**
-   * Full-roster mode: every non-bot member whose newest message is missing or
-   * older than the cutoff (includes members who never posted).
+   * Full-roster mode: every non-bot member who did not post within the window.
+   * `recent` holds only members seen posting since the cutoff, so anyone absent
+   * from it is inactive. Their exact last-post date is unknown (we stop paging
+   * at the cutoff), so lastMessageAt is null.
    */
   private inactiveFromRoster(
     roster: Map<string, { displayName: string; bot: boolean }>,
-    activity: Map<string, Activity>,
-    cutoff: Date
+    recent: Map<string, Activity>
   ): InactiveMember[] {
     const inactive: InactiveMember[] = [];
     for (const [userId, info] of roster) {
       if (info.bot) continue;
+      if (recent.has(userId)) continue;
 
-      const lastMessageAt = activity.get(userId)?.lastMessageAt ?? null;
-      if (!lastMessageAt || lastMessageAt < cutoff) {
-        inactive.push({ userId, displayName: info.displayName, lastMessageAt });
-      }
+      inactive.push({ userId, displayName: info.displayName, lastMessageAt: null });
     }
     return inactive;
   }
@@ -141,15 +166,22 @@ export class PruneService {
   /**
    * Builds a userId -> most-recent-activity map across all readable channels,
    * scanning channels in parallel with a bounded worker pool.
+   *
+   * `stopBefore` halts a channel once it crosses that timestamp (recent-window
+   * scan); `maxPages` caps pages per channel. One of the two bounds the scan so
+   * it can never page an entire channel's history.
    */
-  private async scanActivity(guild: Guild): Promise<Map<string, Activity>> {
+  private async scanActivity(
+    guild: Guild,
+    opts: ScanOptions
+  ): Promise<Map<string, Activity>> {
     const me = guild.members.me ?? (await guild.members.fetchMe());
     const channels = this.readableTextChannels(guild, me);
 
     const perChannel = await this.mapWithConcurrency(
       channels,
       SCAN_CONCURRENCY,
-      (channel) => this.scanChannel(channel)
+      (channel) => this.scanChannel(channel, opts)
     );
 
     const merged = new Map<string, Activity>();
@@ -193,27 +225,50 @@ export class PruneService {
 
   /**
    * Pages a channel's history newest -> oldest, recording each non-bot
-   * author's most-recent message time and display name.
+   * author's most-recent message time and display name. Bounded by
+   * `opts.stopBefore` (stop once messages predate the cutoff) and/or
+   * `opts.maxPages` (hard page cap).
    */
-  private async scanChannel(channel: TextChannel): Promise<Map<string, Activity>> {
+  private async scanChannel(
+    channel: TextChannel,
+    opts: ScanOptions
+  ): Promise<Map<string, Activity>> {
     const latest = new Map<string, Activity>();
 
     try {
       let before: string | undefined;
+      let pages = 0;
 
       for (;;) {
+        if (opts.maxPages !== undefined && pages >= opts.maxPages) {
+          logger.warn(
+            { channelId: channel.id, maxPages: opts.maxPages },
+            'Prune scan hit page cap - older activity in this channel not counted'
+          );
+          break;
+        }
+
         const batch = await channel.messages.fetch({
           limit: MESSAGE_PAGE_SIZE,
           before,
         });
+        pages++;
 
         const messages = [...batch.values()] as Message[];
         if (messages.length === 0) break;
 
+        let crossedCutoff = false;
         for (const message of messages) {
+          const timestamp = new Date(message.createdTimestamp);
+
+          // Messages are newest -> oldest, so once one predates the cutoff every
+          // later message does too; note it and stop after this page.
+          if (opts.stopBefore && timestamp < opts.stopBefore) {
+            crossedCutoff = true;
+            continue;
+          }
           if (message.author.bot) continue;
 
-          const timestamp = new Date(message.createdTimestamp);
           const existing = latest.get(message.author.id);
           if (!existing || timestamp > existing.lastMessageAt) {
             latest.set(message.author.id, {
@@ -223,6 +278,7 @@ export class PruneService {
           }
         }
 
+        if (crossedCutoff) break;
         before = messages[messages.length - 1].id;
         if (messages.length < MESSAGE_PAGE_SIZE) break;
       }
