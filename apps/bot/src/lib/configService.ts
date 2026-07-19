@@ -73,4 +73,9 @@ export class ConfigService {
   static getLogLevel(): string {
     return process.env.LOG_LEVEL || 'info';
   }
+
+  static getPruneWeeks(): number {
+    const weeks = parseInt(process.env.PRUNE_WEEKS || '6');
+    return Number.isNaN(weeks) || weeks <= 0 ? 6 : weeks;
+  }
 }
