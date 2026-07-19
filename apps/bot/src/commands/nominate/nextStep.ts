@@ -19,7 +19,8 @@ const HOUR_MS = 60 * MINUTE_MS;
  *
  *   (no current nominee) → start discussion for the top queued nominee
  *   DISCUSSION           → start the vote
- *   VOTE                 → rejected (a live vote cannot be advanced)
+ *   VOTE                 → force to cleanup (tally if a finished poll exists,
+ *                          otherwise just advance); immediate only
  *   CLEANUP              → finish cleanup and start whatever is next
  */
 export async function handleNextStepCommand(
@@ -69,10 +70,7 @@ export async function handleNextStepCommand(
         await advanceToVote(interaction, nominee, hours);
         break;
       case NomineeState.VOTE:
-        await interaction.editReply(
-          `❌ **${nominee.name}** is in an active vote, which can't be advanced. ` +
-            'The vote must finish on its own.'
-        );
+        await advanceVoteToCleanup(interaction, nominee, hours);
         break;
       case NomineeState.CLEANUP:
         await advanceToCleanup(interaction, nominee, hours);
@@ -162,6 +160,45 @@ async function advanceToVote(
 
   await interaction.editReply(
     `✅ Vote for **${nominee.name}** will start ${formatWhen(voteStart, hours)}.`
+  );
+}
+
+/**
+ * VOTE → CLEANUP. The scheduler normally does this when a detected poll ends,
+ * so a vote where no poll was ever posted would be stuck. This lets a mod force
+ * it forward. Immediate only — a stuck vote has no meaningful end time to
+ * schedule against.
+ */
+async function advanceVoteToCleanup(
+  interaction: ChatInputCommandInteraction,
+  nominee: Nominee,
+  hours: number | null
+): Promise<void> {
+  if (hours !== null) {
+    await interaction.editReply(
+      '❌ An active vote can only be advanced immediately. Re-run ' +
+        `\`/mod nominate next-step\` for **${nominee.name}** without the hours option.`
+    );
+    return;
+  }
+
+  const jobScheduler = NominationJobScheduler.getInstance(interaction.client);
+  const { success, tallied } = await jobScheduler.forceVoteToCleanup(nominee);
+
+  if (!success) {
+    await interaction.editReply(
+      `❌ Couldn't advance **${nominee.name}** to cleanup. Please try again.`
+    );
+    return;
+  }
+
+  const lead = tallied
+    ? `✅ Tallied the finished poll for **${nominee.name}** and posted the results.`
+    : `✅ No finished vote was found for **${nominee.name}**, so nothing was posted.`;
+
+  await interaction.editReply(
+    `${lead} It's now in the **cleanup** phase — run \`/mod nominate cleanup\` ` +
+      '(or `/mod nominate next-step` again) to remove the channels and start the next nominee.'
   );
 }
 
