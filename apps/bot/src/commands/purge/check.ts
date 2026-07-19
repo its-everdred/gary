@@ -14,23 +14,15 @@ const MAX_MESSAGE_LENGTH = 1900;
 export function buildPruneReport(
   members: InactiveMember[],
   pruneWeeks: number,
-  now: Date,
-  rosterAvailable = true
+  now: Date
 ): string[] {
-  const fallbackNote = rosterAvailable
-    ? ''
-    : '\n_Note: only members who have posted are shown. Enable the Server Members Intent (PRUNE_MEMBER_ROSTER=true) to also detect members who never posted._';
-
   if (members.length === 0) {
-    return [
-      `✅ No members have been inactive for ${pruneWeeks}+ weeks.${fallbackNote}`,
-    ];
+    return [`✅ No members have been inactive for ${pruneWeeks}+ weeks.`];
   }
 
-  const title =
-    `⚠️ **PRUNE ALERT** — ${members.length} member${
-      members.length === 1 ? '' : 's'
-    } inactive for ${pruneWeeks}+ weeks` + fallbackNote;
+  const title = `⚠️ **PRUNE ALERT** — ${members.length} member${
+    members.length === 1 ? '' : 's'
+  } inactive for ${pruneWeeks}+ weeks`;
 
   const numberWidth = `${members.length}.`.length;
   const nameWidth = Math.max(...members.map((m) => m.displayName.length));
@@ -99,8 +91,7 @@ export async function handlePurgeCheckCommand(
     const messages = buildPruneReport(
       result.members,
       ConfigService.getPruneWeeks(),
-      new Date(),
-      result.rosterAvailable
+      new Date()
     );
 
     await interaction.editReply({ content: messages[0] });
