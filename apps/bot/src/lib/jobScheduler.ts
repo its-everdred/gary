@@ -513,28 +513,51 @@ export class NominationJobScheduler implements JobScheduler {
             );
           });
       } else {
-        // Vote period expired without results - create default failed results
-        const expiredResults: VoteResults = {
-          passed: false,
-          yesVotes: 0,
-          noVotes: 0,
-          totalVotes: 0,
-          quorumMet: false,
-          passThresholdMet: false,
-          memberCount: 0,
-          requiredQuorum: 0,
-          requiredPassVotes: 0,
-        };
+        // No results parsed. This is either a genuine no-vote expiry or Gary
+        // could not read the poll (e.g. missing channel permissions). Only
+        // announce a failed vote when we can actually read the vote channel;
+        // otherwise link members to it so they can check the results.
+        const canReadVoteChannel =
+          await this.voteResultService.canReadVoteChannel(nominee);
 
-        // Post expired results to all channels
-        this.voteResultService
-          .postVoteResults(nominee, expiredResults)
-          .catch((error) => {
-            logger.error(
-              { error, nomineeId: nominee.id },
-              'Failed to post expired vote results'
-            );
-          });
+        if (!canReadVoteChannel) {
+          logger.warn(
+            { nomineeId: nominee.id, nomineeName: nominee.name },
+            'Cannot read vote channel - posting vote-ended notice instead of failed results'
+          );
+
+          this.voteResultService
+            .postVoteEndedUnreadable(nominee)
+            .catch((error) => {
+              logger.error(
+                { error, nomineeId: nominee.id },
+                'Failed to post vote-ended notice'
+              );
+            });
+        } else {
+          // Vote period expired without results - create default failed results
+          const expiredResults: VoteResults = {
+            passed: false,
+            yesVotes: 0,
+            noVotes: 0,
+            totalVotes: 0,
+            quorumMet: false,
+            passThresholdMet: false,
+            memberCount: 0,
+            requiredQuorum: 0,
+            requiredPassVotes: 0,
+          };
+
+          // Post expired results to all channels
+          this.voteResultService
+            .postVoteResults(nominee, expiredResults)
+            .catch((error) => {
+              logger.error(
+                { error, nomineeId: nominee.id },
+                'Failed to post expired vote results'
+              );
+            });
+        }
       }
     } else {
       logger.error(

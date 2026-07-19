@@ -418,20 +418,95 @@ export class VoteResultService {
 
 
   /**
+   * Channels the vote outcome is announced to (governance, general, and mod-comms)
+   */
+  private getResultChannelConfigs() {
+    return [
+      { name: 'governance', finder: () => ChannelFinderService.governance() },
+      { name: 'general', finder: () => ChannelFinderService.general() },
+      { name: 'mod-comms', finder: () => ChannelFinderService.modComms() }
+    ];
+  }
+
+  /**
+   * Checks whether Gary can actually read the poll in the vote channel.
+   * Used to tell a genuine no-vote outcome apart from a permissions failure.
+   */
+  async canReadVoteChannel(nominee: Nominee): Promise<boolean> {
+    try {
+      if (!nominee.voteChannelId) {
+        return false;
+      }
+
+      const guild = await this.client.guilds.fetch(nominee.guildId);
+      const voteChannel = await ChannelLookupService.findVoteChannel(
+        guild,
+        nominee.id,
+        nominee.name,
+        nominee.voteChannelId
+      );
+
+      if (!voteChannel) {
+        return false;
+      }
+
+      const me = guild.members.me ?? (await guild.members.fetchMe());
+      const perms = voteChannel.permissionsFor(me);
+
+      return !!perms?.has('ViewChannel') && !!perms.has('ReadMessageHistory');
+    } catch (error) {
+      logger.error({ error, nomineeId: nominee.id }, 'Failed to check vote channel read permissions');
+      return false;
+    }
+  }
+
+  /**
+   * Posts a notice that the vote has ended when Gary cannot read the results.
+   * Links members to the vote channel instead of falsely reporting no votes.
+   */
+  async postVoteEndedUnreadable(nominee: Nominee): Promise<void> {
+    const voteChannelMention = nominee.voteChannelId
+      ? `<#${nominee.voteChannelId}>`
+      : 'the vote channel';
+
+    const embed: DiscordEmbed = {
+      title: '🗳️ Vote Ended',
+      description: `The vote for **${nominee.name}** has ended. Head to ${voteChannelMention} to see the results.`,
+      color: 0xff9500,
+      timestamp: new Date().toISOString()
+    };
+
+    for (const config of this.getResultChannelConfigs()) {
+      try {
+        const channel = await config.finder();
+        if (channel) {
+          await channel.send({ embeds: [embed] });
+        }
+      } catch (error) {
+        logger.error({
+          error: error instanceof Error ? {
+            name: error.name,
+            message: error.message,
+            stack: error.stack
+          } : error,
+          nomineeId: nominee.id,
+          channelType: config.name
+        }, `Failed to post vote-ended notice to ${config.name}`);
+      }
+    }
+  }
+
+  /**
    * Posts vote results to the specified channels (governance, general, and mod-comms)
    */
   async postVoteResults(nominee: Nominee, voteResults: VoteResults): Promise<void> {
     try {
       const resultEmbed = await this.createVoteResultsEmbed(nominee, voteResults);
       const messageIds: string[] = [];
-      
+
       // Define channels to post to
-      const channelConfigs = [
-        { name: 'governance', finder: () => ChannelFinderService.governance() },
-        { name: 'general', finder: () => ChannelFinderService.general() },
-        { name: 'mod-comms', finder: () => ChannelFinderService.modComms() }
-      ];
-      
+      const channelConfigs = this.getResultChannelConfigs();
+
       // Post to all configured channels
       for (const config of channelConfigs) {
         try {
