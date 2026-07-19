@@ -33,6 +33,7 @@ interface EnvConfig {
 
   // Pruning
   PRUNE_WEEKS?: string;
+  PRUNE_MEMBER_ROSTER?: string;
 
   // Logging
   LOG_LEVEL?: string;

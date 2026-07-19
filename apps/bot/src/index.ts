@@ -7,6 +7,7 @@ import { modCommand, modHandler } from './commands/mod.js';
 import { NominationJobScheduler } from './lib/jobScheduler.js';
 import { ChannelFinderService } from './lib/channelFinderService.js';
 import { validateEnvironment } from './lib/envValidator.js';
+import { ConfigService } from './lib/configService.js';
 
 // Note: Environment variables should be set by the deployment platform (Railway, Docker, etc)
 // or loaded by the Prisma CLI which reads .env files automatically
@@ -33,14 +34,21 @@ process.on('unhandledRejection', (reason) => {
   logger.error({ reason }, 'Unhandled promise rejection');
 });
 
+const intents = [
+  GatewayIntentBits.Guilds,
+  GatewayIntentBits.DirectMessages,
+  GatewayIntentBits.GuildMessages,
+  GatewayIntentBits.MessageContent,
+];
+
+// Only request the privileged Server Members Intent when explicitly opted in.
+// Declaring it while the Developer Portal toggle is off would break login.
+if (ConfigService.getPruneMemberRoster()) {
+  intents.push(GatewayIntentBits.GuildMembers);
+}
+
 const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.DirectMessages,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
-  ],
+  intents,
   partials: [Partials.Channel],
 });
 
