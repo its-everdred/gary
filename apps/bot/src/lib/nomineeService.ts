@@ -212,14 +212,15 @@ export class NomineeStateManager {
   }
 
   /**
-   * Checks if any nominee is currently in progress states
+   * Checks if any nominee is currently in progress states that block new discussions
+   * CLEANUP state no longer blocks new discussions to allow overlapping cycles
    */
   static async hasNomineeInProgress(guildId: string): Promise<boolean> {
     const count = await prisma.nominee.count({
       where: {
         guildId,
         state: {
-          in: [NomineeState.DISCUSSION, NomineeState.VOTE, NomineeState.CLEANUP]
+          in: [NomineeState.DISCUSSION, NomineeState.VOTE]
         }
       }
     });

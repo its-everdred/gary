@@ -63,3 +63,12 @@ Demo:
   - Only works for nominees in CLEANUP state
   - Removes discussion and vote channels
   - Transitions nominee to PAST state
+
+- `/mod nominate next-step [hours:<number>]` - Advance the pipeline to the next phase
+
+  - No current nominee → starts discussion for the top queued nominee
+  - In discussion → starts the vote
+  - In vote → rejected (a live vote can't be advanced)
+  - In cleanup → finishes cleanup and starts whatever is next
+  - Without `hours`: transitions immediately
+  - With `hours`: overwrites the current phase's end time so the transition happens X hours from now
