@@ -243,6 +243,47 @@ export class VoteResultService {
   }
 
   /**
+   * True when the nominee's vote channel still holds an EasyPoll poll that has
+   * not ended. Used by cleanup to avoid deleting a channel with a live vote.
+   * On any read failure it returns false (treat as no active poll) so cleanup
+   * isn't blocked by unrelated errors.
+   */
+  async hasActivePoll(nominee: Nominee): Promise<boolean> {
+    try {
+      if (!nominee.voteChannelId) return false;
+
+      const guild = await this.client.guilds.fetch(nominee.guildId);
+      const voteChannel = await ChannelLookupService.findVoteChannel(
+        guild,
+        nominee.id,
+        nominee.name,
+        nominee.voteChannelId
+      );
+      if (!voteChannel) return false;
+
+      const messages = await voteChannel.messages.fetch({
+        limit: DISCORD_CONSTANTS.LIMITS.MESSAGE_FETCH_LIMIT,
+      });
+
+      for (const message of messages.values()) {
+        if (!this.isEasyPollMessage(message)) continue;
+        const embed = message.embeds?.[0];
+        if (!embed) continue;
+        if (!this.isPollClosed(embed as unknown as DiscordEmbed)) {
+          return true; // an EasyPoll poll that hasn't ended
+        }
+      }
+      return false;
+    } catch (error) {
+      logger.warn(
+        { error, nomineeId: nominee.id },
+        'Could not check vote channel for an active poll - assuming none'
+      );
+      return false;
+    }
+  }
+
+  /**
    * Checks if poll is closed/completed based on embed content
    */
   private isPollClosed(embed: DiscordEmbed): boolean {

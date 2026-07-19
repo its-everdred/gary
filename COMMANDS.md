@@ -68,10 +68,16 @@ Demo:
 
   - No current nominee → starts discussion for the top queued nominee
   - In discussion → starts the vote
-  - In vote → rejected (a live vote can't be advanced)
+  - In vote → forces the nominee into cleanup (for a vote that never finished —
+    e.g. a poll was never posted). Gary tries to tally; if there's a finished
+    poll it posts the results, otherwise it posts nothing and just advances.
+    Immediate only — the `hours` option is rejected for a live vote.
   - In cleanup → finishes cleanup and starts whatever is next
   - Without `hours`: transitions immediately
   - With `hours`: overwrites the current phase's end time so the transition happens X hours from now
+
+  Cleanup never deletes a vote channel that still has an active poll — it leaves
+  the channel and posts a note to mod-comms so mods can finish the vote manually.
 
 ### Membership Pruning
 

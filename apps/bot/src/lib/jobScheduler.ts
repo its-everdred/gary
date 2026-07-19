@@ -564,6 +564,83 @@ export class NominationJobScheduler implements JobScheduler {
   }
 
   /**
+   * Manually advances a nominee out of VOTE into CLEANUP. Used by the next-step
+   * command to break the deadlock where a vote never finished (no poll posted),
+   * which the scheduler won't auto-transition.
+   *
+   * It attempts a tally: if a finished poll exists, its results are posted as
+   * usual. If there's no finished poll, NO "go see the results" notice is posted
+   * (there are none). Returns whether results were tallied so the caller can
+   * explain the outcome.
+   */
+  public async forceVoteToCleanup(
+    nominee: Nominee
+  ): Promise<{ success: boolean; tallied: boolean }> {
+    const voteResults = await this.voteResultService.checkVoteCompletion(
+      nominee
+    );
+
+    const result = await NomineeStateManager.transitionNominee(
+      nominee.id,
+      NomineeState.CLEANUP,
+      { cleanupStart: new Date() }
+    );
+
+    if (!result.success) {
+      logger.error(
+        { nomineeId: nominee.id, error: result.errorMessage },
+        'Failed to force nominee from VOTE to CLEANUP'
+      );
+      return { success: false, tallied: false };
+    }
+
+    if (voteResults) {
+      this.voteResultService
+        .postVoteResults(nominee, voteResults)
+        .catch((error) =>
+          logger.error(
+            { error, nomineeId: nominee.id },
+            'Failed to post vote results'
+          )
+        );
+      return { success: true, tallied: true };
+    }
+
+    // No finished poll: nothing to tally and nothing to link to, so skip the
+    // vote-ended notice entirely and just move the nominee to cleanup.
+    logger.info(
+      { nomineeId: nominee.id, nomineeName: nominee.name },
+      'Forced VOTE->CLEANUP with no finished poll - skipping results notice'
+    );
+    return { success: true, tallied: false };
+  }
+
+  /**
+   * Posts to mod-comms explaining a vote channel was NOT deleted during cleanup
+   * because it still has an active poll, so mods can finish it manually.
+   */
+  private async notifyVoteChannelPreserved(
+    nominee: Nominee,
+    voteChannelId: string
+  ): Promise<void> {
+    try {
+      const modCommsChannel = await ChannelFinderService.modComms();
+      if (!modCommsChannel) return;
+
+      await modCommsChannel.send(
+        `⚠️ Did not delete <#${voteChannelId}> for **${nominee.name}** during cleanup — ` +
+          'it still has an active poll. Close the poll and delete the channel manually ' +
+          'once the vote is finished.'
+      );
+    } catch (error) {
+      logger.error(
+        { error, nomineeId: nominee.id },
+        'Failed to notify mods about a preserved vote channel'
+      );
+    }
+  }
+
+  /**
    * Performs post-cleanup cleanup: transitions to PAST, deletes channels, sends instructions
    */
   async performPostCleanupCleanup(
@@ -597,7 +674,9 @@ export class NominationJobScheduler implements JobScheduler {
           );
         }
 
-        // Delete vote channel - try ID first, then fallback to name
+        // Delete vote channel - try ID first, then fallback to name. Never
+        // delete a channel that still has an active poll (would destroy a live
+        // vote); leave it and tell the mods to finish it manually.
         const voteChannel = await ChannelLookupService.findVoteChannel(
           guild,
           nominee.id,
@@ -605,10 +684,17 @@ export class NominationJobScheduler implements JobScheduler {
           nominee.voteChannelId
         );
         if (voteChannel) {
-          await channelService.deleteChannel(
-            voteChannel.id,
-            'Nomination completed'
+          const hasActivePoll = await this.voteResultService.hasActivePoll(
+            nominee
           );
+          if (hasActivePoll) {
+            await this.notifyVoteChannelPreserved(nominee, voteChannel.id);
+          } else {
+            await channelService.deleteChannel(
+              voteChannel.id,
+              'Nomination completed'
+            );
+          }
         }
 
         // Delete announcement messages from governance and general channels

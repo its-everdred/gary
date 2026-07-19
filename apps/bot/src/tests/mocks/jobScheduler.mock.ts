@@ -6,7 +6,10 @@ export const mockJobScheduler = {
   isRunning: mock(() => false),
   transitionToVote: mock(() => Promise.resolve()),
   transitionToCleanup: mock(() => Promise.resolve()),
-  transitionToPast: mock(() => Promise.resolve())
+  transitionToPast: mock(() => Promise.resolve()),
+  forceVoteToCleanup: mock(() =>
+    Promise.resolve({ success: true, tallied: false })
+  )
 };
 
 export const mockNominationJobScheduler = {
@@ -20,6 +23,10 @@ export const resetJobSchedulerMocks = () => {
   mockJobScheduler.transitionToVote.mockReset();
   mockJobScheduler.transitionToCleanup.mockReset();
   mockJobScheduler.transitionToPast.mockReset();
+  mockJobScheduler.forceVoteToCleanup.mockReset();
+  mockJobScheduler.forceVoteToCleanup.mockImplementation(() =>
+    Promise.resolve({ success: true, tallied: false })
+  );
   mockNominationJobScheduler.getInstance.mockReset();
   
   // Re-establish the mock implementation after reset
