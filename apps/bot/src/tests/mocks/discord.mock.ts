@@ -99,6 +99,15 @@ export const mockGatewayIntentBits = {
   MessageContent: Symbol('MessageContent')
 };
 
+// Mock ChannelType (values mirror discord.js enum)
+export const mockChannelType = {
+  GuildText: 0,
+  DM: 1,
+  GuildVoice: 2,
+  GuildCategory: 4,
+  GuildAnnouncement: 5
+};
+
 export const mockDiscordJS = {
   EmbedBuilder: {
     from: mock(() => ({
@@ -109,7 +118,8 @@ export const mockDiscordJS = {
   },
   SlashCommandBuilder: MockSlashCommandBuilder,
   Client: MockClient,
-  GatewayIntentBits: mockGatewayIntentBits
+  GatewayIntentBits: mockGatewayIntentBits,
+  ChannelType: mockChannelType
 };
 
 export const resetDiscordMocks = (interaction: any, client: any, channel: any, message: any) => {
