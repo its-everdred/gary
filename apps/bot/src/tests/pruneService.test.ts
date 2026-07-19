@@ -41,12 +41,17 @@ function makeChannel(
 
 function makeMember(
   id: string,
-  { bot = false, username }: { bot?: boolean; username?: string } = {}
+  {
+    bot = false,
+    username,
+    roles = [],
+  }: { bot?: boolean; username?: string; roles?: string[] } = {}
 ) {
   return {
     id,
     displayName: username ?? id,
     user: { bot, username: username ?? id },
+    roles: { cache: { has: (roleId: string) => roles.includes(roleId) } },
   };
 }
 
@@ -71,6 +76,7 @@ function makeService(channels: any[], members: any[] = [], rosterIntent = false)
 }
 
 const originalWeeks = process.env.PRUNE_WEEKS;
+const originalFrozen = process.env.ACCOUNT_FROZEN_ROLE_ID;
 
 beforeEach(() => {
   process.env.PRUNE_WEEKS = '6';
@@ -79,6 +85,8 @@ beforeEach(() => {
 afterEach(() => {
   if (originalWeeks === undefined) delete process.env.PRUNE_WEEKS;
   else process.env.PRUNE_WEEKS = originalWeeks;
+  if (originalFrozen === undefined) delete process.env.ACCOUNT_FROZEN_ROLE_ID;
+  else process.env.ACCOUNT_FROZEN_ROLE_ID = originalFrozen;
 });
 
 describe('PruneService fallback mode (no member roster)', () => {
@@ -184,6 +192,18 @@ describe('PruneService roster mode (Server Members Intent)', () => {
     const service = makeService([makeChannel('c1', [])], [makeMember('a')], true);
     const result = await service.getInactiveMembers('g');
     expect(result.rosterAvailable).toBe(true);
+  });
+
+  test('excludes frozen (paused) members from prune candidates', async () => {
+    process.env.ACCOUNT_FROZEN_ROLE_ID = 'frozen-role';
+    // Neither has posted; 'paused' holds the frozen role and must be skipped.
+    const service = makeService(
+      [makeChannel('c1', [])],
+      [makeMember('lurker'), makeMember('paused', { roles: ['frozen-role'] })],
+      true
+    );
+    const result = await service.getInactiveMembers('g');
+    expect(result.members.map((m) => m.userId)).toEqual(['lurker']);
   });
 
   test('includes members who never posted', async () => {

@@ -39,6 +39,11 @@ interface ScanOptions {
   maxPages?: number;
 }
 
+type RosterEntry = Map<
+  string,
+  { displayName: string; bot: boolean; frozen: boolean }
+>;
+
 /**
  * Scans channel history to find members who have been inactive for at least
  * PRUNE_WEEKS. Read-only — never modifies members or channels.
@@ -90,18 +95,20 @@ export class PruneService {
   }
 
   /**
-   * Full-roster mode: every non-bot member who did not post within the window.
-   * `recent` holds only members seen posting since the cutoff, so anyone absent
-   * from it is inactive. Their exact last-post date is unknown (we stop paging
-   * at the cutoff), so lastMessageAt is null.
+   * Full-roster mode: every non-bot, non-frozen member who did not post within
+   * the window. `recent` holds only members seen posting since the cutoff, so
+   * anyone absent from it is inactive. Frozen (paused) accounts are never prune
+   * candidates. Exact last-post date is unknown (we stop paging at the cutoff),
+   * so lastMessageAt is null.
    */
   private inactiveFromRoster(
-    roster: Map<string, { displayName: string; bot: boolean }>,
+    roster: RosterEntry,
     recent: Map<string, Activity>
   ): InactiveMember[] {
     const inactive: InactiveMember[] = [];
     for (const [userId, info] of roster) {
       if (info.bot) continue;
+      if (info.frozen) continue;
       if (recent.has(userId)) continue;
 
       inactive.push({ userId, displayName: info.displayName, lastMessageAt: null });
@@ -137,20 +144,21 @@ export class PruneService {
    * needed — the bot connects with it when the Developer Portal toggle is on
    * and degrades automatically when it is off.
    */
-  private async tryFetchRoster(
-    guild: Guild
-  ): Promise<Map<string, { displayName: string; bot: boolean }> | null> {
+  private async tryFetchRoster(guild: Guild): Promise<RosterEntry | null> {
     if (!this.client.options.intents.has(GatewayIntentBits.GuildMembers)) {
       return null;
     }
 
     try {
       const members = await guild.members.fetch();
-      const roster = new Map<string, { displayName: string; bot: boolean }>();
+      const frozenRoleId = ConfigService.getAccountFrozenRoleId();
+      const roster: RosterEntry = new Map();
       for (const member of members.values()) {
         roster.set(member.id, {
           displayName: member.displayName ?? member.user.username,
           bot: member.user.bot,
+          // Frozen (paused) accounts opted out; never prune candidates.
+          frozen: frozenRoleId ? member.roles.cache.has(frozenRoleId) : false,
         });
       }
       return roster;

@@ -17,7 +17,8 @@ export const mockConfigService = {
     getPruneWeeks: () => {
       const weeks = parseInt(process.env.PRUNE_WEEKS || '6');
       return Number.isNaN(weeks) || weeks <= 0 ? 6 : weeks;
-    }
+    },
+    getAccountFrozenRoleId: () => process.env.ACCOUNT_FROZEN_ROLE_ID || undefined
   }
 };
 

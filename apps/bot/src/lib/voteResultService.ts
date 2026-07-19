@@ -1,4 +1,5 @@
 import type { Client, Guild, TextChannel, Message } from 'discord.js';
+import { GatewayIntentBits } from 'discord.js';
 import pino from 'pino';
 import { prisma } from './db.js';
 import type { Nominee } from '@prisma/client';
@@ -83,7 +84,7 @@ export class VoteResultService {
       }
 
       // Calculate member count (excluding bots)
-      const memberCount = await this.getNonBotMemberCount(guild);
+      const memberCount = await this.getEligibleMemberCount(guild);
       
       // Calculate results
       const results = this.calculateVoteResults(pollData, memberCount);
@@ -328,12 +329,42 @@ export class VoteResultService {
   }
 
   /**
-   * Gets member count (uses total member count, same as warn feature)
+   * Number of members eligible to reach quorum: real (non-bot) members who are
+   * not frozen (paused via ACCOUNT_FROZEN_ROLE_ID). Frozen accounts are excluded
+   * so a vote can't fail quorum because too many eligible bodies are paused.
+   *
+   * Requires the member roster (Server Members Intent) to read roles; when the
+   * intent is off we can't see them, so we fall back to the raw guild member
+   * count and log that no exclusions were applied.
    */
-  private async getNonBotMemberCount(guild: Guild): Promise<number> {
-    // Use guild.memberCount which doesn't require GuildMembers intent
-    // This includes bots but is consistent with how the warn feature works
-    return guild.memberCount || 1;
+  private async getEligibleMemberCount(guild: Guild): Promise<number> {
+    const hasRosterIntent = this.client.options?.intents?.has(
+      GatewayIntentBits.GuildMembers
+    );
+    if (!hasRosterIntent) {
+      logger.warn(
+        'Server Members Intent off - quorum counts all members (bots/frozen not excluded)'
+      );
+      return guild.memberCount || 1;
+    }
+
+    try {
+      const members = await guild.members.fetch();
+      const frozenRoleId = ConfigService.getAccountFrozenRoleId();
+      let eligible = 0;
+      for (const member of members.values()) {
+        if (member.user.bot) continue;
+        if (frozenRoleId && member.roles.cache.has(frozenRoleId)) continue;
+        eligible++;
+      }
+      return eligible || 1;
+    } catch (error) {
+      logger.warn(
+        { error },
+        'Member fetch failed - quorum falling back to guild member count'
+      );
+      return guild.memberCount || 1;
+    }
   }
 
   /**
@@ -396,7 +427,7 @@ export class VoteResultService {
    */
   async simulateVoteResults(nominee: Nominee, yesVotes: number, noVotes: number): Promise<VoteResults> {
     const guild = await this.client.guilds.fetch(nominee.guildId);
-    const memberCount = await this.getNonBotMemberCount(guild);
+    const memberCount = await this.getEligibleMemberCount(guild);
     
     const pollData: PollData = {
       question: `Should we invite ${nominee.name}?`,

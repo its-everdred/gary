@@ -83,3 +83,13 @@ Demo:
   - By default reports only members who have posted. To also catch members who
     never posted, enable the **Server Members Intent** in the Discord Developer
     Portal — Gary picks it up automatically on the next restart, no env var needed
+  - Members with the `ACCOUNT_FROZEN_ROLE_ID` role (paused accounts) are never
+    listed as prune candidates
+
+### Voting
+
+- Quorum is measured against **eligible** members: bots and members with the
+  `ACCOUNT_FROZEN_ROLE_ID` role (paused accounts) are excluded from the
+  denominator, so a vote can't fail quorum just because too many members are
+  frozen. Requires the Server Members Intent; without it, quorum falls back to
+  the raw member count.
