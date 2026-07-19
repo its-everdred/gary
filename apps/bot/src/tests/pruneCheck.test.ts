@@ -63,6 +63,27 @@ describe('buildPruneReport', () => {
     expect(messages[0]).toContain('No members have been inactive');
   });
 
+  test('adds a fallback note when the member roster is unavailable', () => {
+    const messages = buildPruneReport(
+      [{ userId: '1', displayName: 'everdred', lastMessageAt: utc(2025, 7, 2) }],
+      6,
+      NOW,
+      false
+    );
+    expect(messages[0]).toContain('only members who have posted');
+    expect(messages[0]).toContain('PRUNE_MEMBER_ROSTER');
+  });
+
+  test('omits the fallback note when the roster is available', () => {
+    const messages = buildPruneReport(
+      [{ userId: '1', displayName: 'everdred', lastMessageAt: utc(2025, 7, 2) }],
+      6,
+      NOW,
+      true
+    );
+    expect(messages[0]).not.toContain('only members who have posted');
+  });
+
   test('splits large lists into multiple sub-2000-char messages', () => {
     const members = Array.from({ length: 120 }, (_, i) => ({
       userId: `${i}`,

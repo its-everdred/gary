@@ -15,9 +15,25 @@ export interface InactiveMember {
   lastMessageAt: Date | null;
 }
 
+export interface PruneResult {
+  members: InactiveMember[];
+  // False when the member roster was unavailable (Server Members Intent off),
+  // meaning members who never posted could not be detected.
+  rosterAvailable: boolean;
+}
+
+interface Activity {
+  lastMessageAt: Date;
+  displayName: string;
+}
+
 /**
  * Scans channel history to find members who have been inactive for at least
  * PRUNE_WEEKS. Read-only — never modifies members or channels.
+ *
+ * When the Server Members Intent is available the full roster is used, so
+ * members who never posted are also flagged. Otherwise it degrades to the set
+ * of members seen posting, and never-posters are silently excluded.
  */
 export class PruneService {
   private client: Client;
@@ -26,30 +42,16 @@ export class PruneService {
     this.client = client;
   }
 
-  /**
-   * Returns non-bot members with no message in the last PRUNE_WEEKS, sorted
-   * with never-posted members first, then oldest last-message first.
-   */
-  async getInactiveMembers(guildId: string): Promise<InactiveMember[]> {
+  async getInactiveMembers(guildId: string): Promise<PruneResult> {
     const guild = await this.client.guilds.fetch(guildId);
     const cutoff = new Date(Date.now() - ConfigService.getPruneWeeks() * WEEK_MS);
 
     const activity = await this.scanActivity(guild);
-    const members = await guild.members.fetch();
+    const roster = await this.tryFetchRoster(guild);
 
-    const inactive: InactiveMember[] = [];
-    for (const member of members.values()) {
-      if (member.user.bot) continue;
-
-      const lastMessageAt = activity.get(member.id) ?? null;
-      if (!lastMessageAt || lastMessageAt < cutoff) {
-        inactive.push({
-          userId: member.id,
-          displayName: member.displayName ?? member.user.username,
-          lastMessageAt,
-        });
-      }
-    }
+    const inactive: InactiveMember[] = roster
+      ? this.inactiveFromRoster(roster, activity, cutoff)
+      : this.inactiveFromActivity(activity, cutoff);
 
     inactive.sort((a, b) => {
       if (!a.lastMessageAt && !b.lastMessageAt) return 0;
@@ -58,14 +60,86 @@ export class PruneService {
       return a.lastMessageAt.getTime() - b.lastMessageAt.getTime();
     });
 
+    return { members: inactive, rosterAvailable: roster !== null };
+  }
+
+  /**
+   * Full-roster mode: every non-bot member whose newest message is missing or
+   * older than the cutoff (includes members who never posted).
+   */
+  private inactiveFromRoster(
+    roster: Map<string, { displayName: string; bot: boolean }>,
+    activity: Map<string, Activity>,
+    cutoff: Date
+  ): InactiveMember[] {
+    const inactive: InactiveMember[] = [];
+    for (const [userId, info] of roster) {
+      if (info.bot) continue;
+
+      const lastMessageAt = activity.get(userId)?.lastMessageAt ?? null;
+      if (!lastMessageAt || lastMessageAt < cutoff) {
+        inactive.push({ userId, displayName: info.displayName, lastMessageAt });
+      }
+    }
     return inactive;
   }
 
   /**
-   * Builds a userId -> most-recent-message-time map across all readable
-   * channels, scanning channels in parallel with a bounded worker pool.
+   * Fallback mode: only members seen posting whose newest message is older than
+   * the cutoff. Members who never posted cannot be detected without the roster.
    */
-  private async scanActivity(guild: Guild): Promise<Map<string, Date>> {
+  private inactiveFromActivity(
+    activity: Map<string, Activity>,
+    cutoff: Date
+  ): InactiveMember[] {
+    const inactive: InactiveMember[] = [];
+    for (const [userId, info] of activity) {
+      if (info.lastMessageAt < cutoff) {
+        inactive.push({
+          userId,
+          displayName: info.displayName,
+          lastMessageAt: info.lastMessageAt,
+        });
+      }
+    }
+    return inactive;
+  }
+
+  /**
+   * Fetches the member roster when opted in via PRUNE_MEMBER_ROSTER. Returns
+   * null (fallback mode) when disabled or the fetch fails.
+   */
+  private async tryFetchRoster(
+    guild: Guild
+  ): Promise<Map<string, { displayName: string; bot: boolean }> | null> {
+    if (!ConfigService.getPruneMemberRoster()) {
+      return null;
+    }
+
+    try {
+      const members = await guild.members.fetch();
+      const roster = new Map<string, { displayName: string; bot: boolean }>();
+      for (const member of members.values()) {
+        roster.set(member.id, {
+          displayName: member.displayName ?? member.user.username,
+          bot: member.user.bot,
+        });
+      }
+      return roster;
+    } catch (error) {
+      logger.warn(
+        { error },
+        'Member roster fetch failed - falling back to message-author scan'
+      );
+      return null;
+    }
+  }
+
+  /**
+   * Builds a userId -> most-recent-activity map across all readable channels,
+   * scanning channels in parallel with a bounded worker pool.
+   */
+  private async scanActivity(guild: Guild): Promise<Map<string, Activity>> {
     const me = guild.members.me ?? (await guild.members.fetchMe());
     const channels = this.readableTextChannels(guild, me);
 
@@ -75,12 +149,12 @@ export class PruneService {
       (channel) => this.scanChannel(channel)
     );
 
-    const merged = new Map<string, Date>();
+    const merged = new Map<string, Activity>();
     for (const channelMap of perChannel) {
-      for (const [userId, timestamp] of channelMap) {
+      for (const [userId, activity] of channelMap) {
         const existing = merged.get(userId);
-        if (!existing || timestamp > existing) {
-          merged.set(userId, timestamp);
+        if (!existing || activity.lastMessageAt > existing.lastMessageAt) {
+          merged.set(userId, activity);
         }
       }
     }
@@ -116,10 +190,10 @@ export class PruneService {
 
   /**
    * Pages a channel's history newest -> oldest, recording each non-bot
-   * author's most-recent message time.
+   * author's most-recent message time and display name.
    */
-  private async scanChannel(channel: TextChannel): Promise<Map<string, Date>> {
-    const latest = new Map<string, Date>();
+  private async scanChannel(channel: TextChannel): Promise<Map<string, Activity>> {
+    const latest = new Map<string, Activity>();
 
     try {
       let before: string | undefined;
@@ -138,8 +212,11 @@ export class PruneService {
 
           const timestamp = new Date(message.createdTimestamp);
           const existing = latest.get(message.author.id);
-          if (!existing || timestamp > existing) {
-            latest.set(message.author.id, timestamp);
+          if (!existing || timestamp > existing.lastMessageAt) {
+            latest.set(message.author.id, {
+              lastMessageAt: timestamp,
+              displayName: message.member?.displayName ?? message.author.username,
+            });
           }
         }
 

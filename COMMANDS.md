@@ -80,4 +80,6 @@ Demo:
   - Flags members with no message in any channel for `PRUNE_WEEKS` weeks (default 6)
   - Shows each member's last-message date and how long ago it was
   - Read-only — does not kick or warn anyone
-  - Requires the **Server Members Intent** enabled in the Discord Developer Portal
+  - By default reports only members who have posted. To also catch members who
+    never posted, enable the **Server Members Intent** in the Discord Developer
+    Portal and set `PRUNE_MEMBER_ROSTER=true`
