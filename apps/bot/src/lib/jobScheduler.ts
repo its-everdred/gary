@@ -387,12 +387,26 @@ export class NominationJobScheduler implements JobScheduler {
   /**
    * Transitions a nominee from ACTIVE to DISCUSSION
    */
-  private async transitionToDiscussion(nominee: Nominee): Promise<void> {
+  public async transitionToDiscussion(nominee: Nominee): Promise<void> {
+    // Anchor the downstream schedule to now so a manually-started discussion
+    // gets correct vote/cleanup times instead of stale queued ones.
+    const now = new Date();
+    const voteStart = new Date(now);
+    voteStart.setUTCMinutes(
+      voteStart.getUTCMinutes() + NOMINATION_CONFIG.DISCUSSION_DURATION_MINUTES
+    );
+    const cleanupStart = new Date(voteStart);
+    cleanupStart.setUTCMinutes(
+      cleanupStart.getUTCMinutes() + NOMINATION_CONFIG.VOTE_DURATION_MINUTES
+    );
+
     const result = await NomineeStateManager.transitionNominee(
       nominee.id,
       NomineeState.DISCUSSION,
       {
-        discussionStart: new Date(),
+        discussionStart: now,
+        voteStart,
+        cleanupStart,
       }
     );
 
