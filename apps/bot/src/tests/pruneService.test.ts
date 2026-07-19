@@ -154,6 +154,32 @@ describe('PruneService fallback mode (no member roster)', () => {
 });
 
 describe('PruneService roster mode (Server Members Intent)', () => {
+  test('stops paging a channel once it crosses the cutoff', async () => {
+    // Newest -> oldest: one recent message, then a deep backlog of old ones.
+    // The scan must stop after reaching the cutoff, not page the whole history.
+    const messages = [
+      msg('recent', 'active', RECENT),
+      ...Array.from({ length: 500 }, (_, i) =>
+        msg(`old${i}`, `u${i}`, OLD - i * 1000)
+      ),
+    ];
+    const channel = makeChannel('c1', messages);
+    let fetchCalls = 0;
+    const originalFetch = channel.messages.fetch;
+    channel.messages.fetch = async (args: any) => {
+      fetchCalls++;
+      return originalFetch(args);
+    };
+
+    const service = makeService([channel], [makeMember('active')], true);
+    const result = await service.getInactiveMembers('g');
+
+    // 'active' posted recently -> not inactive; and we stopped after the first
+    // page instead of paging all 500 old messages.
+    expect(result.members).toEqual([]);
+    expect(fetchCalls).toBe(1);
+  });
+
   test('reports rosterAvailable = true', async () => {
     const service = makeService([makeChannel('c1', [])], [makeMember('a')], true);
     const result = await service.getInactiveMembers('g');
@@ -191,7 +217,10 @@ describe('PruneService roster mode (Server Members Intent)', () => {
     expect(result.members[0].displayName).toBe('CoolName');
   });
 
-  test('sorts never-posted first, then oldest last-message first', async () => {
+  test('lists all non-recent members (roster mode) sorted by name', async () => {
+    // In roster mode the scan stops at the cutoff, so members whose only posts
+    // predate it are indistinguishable from never-posters: all report no recent
+    // activity and are ordered alphabetically for a stable list.
     const service = makeService(
       [makeChannel('c1', [msg('m1', 'old', OLD), msg('m2', 'older', OLDER)])],
       [makeMember('old'), makeMember('older'), makeMember('never')],
@@ -200,8 +229,9 @@ describe('PruneService roster mode (Server Members Intent)', () => {
     const result = await service.getInactiveMembers('g');
     expect(result.members.map((m) => m.userId)).toEqual([
       'never',
-      'older',
       'old',
+      'older',
     ]);
+    expect(result.members.every((m) => m.lastMessageAt === null)).toBe(true);
   });
 });
