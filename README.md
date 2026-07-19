@@ -45,8 +45,8 @@ The bot integrates with [EasyPoll](https://easypoll.bot) for anonymous voting in
 4. **Application ID**: General Information → Copy for `DISCORD_APP_ID`
 5. **Privileged Gateway Intents**:
    - ✅ Enable `MESSAGE CONTENT INTENT` (required to read EasyPoll embeds)
+   - ✅ Enable `SERVER MEMBERS INTENT` (required for `/mod purge check` to read the member roster)
    - ❌ Keep `PRESENCE INTENT` disabled
-   - ❌ Keep `SERVER MEMBERS INTENT` disabled
 
 ### 2. Generate Invite Link
 

@@ -72,3 +72,12 @@ Demo:
   - In cleanup → finishes cleanup and starts whatever is next
   - Without `hours`: transitions immediately
   - With `hours`: overwrites the current phase's end time so the transition happens X hours from now
+
+### Membership Pruning
+
+- `/mod purge check` - Privately list inactive members (potential prune candidates)
+  - Replies only to the calling moderator (ephemeral)
+  - Flags members with no message in any channel for `PRUNE_WEEKS` weeks (default 6)
+  - Shows each member's last-message date and how long ago it was
+  - Read-only — does not kick or warn anyone
+  - Requires the **Server Members Intent** enabled in the Discord Developer Portal
