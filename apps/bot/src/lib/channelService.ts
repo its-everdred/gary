@@ -163,6 +163,30 @@ export class ChannelManagementService {
         );
       }
 
+      // Explicitly grant Gary read access so tallying never depends on
+      // inherited category permissions or a denying bot role.
+      try {
+        const me = guild.members.me ?? (await guild.members.fetchMe());
+        await channel.permissionOverwrites.edit(me.id, {
+          ViewChannel: true,
+          ReadMessageHistory: true,
+          SendMessages: true,
+          EmbedLinks: true,
+        });
+        logger.info(
+          `Granted Gary read access in vote channel: ${nominee.name}`
+        );
+      } catch (error) {
+        logger.error(
+          {
+            error,
+            channelId: channel.id,
+            nomineeName: nominee.name,
+          },
+          'Failed to grant Gary read access to vote channel'
+        );
+      }
+
       // Send initial vote message with calculated quorum
       await this.sendVoteStartMessage(
         channel,

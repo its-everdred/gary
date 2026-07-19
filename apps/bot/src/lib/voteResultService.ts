@@ -103,36 +103,84 @@ export class VoteResultService {
   }
 
   /**
+   * Describes a read error so logs distinguish a permissions failure
+   * (Missing Access 50001 / Missing Permissions 50013) from other problems.
+   */
+  private describeReadError(error: unknown): {
+    code?: number;
+    isPermissionError: boolean;
+    meaning: string;
+  } {
+    const code = (error as { code?: number })?.code;
+    const meanings: Record<number, string> = {
+      50001: 'Missing Access (Gary cannot see the channel - grant View Channel)',
+      50013: 'Missing Permissions (grant Read Message History on the vote channel)'
+    };
+    return {
+      code,
+      isPermissionError: code === 50001 || code === 50013,
+      meaning: (code && meanings[code]) || 'Non-permission read failure (parse/timing/other)'
+    };
+  }
+
+  /**
    * Finds and parses EasyPoll message in channel
    */
   private async findPollInChannel(channel: TextChannel): Promise<PollData | null> {
     try {
       // Fetch recent messages to find the poll - force cache bypass
       const messages = await channel.messages.fetch({ limit: DISCORD_CONSTANTS.LIMITS.MESSAGE_FETCH_LIMIT, force: true });
-      
+
+      let easyPollFound = 0;
+      let recentEasyPollFound = 0;
+
       for (const message of messages.values()) {
         // Only check EasyPoll messages
         if (!this.isEasyPollMessage(message)) continue;
-        
+        easyPollFound++;
+
         // For EasyPoll, try to match any recent poll (assume it's the one we want)
         const isRecentPoll = message.createdTimestamp > (Date.now() - (2 * 60 * 60 * 1000));
         if (!isRecentPoll) continue;
+        recentEasyPollFound++;
 
         // Force refetch the specific message to get latest embed data
         const refreshedMessage = await channel.messages.fetch(message.id, { force: true });
-        
+
         // Parse poll data from the refreshed message
         const pollData = await this.parsePollMessage(refreshedMessage);
-        
+
         if (pollData) {
           // Successfully parsed EasyPoll results
           return pollData;
         }
       }
 
+      // Read succeeded but no parseable poll - log why so we can tell a
+      // permissions issue (none reached here) from a parse/timing issue.
+      logger.warn(
+        {
+          channelId: channel.id,
+          messagesFetched: messages.size,
+          easyPollFound,
+          recentEasyPollFound
+        },
+        'No parseable EasyPoll results found (read succeeded - likely parse/timing, not permissions)'
+      );
+
       return null;
     } catch (error) {
-      logger.error({ error, channelId: channel.id }, 'Failed to find poll in channel');
+      const diagnosis = this.describeReadError(error);
+      logger.error(
+        {
+          error,
+          channelId: channel.id,
+          errorCode: diagnosis.code,
+          isPermissionError: diagnosis.isPermissionError,
+          diagnosis: diagnosis.meaning
+        },
+        'Failed to find poll in channel'
+      );
       return null;
     }
   }
@@ -418,20 +466,95 @@ export class VoteResultService {
 
 
   /**
+   * Channels the vote outcome is announced to (governance, general, and mod-comms)
+   */
+  private getResultChannelConfigs() {
+    return [
+      { name: 'governance', finder: () => ChannelFinderService.governance() },
+      { name: 'general', finder: () => ChannelFinderService.general() },
+      { name: 'mod-comms', finder: () => ChannelFinderService.modComms() }
+    ];
+  }
+
+  /**
+   * Checks whether Gary can actually read the poll in the vote channel.
+   * Used to tell a genuine no-vote outcome apart from a permissions failure.
+   */
+  async canReadVoteChannel(nominee: Nominee): Promise<boolean> {
+    try {
+      if (!nominee.voteChannelId) {
+        return false;
+      }
+
+      const guild = await this.client.guilds.fetch(nominee.guildId);
+      const voteChannel = await ChannelLookupService.findVoteChannel(
+        guild,
+        nominee.id,
+        nominee.name,
+        nominee.voteChannelId
+      );
+
+      if (!voteChannel) {
+        return false;
+      }
+
+      const me = guild.members.me ?? (await guild.members.fetchMe());
+      const perms = voteChannel.permissionsFor(me);
+
+      return !!perms?.has('ViewChannel') && !!perms.has('ReadMessageHistory');
+    } catch (error) {
+      logger.error({ error, nomineeId: nominee.id }, 'Failed to check vote channel read permissions');
+      return false;
+    }
+  }
+
+  /**
+   * Posts a notice that the vote has ended when Gary cannot read the results.
+   * Links members to the vote channel instead of falsely reporting no votes.
+   */
+  async postVoteEndedUnreadable(nominee: Nominee): Promise<void> {
+    const voteChannelMention = nominee.voteChannelId
+      ? `<#${nominee.voteChannelId}>`
+      : 'the vote channel';
+
+    const embed: DiscordEmbed = {
+      title: '🗳️ Vote Ended',
+      description: `The vote for **${nominee.name}** has ended. Head to ${voteChannelMention} to see the results.`,
+      color: 0xff9500,
+      timestamp: new Date().toISOString()
+    };
+
+    for (const config of this.getResultChannelConfigs()) {
+      try {
+        const channel = await config.finder();
+        if (channel) {
+          await channel.send({ embeds: [embed] });
+        }
+      } catch (error) {
+        logger.error({
+          error: error instanceof Error ? {
+            name: error.name,
+            message: error.message,
+            stack: error.stack
+          } : error,
+          nomineeId: nominee.id,
+          channelType: config.name
+        }, `Failed to post vote-ended notice to ${config.name}`);
+      }
+    }
+  }
+
+  /**
    * Posts vote results to the specified channels (governance, general, and mod-comms)
    */
   async postVoteResults(nominee: Nominee, voteResults: VoteResults): Promise<void> {
     try {
       const resultEmbed = await this.createVoteResultsEmbed(nominee, voteResults);
       const messageIds: string[] = [];
-      
+
       // Define channels to post to
-      const channelConfigs = [
-        { name: 'governance', finder: () => ChannelFinderService.governance() },
-        { name: 'general', finder: () => ChannelFinderService.general() },
-        { name: 'mod-comms', finder: () => ChannelFinderService.modComms() }
-      ];
-      
+      const channelConfigs = this.getResultChannelConfigs();
+
       // Post to all configured channels
       for (const config of channelConfigs) {
         try {

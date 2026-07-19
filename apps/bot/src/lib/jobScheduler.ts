@@ -387,12 +387,26 @@ export class NominationJobScheduler implements JobScheduler {
   /**
    * Transitions a nominee from ACTIVE to DISCUSSION
    */
-  private async transitionToDiscussion(nominee: Nominee): Promise<void> {
+  public async transitionToDiscussion(nominee: Nominee): Promise<void> {
+    // Anchor the downstream schedule to now so a manually-started discussion
+    // gets correct vote/cleanup times instead of stale queued ones.
+    const now = new Date();
+    const voteStart = new Date(now);
+    voteStart.setUTCMinutes(
+      voteStart.getUTCMinutes() + NOMINATION_CONFIG.DISCUSSION_DURATION_MINUTES
+    );
+    const cleanupStart = new Date(voteStart);
+    cleanupStart.setUTCMinutes(
+      cleanupStart.getUTCMinutes() + NOMINATION_CONFIG.VOTE_DURATION_MINUTES
+    );
+
     const result = await NomineeStateManager.transitionNominee(
       nominee.id,
       NomineeState.DISCUSSION,
       {
-        discussionStart: new Date(),
+        discussionStart: now,
+        voteStart,
+        cleanupStart,
       }
     );
 
@@ -513,26 +527,28 @@ export class NominationJobScheduler implements JobScheduler {
             );
           });
       } else {
-        // Vote period expired without results - create default failed results
-        const expiredResults: VoteResults = {
-          passed: false,
-          yesVotes: 0,
-          noVotes: 0,
-          totalVotes: 0,
-          quorumMet: false,
-          passThresholdMet: false,
-          memberCount: 0,
-          requiredQuorum: 0,
-          requiredPassVotes: 0,
-        };
+        // A poll was detected but Gary couldn't read or parse its final
+        // results (missing channel permissions, parse failure, poll rolled
+        // out of history, etc). We can't know the outcome, so never claim
+        // nobody voted - link members to the vote channel to see the results.
+        const canReadVoteChannel =
+          await this.voteResultService.canReadVoteChannel(nominee);
 
-        // Post expired results to all channels
+        logger.warn(
+          {
+            nomineeId: nominee.id,
+            nomineeName: nominee.name,
+            canReadVoteChannel,
+          },
+          'Vote outcome unreadable - posting vote-ended notice instead of failed results'
+        );
+
         this.voteResultService
-          .postVoteResults(nominee, expiredResults)
+          .postVoteEndedUnreadable(nominee)
           .catch((error) => {
             logger.error(
               { error, nomineeId: nominee.id },
-              'Failed to post expired vote results'
+              'Failed to post vote-ended notice'
             );
           });
       }
