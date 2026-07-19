@@ -14,8 +14,8 @@ mock.module('../lib/commandUtils.js', () => ({
   CommandUtils: { validateModeratorAccess, handleCommandError },
 }));
 
-const { buildPruneReport, handlePurgeCheckCommand } = await import(
-  '../commands/purge/check.js'
+const { buildPruneReport, handlePruneCheckCommand } = await import(
+  '../commands/prune/check.js'
 );
 
 function utc(y: number, m: number, d: number): Date {
@@ -77,7 +77,7 @@ describe('buildPruneReport', () => {
   });
 });
 
-describe('handlePurgeCheckCommand', () => {
+describe('handlePruneCheckCommand', () => {
   beforeEach(() => {
     handleCommandError.mockClear();
   });
@@ -91,7 +91,7 @@ describe('handlePurgeCheckCommand', () => {
       followUp: mock(async () => {}),
     };
 
-    await handlePurgeCheckCommand(interaction as any);
+    await handlePruneCheckCommand(interaction as any);
 
     // Denied before deferring/scanning — deferReply is the first thing the
     // handler does after passing validation.

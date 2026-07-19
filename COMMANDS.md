@@ -75,7 +75,7 @@ Demo:
 
 ### Membership Pruning
 
-- `/mod purge check` - Privately list inactive members (potential prune candidates)
+- `/mod prune check` - Privately list inactive members (potential prune candidates)
   - Replies only to the calling moderator (ephemeral)
   - Flags members with no message in any channel for `PRUNE_WEEKS` weeks (default 6)
   - Shows each member's last-message date and how long ago it was

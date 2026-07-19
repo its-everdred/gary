@@ -6,7 +6,7 @@ import { handleStartCommand } from './nominate/start.js';
 import { handleCleanupCommand } from './nominate/cleanup.js';
 import { handleDiscussionCommand } from './nominate/discussion.js';
 import { handleNextStepCommand } from './nominate/nextStep.js';
-import { handlePurgeCheckCommand } from './purge/check.js';
+import { handlePruneCheckCommand } from './prune/check.js';
 
 export const modCommand = new SlashCommandBuilder()
   .setName('mod')
@@ -85,7 +85,7 @@ export const modCommand = new SlashCommandBuilder()
   )
   .addSubcommandGroup(subcommandGroup =>
     subcommandGroup
-      .setName('purge')
+      .setName('prune')
       .setDescription('Membership pruning tools')
       .addSubcommand(subcommand =>
         subcommand
@@ -125,10 +125,10 @@ export async function modHandler(interaction: ChatInputCommandInteraction): Prom
           flags: 64
         });
     }
-  } else if (subcommandGroup === 'purge') {
+  } else if (subcommandGroup === 'prune') {
     switch (subcommand) {
       case 'check':
-        await handlePurgeCheckCommand(interaction);
+        await handlePruneCheckCommand(interaction);
         break;
       default:
         await interaction.reply({
