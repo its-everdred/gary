@@ -31,12 +31,33 @@ describe('Message Access Security Tests', () => {
     // Reset message access tracking
     messageAccessLog = [];
 
+    // Pre-create mockGuild so channels can reference it
+    mockGuild = {
+      id: 'test-guild-id',
+      members: {
+        me: { id: 'bot-id' }, // Bot member for permission checks
+        cache: new Map(),
+        fetch: mock(async () => new Map())
+      },
+      channels: {
+        cache: new Map(),
+        fetch: mock(async (id: string) => {
+          const channel = mockGuild.channels.cache.get(id);
+          if (channel) return channel;
+          throw new Error('Channel not found');
+        })
+      }
+    };
+
     // Create mock channels with tracking
     const createTrackedChannel = (id: string, type: string, name: string) => ({
       id,
       name,
       type: 0, // GUILD_TEXT
       guild: mockGuild,
+      permissionsFor: mock(() => ({
+        has: mock(() => true) // Grant all permissions in tests
+      })),
       messages: {
         fetch: mock(async (options?: any) => {
           messageAccessLog.push({
@@ -51,7 +72,7 @@ describe('Message Access Security Tests', () => {
               id: 'poll-message-id',
               author: { id: '437618149505105920' }, // EasyPoll bot ID
               embeds: [{
-                description: 'Poll Results: ✅ 15 votes, ❌ 3 votes - Poll closed'
+                description: '**Question**\nShould we invite nominee?\n\n**Final Result**\n✅ **Yes, Accept** — 15 votes (83%)\n❌ **No, Reject** — 3 votes (17%)'
               }],
               createdTimestamp: Date.now() - 30000, // 30 seconds ago
               reactions: {
@@ -62,6 +83,12 @@ describe('Message Access Security Tests', () => {
               }
             };
             
+            // If fetching by ID (string), return the message directly
+            if (typeof options === 'string') {
+              return mockMessage;
+            }
+            
+            // Otherwise return a Map collection
             const mockCollection = new Map();
             mockCollection.set('poll-message-id', mockMessage);
             return mockCollection;
@@ -80,26 +107,10 @@ describe('Message Access Security Tests', () => {
     mockDiscussionChannel = createTrackedChannel('discussion-channel-456', 'discussion', 'nominee-discussion-smith'); 
     mockGovernanceChannel = createTrackedChannel('governance-channel-789', 'governance', 'governance');
 
-    // Mock guild
-    mockGuild = {
-      id: 'test-guild-id',
-      channels: {
-        cache: new Map([
-          ['vote-channel-123', mockVoteChannel],
-          ['discussion-channel-456', mockDiscussionChannel],
-          ['governance-channel-789', mockGovernanceChannel]
-        ]),
-        fetch: mock(async (id: string) => {
-          const channel = mockGuild.channels.cache.get(id);
-          if (channel) return channel;
-          throw new Error('Channel not found');
-        })
-      },
-      members: {
-        cache: new Map(),
-        fetch: mock(async () => new Map())
-      }
-    };
+    // Add channels to guild's cache
+    mockGuild.channels.cache.set('vote-channel-123', mockVoteChannel);
+    mockGuild.channels.cache.set('discussion-channel-456', mockDiscussionChannel);
+    mockGuild.channels.cache.set('governance-channel-789', mockGovernanceChannel);
 
     // Mock client
     mockClient = {
